@@ -1,0 +1,152 @@
+/* Yellina Seeds — Layout: Topbar, Sidebar, Main */
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+.topbar {
+  position:fixed; top:0; left:0; right:0; height:var(--topbar-h); z-index:500;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--surface-4);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px 0 0;
+  box-shadow:var(--shadow-xs);
+}
+.topbar-left {
+  width:var(--sidebar-w);
+  display:flex; align-items:center; gap:10px;
+  padding:0 20px;
+  border-right:1px solid var(--surface-4);
+  height:100%;
+}
+.logo-img { width:32px; height:32px; object-fit:contain; }
+.brand-text { display:flex; flex-direction:column; line-height:1.1; }
+.brand-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:800; color:var(--ink); letter-spacing:.2px; }
+.brand-tagline { font-size:10px; font-weight:500; color:var(--ink-5); letter-spacing:.8px; text-transform:uppercase; }
+
+.topbar-center { flex:1; display:flex; align-items:center; padding:0 24px; }
+.search-bar {
+  display:flex; align-items:center; gap:8px;
+  background:var(--surface-2); border:1px solid var(--surface-4);
+  border-radius:var(--radius); padding:0 14px; height:36px;
+  width:320px; transition:all var(--transition);
+}
+.search-bar:focus-within { border-color:var(--gold); background:#fff; box-shadow:0 0 0 3px rgba(245,166,35,.12); }
+.search-bar input { flex:1; background:none; border:none; outline:none; font-size:13px; color:var(--ink); }
+.search-bar input::placeholder { color:var(--ink-5); }
+
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.topbar-btn {
+  display:flex; align-items:center; gap:6px;
+  height:36px; padding:0 14px; border-radius:var(--radius);
+  border:1px solid var(--surface-4); background:var(--surface);
+  font-size:12px; font-weight:600; color:var(--ink-3); cursor:pointer;
+  transition:all var(--transition);
+}
+.topbar-btn:hover { border-color:var(--gold-border); background:var(--gold-pale); color:var(--gold-dark); }
+.btn-primary {
+  height:36px; padding:0 16px; border-radius:var(--radius);
+  background:var(--ink); color:#fff; border:none; cursor:pointer;
+  font-size:12px; font-weight:600; letter-spacing:.2px;
+  display:flex; align-items:center; gap:6px;
+  transition:all var(--transition);
+  box-shadow:0 1px 2px rgba(0,0,0,.2), 0 0 0 0 rgba(245,166,35,0);
+}
+.btn-primary:hover { background:var(--ink-2); transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+.live-pill {
+  display:flex; align-items:center; gap:5px;
+  background:var(--green-bg); border:1px solid var(--green-bdr);
+  border-radius:99px; padding:4px 10px; font-size:11px;
+  font-weight:600; color:var(--green);
+}
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:livePulse 2s infinite; }
+@keyframes livePulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(16,185,129,.4); }
+  50% { box-shadow:0 0 0 4px rgba(16,185,129,0); }
+}
+.topbar-time { font-family:'DM Mono',monospace; font-size:12px; font-weight:500; color:var(--ink-4); padding:0 4px; }
+
+/* Avatar */
+.avatar {
+  width:32px; height:32px; border-radius:50%;
+  background:linear-gradient(135deg,var(--gold) 0%,var(--gold-dark) 100%);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; color:#fff; cursor:pointer;
+  border:2px solid var(--gold-border);
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  position:fixed; top:var(--topbar-h); left:0; bottom:0;
+  width:var(--sidebar-w); background:var(--surface);
+  border-right:1px solid var(--surface-4);
+  z-index:400; overflow-y:auto;
+  display:flex; flex-direction:column;
+  padding:16px 12px;
+}
+.nav-section-label {
+  font-size:10px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--ink-5);
+  padding:8px 12px 4px; margin-top:4px;
+}
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:var(--radius-sm);
+  cursor:pointer; font-size:13px; font-weight:500;
+  color:var(--ink-3); position:relative;
+  transition:all var(--transition); margin-bottom:1px;
+  user-select:none;
+}
+.nav-item:hover { background:var(--surface-2); color:var(--ink); }
+.nav-item.active {
+  background:var(--gold-pale); color:var(--gold-dark);
+  font-weight:600;
+}
+.nav-item.active::before {
+  content:''; position:absolute; left:-12px; top:50%; transform:translateY(-50%);
+  width:3px; height:20px; background:var(--gold); border-radius:0 3px 3px 0;
+}
+.nav-icon { width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.nav-badge {
+  margin-left:auto; min-width:18px; height:18px; padding:0 5px;
+  border-radius:9px; background:var(--gold); color:#fff;
+  font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+.nav-divider { height:1px; background:var(--surface-3); margin:8px 0; }
+
+.sidebar-footer {
+  margin-top:auto; padding-top:12px;
+  border-top:1px solid var(--surface-3);
+}
+.company-card {
+  background:linear-gradient(135deg,var(--gold-pale),rgba(255,200,92,.15));
+  border:1px solid var(--gold-border);
+  border-radius:var(--radius); padding:12px 14px;
+}
+.company-name { font-size:12px; font-weight:700; color:var(--ink); }
+.company-meta { font-size:10px; color:var(--ink-4); margin-top:2px; }
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.main {
+  margin-left:var(--sidebar-w);
+  padding-top:var(--topbar-h);
+  min-height:100vh;
+}
+.page-wrap { padding:28px 28px 48px; max-width:1440px; }
+.page { display:none; }
+.page.active { display:block; animation:pageIn .25s ease; }
+@keyframes pageIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px; }
+.page-title-wrap {}
+.page-eyebrow { font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--ink-5); margin-bottom:4px; }
+.page-title { font-family:'Playfair Display',serif; font-size:26px; font-weight:800; color:var(--ink); letter-spacing:-.3px; line-height:1.2; }
+.page-subtitle { font-size:13px; color:var(--ink-4); margin-top:4px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+
