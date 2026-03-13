@@ -6,6 +6,12 @@
 // ================================================================
 // ACTIONS
 // ================================================================
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if(sidebar) sidebar.classList.toggle('open');
+}
+
 function openIntakeModal() {
   document.getElementById('i-bin-rows').innerHTML = '';
   addIntakeBinRow();

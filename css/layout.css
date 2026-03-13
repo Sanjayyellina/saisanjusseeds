@@ -22,6 +22,7 @@
 .brand-text { display:flex; flex-direction:column; line-height:1.1; }
 .brand-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:800; color:var(--ink); letter-spacing:.2px; }
 .brand-tagline { font-size:10px; font-weight:500; color:var(--ink-5); letter-spacing:.8px; text-transform:uppercase; }
+.mobile-menu-btn { display:none; background:none; border:none; cursor:pointer; color:var(--ink); margin-right:8px; padding:4px; }
 
 .topbar-center { flex:1; display:flex; align-items:center; padding:0 24px; }
 .search-bar {
@@ -144,9 +145,38 @@
    PAGE HEADER
    ============================================================ */
 .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px; }
-.page-title-wrap {}
 .page-eyebrow { font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--ink-5); margin-bottom:4px; }
 .page-title { font-family:'Playfair Display',serif; font-size:26px; font-weight:800; color:var(--ink); letter-spacing:-.3px; line-height:1.2; }
 .page-subtitle { font-size:13px; color:var(--ink-4); margin-top:4px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 
+/* ============================================================
+   MOBILE RESPONSIVENESS
+   ============================================================ */
+@media (max-width: 992px) {
+  :root {
+    --sidebar-w: 240px; /* Keep sidebar width for off-canvas */
+  }
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: none;
+    transition: transform 0.3s ease;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 10px 0 30px rgba(0,0,0,0.15);
+  }
+  .main {
+    margin-left: 0;
+    padding-top: var(--topbar-h);
+  }
+  .mobile-menu-btn { display: flex; }
+  .topbar-left { width: auto; border-right: none; padding-right: 10px; padding-left: 12px; }
+  .brand-text { display: none; }
+  .topbar-center { display: none; }
+  .topbar-right .live-pill, .topbar-right .topbar-time { display: none; }
+  .topbar-right select { display: none; }
+  .topbar-right .topbar-btn span { display: none; } /* Hide 'New Intake' text, just show icon */
+  .page-wrap { padding: 16px; min-width:100%; }
+  .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+}
