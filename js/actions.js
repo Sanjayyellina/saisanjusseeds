@@ -4,6 +4,34 @@
 // ============================================================
 
 // ================================================================
+// CONFIG BANNER HANDLERS
+// ================================================================
+
+function saveConfig() {
+  const url = document.getElementById('cfg-url').value.trim();
+  const key = document.getElementById('cfg-key').value.trim();
+  if (!url || !key) {
+    toast('Please enter both Supabase URL and Key', 'error');
+    return;
+  }
+  try {
+    window._supabase = window.supabase.createClient(url, key);
+    document.getElementById('config-banner').style.display = 'none';
+    toast('Database connected! Loading data…', 'success');
+    initApp();
+  } catch(e) {
+    toast('Invalid credentials. Please check and try again.', 'error');
+  }
+}
+
+function useDemoMode() {
+  document.getElementById('config-banner').style.display = 'none';
+  window._demoMode = true;
+  seedData();
+  renderDashboard();
+}
+
+// ================================================================
 // ACTIONS
 // ================================================================
 
@@ -16,7 +44,15 @@ function openIntakeModal() {
   document.getElementById('i-bin-rows').innerHTML = '';
   addIntakeBinRow();
   ['i-challan','i-vehicle','i-location','i-hybrid','i-lot','i-qty','i-pkts','i-moisture','i-lr','i-remarks','i-veh-weight','i-gross-weight'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const companySelect=document.getElementById('i-company');
+  if(companySelect)companySelect.value='Yellina';
   openModal('intake-modal');
+  setTimeout(()=>{
+    const challanInput=document.getElementById('i-challan');
+    const intakeModal=document.querySelector('#intake-modal .modal');
+    if(intakeModal)intakeModal.scrollTop=0;
+    if(challanInput)challanInput.focus();
+  },0);
 }
 
 function addIntakeBinRow() {
@@ -38,7 +74,7 @@ function addIntakeBinRow() {
       <label class="form-label">Bags</label>
       <div style="display:flex; gap:8px;">
         <input class="form-input i-bin-pkts" type="number" placeholder="e.g. 20" style="flex:1;">
-        <button class="btn btn-ghost" style="padding:0 8px;" onclick="this.closest('.i-bin-row').remove()">✕</button>
+        <button type="button" class="btn btn-ghost" style="padding:0 8px;" onclick="this.closest('.i-bin-row').remove()">✕</button>
       </div>
     </div>
   `;
@@ -52,7 +88,23 @@ async function saveIntake(){
   const qtyInput=document.getElementById('i-qty').value;
   const qty=parseFloat(qtyInput);
   
-  if(!challan||!vehicle||!hybrid||!qtyInput){toast('Please fill all required Intake fields (*)','error');return;}
+  const missingFields = [];
+  if(!challan)missingFields.push({label:'Challan No', id:'i-challan'});
+  if(!vehicle)missingFields.push({label:'Vehicle Number', id:'i-vehicle'});
+  if(!hybrid)missingFields.push({label:'Hybrid / Variety', id:'i-hybrid'});
+  if(!qtyInput)missingFields.push({label:'Quantity (Tons)', id:'i-qty'});
+  if(missingFields.length){
+    const firstMissing=document.getElementById(missingFields[0].id);
+    const intakeModal=document.querySelector('#intake-modal .modal');
+    if(firstMissing){
+      firstMissing.scrollIntoView({behavior:'smooth', block:'center'});
+      firstMissing.focus();
+    } else if(intakeModal){
+      intakeModal.scrollTop=0;
+    }
+    toast(`Missing required field: ${missingFields[0].label}`,'error');
+    return;
+  }
   
   // gather bin allocations
   const rows = document.querySelectorAll('.i-bin-row');
@@ -73,9 +125,24 @@ async function saveIntake(){
     }
   });
   
-  if (allocError) { toast('Please complete all Bin Assignment rows','error'); return; }
-  if (allocations.length === 0) { toast('Please assign at least one bin','error'); return; }
-  if (Math.abs(totalAllocated - qty) > 0.01) { toast(`Allocated tons (${totalAllocated}) does not match Intake qty (${qty})`, 'error'); return; }
+  if (allocError) {
+    const firstRow = document.querySelector('.i-bin-row');
+    if (firstRow) firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast('Please complete all Bin Assignment rows','error');
+    return;
+  }
+  if (allocations.length === 0) {
+    const firstRow = document.querySelector('.i-bin-row');
+    if (firstRow) firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast('Please assign at least one bin','error');
+    return;
+  }
+  if (Math.abs(totalAllocated - qty) > 0.01) {
+    const firstRow = document.querySelector('.i-bin-row');
+    if (firstRow) firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast(`Allocated tons (${totalAllocated}) does not match Intake qty (${qty})`, 'error');
+    return;
+  }
 
   const now=new Date();
   const dateStr=now.toISOString();
@@ -115,46 +182,51 @@ async function saveIntake(){
   btn.innerHTML = 'Saving...';
   btn.disabled = true;
 
-  const success = await dbInsertIntake(intakeRecord, dbAllocations);
-  
-  if (success) {
-      const entry = {
-        ...intakeRecord,
-        entryMoisture: intakeRecord.entry_moisture,
-        vehicleWeight: intakeRecord.vehicle_weight,
-        grossWeight: intakeRecord.gross_weight,
-        netWeight: intakeRecord.net_weight,
-        dateTS: now.getTime(),
-        date: now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
-      };
-      state.intakes.unshift(entry);
-      
-      dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} Tons of ${hybrid} (Challan: ${challan})`);
-      
-      allocations.forEach(a => {
-         const b = state.bins[a.binId - 1];
-         b.status='intake';b.hybrid=hybrid;b.company=intakeRecord.company;b.lot=intakeRecord.lot;
-         b.qty=(b.qty || 0) + a.qty;b.pkts=(b.pkts || 0) + a.pkts;b.entryMoisture=intakeRecord.entry_moisture;
-         b.currentMoisture=intakeRecord.entry_moisture;b.intakeDate=entry.date;
-         b.intakeDateTS=now.getTime();b.intakeRef=entry.id;b.airflow='up';
-         
-         dbUpdateBin(b.id, {
-             status: 'intake', hybrid: b.hybrid, company: b.company, lot: b.lot,
-             qty: b.qty, pkts: b.pkts, entry_moisture: b.entryMoisture,
-             current_moisture: b.currentMoisture, intake_date_ts: b.intakeDateTS.toString(), 
-             airflow: 'up'
-         });
-      });
-      
-      closeModal('intake-modal');
-      toast(`Intake saved — Challan ${challan}`);
-      renderDashboard();
-  } else {
-      toast('Failed to save to database', 'error');
+  try {
+    const success = await dbInsertIntake(intakeRecord, dbAllocations);
+
+    if (success) {
+        const entry = {
+          ...intakeRecord,
+          entryMoisture: intakeRecord.entry_moisture,
+          vehicleWeight: intakeRecord.vehicle_weight,
+          grossWeight: intakeRecord.gross_weight,
+          netWeight: intakeRecord.net_weight,
+          dateTS: now.getTime(),
+          date: now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+        };
+        state.intakes.unshift(entry);
+
+        dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} Tons of ${hybrid} (Challan: ${challan})`);
+
+        allocations.forEach(a => {
+           const b = state.bins[a.binId - 1];
+           b.status='intake';b.hybrid=hybrid;b.company=intakeRecord.company;b.lot=intakeRecord.lot;
+           b.qty=(b.qty || 0) + a.qty;b.pkts=(b.pkts || 0) + a.pkts;b.entryMoisture=intakeRecord.entry_moisture;
+           b.currentMoisture=intakeRecord.entry_moisture;b.intakeDate=entry.date;
+           b.intakeDateTS=now.getTime();b.intakeRef=entry.id;b.airflow='up';
+
+           dbUpdateBin(b.id, {
+               status: 'intake', hybrid: b.hybrid, company: b.company, lot: b.lot,
+               qty: b.qty, pkts: b.pkts, entry_moisture: b.entryMoisture,
+               current_moisture: b.currentMoisture, intake_date_ts: b.intakeDateTS.toString(),
+               airflow: 'up'
+           });
+        });
+
+        closeModal('intake-modal');
+        toast(`Intake saved — Challan ${challan}`);
+        renderDashboard();
+    } else {
+        toast('Failed to save to database', 'error');
+    }
+  } catch(err) {
+    console.error('Save intake error:', err);
+    toast('Server error. Please try again.', 'error');
+  } finally {
+    btn.innerHTML = ogText;
+    btn.disabled = false;
   }
-  
-  btn.innerHTML = ogText;
-  btn.disabled = false;
 }
 
 async function saveDispatch(){
@@ -206,32 +278,39 @@ async function saveDispatch(){
   btn.innerHTML = 'Generating...';
   btn.disabled = true;
 
-  const success = await dbInsertDispatch(dispatchRecord);
-  
-  if (success) {
-      state.dispatches.unshift(d);
-      dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Tons / ${d.amount} INR)`);
-      if (d.bin) {
-          const b = state.bins[d.bin - 1];
-          if (b.qty) {
-              b.qty = Math.max(0, b.qty - d.qty);
-              b.pkts = Math.max(0, b.pkts - d.bags);
-              dbUpdateBin(b.id, { qty: b.qty, pkts: b.pkts });
-          }
-      }
-      closeModal('dispatch-modal');
-      toast(`Receipt ${receiptId} generated & signed`,'success');
-      setTimeout(()=>viewReceipt(receiptId),350);
-      renderDispatchPage();
-  } else {
-      toast('Failed to save dispatch to database', 'error');
+  try {
+    const success = await dbInsertDispatch(dispatchRecord);
+
+    if (success) {
+        state.dispatches.unshift(d);
+        dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Tons / ${d.amount} INR)`);
+        if (d.bin) {
+            const b = state.bins[d.bin - 1];
+            if (b.qty) {
+                b.qty = Math.max(0, b.qty - d.qty);
+                b.pkts = Math.max(0, b.pkts - d.bags);
+                dbUpdateBin(b.id, { qty: b.qty, pkts: b.pkts });
+            }
+        }
+        closeModal('dispatch-modal');
+        toast(`Receipt ${receiptId} generated & signed`,'success');
+        setTimeout(()=>viewReceipt(receiptId),350);
+        renderDispatchPage();
+    } else {
+        toast('Failed to save dispatch to database', 'error');
+    }
+  } catch(err) {
+    console.error('Save dispatch error:', err);
+    toast('Server error. Please try again.', 'error');
+  } finally {
+    btn.innerHTML = ogText;
+    btn.disabled = false;
   }
-  btn.innerHTML = ogText;
-  btn.disabled = false;
 }
 
 function openBinModal(binId){
   const bin=state.bins[binId-1];
+  const editableStatus=getEditableBinStatus(bin);
   document.getElementById('bin-modal-title').textContent=`BIN-${bin.id} — ${bin.status==='empty'?'Empty':'Update'}`;
   const m=bin.currentMoisture||0;
   const days=dateDiff(bin.intakeDateTS);
@@ -257,9 +336,8 @@ function openBinModal(binId){
       <div class="form-group">
         <label class="form-label">Status</label>
         <select class="form-select" id="bm-s" onchange="document.getElementById('bm-details-container').style.display=this.value==='empty'?'none':'grid';document.getElementById('bm-details-divider').style.display=this.value==='empty'?'none':'block';">
-          <option value="intake" ${bin.status==='intake'?'selected':''}>Intake</option>
-          <option value="drying" ${bin.status==='drying'?'selected':''}>Drying</option>
-          <option value="ready" ${bin.status==='ready'?'selected':''}>Ready</option>
+          <option value="intake" ${editableStatus==='intake'?'selected':''}>Intake</option>
+          <option value="drying" ${editableStatus==='drying'?'selected':''}>Drying</option>
           <option value="shelling" ${bin.status==='shelling'?'selected':''}>Shelling</option>
           <option value="empty" ${bin.status==='empty'?'selected':''}>Empty (Clear Bin)</option>
         </select>
@@ -312,7 +390,7 @@ async function saveBinModal(binId){
   const ogText = btn.innerHTML;
   btn.innerHTML = 'Saving...';
   btn.disabled = true;
-  
+
   const updates = {
       status: b.status,
       hybrid: b.hybrid,
@@ -325,21 +403,27 @@ async function saveBinModal(binId){
       intake_date_ts: b.intakeDateTS ? b.intakeDateTS.toString() : null,
       airflow: b.airflow
   };
-  
-  const success = await dbUpdateBin(b.id, updates);
-  if (success) {
-      if (oldStatus !== b.status) {
-          dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.id} changed to ${b.status}`);
-      }
-      closeModal('bin-modal');
-      toast(`BIN-${binId} updated successfully`);
-      const ap=document.querySelector('.page.active');
-      if(ap)renderPage(ap.id.replace('page-',''));
-  } else {
-      toast('Failed to update bin in database', 'error');
+
+  try {
+    const success = await dbUpdateBin(b.id, updates);
+    if (success) {
+        if (oldStatus !== b.status) {
+            dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.id} changed to ${b.status}`);
+        }
+        closeModal('bin-modal');
+        toast(`BIN-${binId} updated successfully`);
+        const ap=document.querySelector('.page.active');
+        if(ap)renderPage(ap.id.replace('page-',''));
+    } else {
+        toast('Failed to update bin in database', 'error');
+    }
+  } catch(err) {
+    console.error('Save bin error:', err);
+    toast('Server error. Please try again.', 'error');
+  } finally {
+    btn.innerHTML = ogText;
+    btn.disabled = false;
   }
-  btn.innerHTML = ogText;
-  btn.disabled = false;
 }
 function setAir(id,dir){
   state.bins[id-1].airflow=dir;
@@ -347,6 +431,9 @@ function setAir(id,dir){
   if(u&&d){u.classList.toggle('active-up',dir==='up');d.classList.toggle('active-down',dir==='down');}
 }
 async function saveAllMoisture(){
+  const btn = document.querySelector('#page-moisture .btn-gold');
+  if (btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
+
   const promises = [];
   state.bins.filter(b=>b.status!=='empty').forEach(b=>{
     const el=document.getElementById('mi-'+b.id);
@@ -358,13 +445,22 @@ async function saveAllMoisture(){
         }
     }
   });
-  
-  if (promises.length > 0) {
-      await Promise.all(promises);
-      dbLogActivity('MOISTURE_LOGGED', `Recorded ${promises.length} new moisture readings`);
+
+  try {
+    if (promises.length > 0) {
+        await Promise.all(promises);
+        dbLogActivity('MOISTURE_LOGGED', `Recorded ${promises.length} new moisture readings`);
+    }
+    toast('All moisture readings saved');
+    renderMoisturePage();
+    renderDashboard();
+    renderAnalytics();
+  } catch(err) {
+    console.error('Save moisture error:', err);
+    toast('Failed to save moisture readings', 'error');
+  } finally {
+    if (btn) { btn.innerHTML = 'Save All Readings'; btn.disabled = false; }
   }
-  toast('All moisture readings saved');
-  renderMoisturePage();
 }
 
 let managerAccessBtn = null;
@@ -553,7 +649,7 @@ async function saveMaintenance() {
   try {
     const saved = await dbInsertMaintenance(log);
     if (saved) {
-      state.maintenance.unshift(saved);
+      state.maintenance.unshift(saved === true ? log : saved);
       renderMaintenancePage();
       closeModal('maintenance-modal');
       
@@ -614,7 +710,7 @@ async function saveLabor() {
   try {
     const saved = await dbInsertLabor(log);
     if (saved) {
-      state.labor.unshift(saved);
+      state.labor.unshift(saved === true ? log : saved);
       renderLaborPage();
       closeModal('labor-modal');
       
