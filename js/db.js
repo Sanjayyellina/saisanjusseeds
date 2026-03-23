@@ -96,8 +96,8 @@ async function insertRecord(table, record, fallbackRecords = []) {
 
   for (let index = 0; index < attempts.length; index += 1) {
     const payload = attempts[index];
-    const { data, error } = await client.from(table).insert([payload]).select().maybeSingle();
-    if (!error) return data || payload;
+    const { error } = await client.from(table).insert([payload]);
+    if (!error) return payload;
 
     lastError = error;
     if (!isSchemaMismatchError(error) || index === attempts.length - 1) break;
