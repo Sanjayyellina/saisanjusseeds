@@ -7,30 +7,38 @@
 // CONFIG BANNER HANDLERS
 // ================================================================
 
-function saveConfig() {
+async function saveConfig() {
   const url = document.getElementById('cfg-url').value.trim();
   const key = document.getElementById('cfg-key').value.trim();
+  const btn = document.querySelector('#config-banner button');
+  const originalText = btn ? btn.innerHTML : '';
+
   if (!url || !key) {
     toast('Please enter both Supabase URL and Key', 'error');
     return;
   }
+
   try {
-    window._demoMode = false;
+    if (btn) {
+      btn.innerHTML = 'Connecting...';
+      btn.disabled = true;
+    }
+
     configureSupabaseClient(url, key);
+    await validateSupabaseConnection();
     document.getElementById('config-banner').style.display = 'none';
     toast('Database connected! Loading data…', 'success');
-    initApp();
+    await initApp();
   } catch(e) {
-    toast('Invalid credentials. Please check and try again.', 'error');
+    console.error('Supabase connection failed:', e);
+    resetSupabaseClient();
+    toast(explainDbError(e, 'Unable to connect to Supabase. Please check the project URL, anon key, and table permissions.'), 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
   }
-}
-
-function useDemoMode() {
-  document.getElementById('config-banner').style.display = 'none';
-  resetSupabaseClient();
-  window._demoMode = true;
-  seedData();
-  renderDashboard();
 }
 
 // ================================================================
@@ -185,11 +193,12 @@ async function saveIntake(){
   btn.disabled = true;
 
   try {
-    const success = await dbInsertIntake(intakeRecord, dbAllocations);
+    const savedIntake = await dbInsertIntake(intakeRecord, dbAllocations);
 
-    if (success) {
+    if (savedIntake) {
         const entry = {
           ...intakeRecord,
+          id: savedIntake.id || intakeRecord.id,
           entryMoisture: intakeRecord.entry_moisture,
           vehicleWeight: intakeRecord.vehicle_weight,
           grossWeight: intakeRecord.gross_weight,
@@ -199,7 +208,7 @@ async function saveIntake(){
         };
         state.intakes.unshift(entry);
 
-        dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} Tons of ${hybrid} (Challan: ${challan})`);
+        dbLogActivity('INTAKE_CREATED', `Intake ${entry.id} created for ${qty} Tons of ${hybrid} (Challan: ${challan})`);
 
         allocations.forEach(a => {
            const b = state.bins[a.binId - 1];
@@ -220,11 +229,11 @@ async function saveIntake(){
         toast(`Intake saved — Challan ${challan}`);
         renderDashboard();
     } else {
-        toast('Failed to save to database', 'error');
+        toast('Failed to save intake to database', 'error');
     }
   } catch(err) {
     console.error('Save intake error:', err);
-    toast('Server error. Please try again.', 'error');
+    toast(explainDbError(err, 'Unable to save intake to Supabase.'), 'error');
   } finally {
     btn.innerHTML = ogText;
     btn.disabled = false;
@@ -281,9 +290,9 @@ async function saveDispatch(){
   btn.disabled = true;
 
   try {
-    const success = await dbInsertDispatch(dispatchRecord);
+    const savedDispatch = await dbInsertDispatch(dispatchRecord);
 
-    if (success) {
+    if (savedDispatch) {
         state.dispatches.unshift(d);
         dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Tons / ${d.amount} INR)`);
         if (d.bin) {
@@ -303,7 +312,7 @@ async function saveDispatch(){
     }
   } catch(err) {
     console.error('Save dispatch error:', err);
-    toast('Server error. Please try again.', 'error');
+    toast(explainDbError(err, 'Unable to save dispatch to Supabase.'), 'error');
   } finally {
     btn.innerHTML = ogText;
     btn.disabled = false;
@@ -421,7 +430,7 @@ async function saveBinModal(binId){
     }
   } catch(err) {
     console.error('Save bin error:', err);
-    toast('Server error. Please try again.', 'error');
+    toast(explainDbError(err, 'Unable to update bin in Supabase.'), 'error');
   } finally {
     btn.innerHTML = ogText;
     btn.disabled = false;
@@ -459,7 +468,7 @@ async function saveAllMoisture(){
     renderAnalytics();
   } catch(err) {
     console.error('Save moisture error:', err);
-    toast('Failed to save moisture readings', 'error');
+    toast(explainDbError(err, 'Failed to save moisture readings to Supabase.'), 'error');
   } finally {
     if (btn) { btn.innerHTML = 'Save All Readings'; btn.disabled = false; }
   }
