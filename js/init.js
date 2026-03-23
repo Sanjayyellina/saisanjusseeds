@@ -5,6 +5,12 @@
 
 async function initApp() {
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  if (window._demoMode) {
+    seedData();
+    renderDashboard();
+    return;
+  }
   
   const bins = await dbFetchBins();
   if (bins && bins.length > 0) {

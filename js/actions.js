@@ -15,7 +15,8 @@ function saveConfig() {
     return;
   }
   try {
-    window._supabase = window.supabase.createClient(url, key);
+    window._demoMode = false;
+    configureSupabaseClient(url, key);
     document.getElementById('config-banner').style.display = 'none';
     toast('Database connected! Loading data…', 'success');
     initApp();
@@ -26,6 +27,7 @@ function saveConfig() {
 
 function useDemoMode() {
   document.getElementById('config-banner').style.display = 'none';
+  resetSupabaseClient();
   window._demoMode = true;
   seedData();
   renderDashboard();
