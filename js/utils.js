@@ -20,6 +20,10 @@ function dateDiff(d){
   if(!d)return 0;
   return Math.floor((Date.now()-new Date(d).getTime())/86400000);
 }
+function hoursDiff(d){
+  if(!d)return 0;
+  return Math.floor((Date.now()-new Date(d).getTime())/3600000);
+}
 function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
