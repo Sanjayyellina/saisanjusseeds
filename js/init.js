@@ -1,9 +1,23 @@
 // ============================================================
 // INITIALISATION & BOOT
 // Yellina Seeds Private Limited — Operations Platform
+"use strict";
 // ============================================================
 
 async function initApp() {
+  const { data: { session } } = await dbClient.auth.getSession();
+  const loginScreen = document.getElementById('login-screen');
+  const appWrapper = document.querySelector('.wrapper'); // Based on index.html having a wrapper or similar
+  
+  if (!session) {
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (appWrapper) appWrapper.style.display = 'none';
+    return;
+  } else {
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (appWrapper) appWrapper.style.display = 'flex';
+  }
+
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   
   const bins = await dbFetchBins();
@@ -83,7 +97,7 @@ async function initApp() {
     state.labor = labor;
   }
 
-  renderDashboard();
+  if(window.Store) window.Store.emitChange();
 }
 
 initApp();

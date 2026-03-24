@@ -1,5 +1,6 @@
 // ============================================================
 // ACTIONS & EVENT HANDLERS
+"use strict";
 // Yellina Seeds Private Limited — Operations Platform
 // ============================================================
 
@@ -45,6 +46,13 @@ function addIntakeBinRow() {
   container.appendChild(row);
 }
 
+/**
+ * Reads form data from the Intake modal, constructs intake records and allocations,
+ * and inserts them into the database while updating the relevant bin states.
+ * 
+ * @async
+ * @returns {Promise<void>} Resolves when the transaction and state updates are complete.
+ */
 async function saveIntake(){
   const challan=document.getElementById('i-challan').value.trim();
   const vehicle=document.getElementById('i-vehicle').value.trim().toUpperCase();
@@ -97,8 +105,7 @@ async function saveIntake(){
       vehicle_weight: parseFloat(document.getElementById('i-veh-weight').value)||0,
       gross_weight: parseFloat(document.getElementById('i-gross-weight').value)||0,
       net_weight: 0,
-      created_at: dateStr,
-      updated_at: dateStr
+      created_at: dateStr
   };
   
   intakeRecord.net_weight = intakeRecord.gross_weight && intakeRecord.vehicle_weight ? intakeRecord.gross_weight - intakeRecord.vehicle_weight : 0;
@@ -148,7 +155,7 @@ async function saveIntake(){
       
       closeModal('intake-modal');
       toast(`Intake saved — Challan ${challan}`);
-      renderDashboard();
+      if(window.Store) window.Store.emitChange();
   } else {
       toast('Failed to save to database', 'error');
   }
@@ -157,6 +164,13 @@ async function saveIntake(){
   btn.disabled = false;
 }
 
+/**
+ * Reads form data from the Dispatch modal, constructs a new dispatch/receipt record,
+ * generates a secure hash & signature for the receipt, and inserts the data into the database.
+ * 
+ * @async
+ * @returns {Promise<void>} Resolves when the dispatch record is successfully generated and stored.
+ */
 async function saveDispatch(){
   const party=document.getElementById('d-party').value.trim();
   const vehicle=document.getElementById('d-vehicle').value.trim().toUpperCase();
@@ -222,7 +236,7 @@ async function saveDispatch(){
       closeModal('dispatch-modal');
       toast(`Receipt ${receiptId} generated & signed`,'success');
       setTimeout(()=>viewReceipt(receiptId),350);
-      renderDispatchPage();
+      if(window.Store) window.Store.emitChange();
   } else {
       toast('Failed to save dispatch to database', 'error');
   }
@@ -334,38 +348,14 @@ async function saveBinModal(binId){
       closeModal('bin-modal');
       toast(`BIN-${binId} updated successfully`);
       const ap=document.querySelector('.page.active');
-      if(ap)renderPage(ap.id.replace('page-',''));
+      if(ap && window.Store) window.Store.emitChange();
   } else {
       toast('Failed to update bin in database', 'error');
   }
   btn.innerHTML = ogText;
   btn.disabled = false;
 }
-function setAir(id,dir){
-  state.bins[id-1].airflow=dir;
-  const u=document.getElementById('air-up-'+id),d=document.getElementById('air-dn-'+id);
-  if(u&&d){u.classList.toggle('active-up',dir==='up');d.classList.toggle('active-down',dir==='down');}
-}
-async function saveAllMoisture(){
-  const promises = [];
-  state.bins.filter(b=>b.status!=='empty').forEach(b=>{
-    const el=document.getElementById('mi-'+b.id);
-    if(el) {
-        const newVal = parseFloat(el.value);
-        if (!isNaN(newVal) && newVal !== b.currentMoisture) {
-            b.currentMoisture=newVal;
-            promises.push(dbUpdateBin(b.id, { current_moisture: newVal }));
-        }
-    }
-  });
-  
-  if (promises.length > 0) {
-      await Promise.all(promises);
-      dbLogActivity('MOISTURE_LOGGED', `Recorded ${promises.length} new moisture readings`);
-  }
-  toast('All moisture readings saved');
-  renderMoisturePage();
-}
+
 
 let managerAccessBtn = null;
 function showManagerAccess(btnElement) {
@@ -554,7 +544,7 @@ async function saveMaintenance() {
     const saved = await dbInsertMaintenance(log);
     if (saved) {
       state.maintenance.unshift(saved);
-      renderMaintenancePage();
+      if(window.Store) window.Store.emitChange();
       closeModal('maintenance-modal');
       
       // Clear Inputs
@@ -615,7 +605,7 @@ async function saveLabor() {
     const saved = await dbInsertLabor(log);
     if (saved) {
       state.labor.unshift(saved);
-      renderLaborPage();
+      if(window.Store) window.Store.emitChange();
       closeModal('labor-modal');
       
       // Clear Inputs

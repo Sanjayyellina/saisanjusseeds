@@ -1,6 +1,7 @@
 // ============================================================
 // RENDER PAGES
 // Yellina Seeds Private Limited — Operations Platform
+"use strict";
 // ============================================================
 
 // ================================================================
@@ -8,7 +9,7 @@
 // ================================================================
 function renderPage(name){
   const map={dashboard:renderDashboard,intake:renderIntakePage,bins:renderBinsPage,
-    moisture:renderMoisturePage,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
+    moisture:null,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
     analytics:renderAnalytics, manager: renderManagerPage, maintenance: renderMaintenancePage, labor: renderLaborPage};
   if(map[name])map[name]();
 }
@@ -84,47 +85,6 @@ function renderIntakePage(){
 
 function renderBinsPage(){
   document.getElementById('bins-full-grid').innerHTML=state.bins.map(b=>renderBinTile(b, false)).join('');
-}
-
-function renderMoisturePage(){
-  const active=state.bins.filter(b=>b.status!=='empty');
-  document.getElementById('moisture-list').innerHTML=active.length?active.map(bin=>`
-    <div class="m-card">
-      <div class="m-bin-badge">BIN<br>${bin.id}</div>
-      <div class="m-info">
-        <div class="m-hybrid">${bin.hybrid}</div>
-        <div class="m-meta">${bin.qty}T · ${t('bins.entry')}: <span class="mono fw700">${bin.entryMoisture}%</span> · ${t('bins.status.intake')}: ${bin.intakeDate?bin.intakeDate.split(',')[0]:''} · ${t('bins.day')} ${dateDiff(bin.intakeDateTS)}</div>
-        <div style="margin-top:6px;">
-          <div class="moisture-track" style="max-width:200px;"><div class="moisture-bar" style="width:${getMoisturePct(bin.currentMoisture)}%;background:${getMoistureBarColor(bin.currentMoisture)};"></div></div>
-        </div>
-      </div>
-      <div class="m-controls">
-        <div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-5);text-align:center;margin-bottom:4px;">${t('intake.table.moisture')}</div>
-          <input type="number" step="0.1" value="${(bin.currentMoisture||0).toFixed(1)}" class="m-input"
-            onchange="state.bins[${bin.id-1}].currentMoisture=parseFloat(this.value)||0" id="mi-${bin.id}" disabled>
-        </div>
-        <div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-5);text-align:center;margin-bottom:4px;">Airflow</div>
-          <div class="air-toggle">
-            <button class="air-btn ${bin.airflow==='up'?'active-up':''}" id="air-up-${bin.id}"
-              onclick="setAir(${bin.id},'up')" disabled>${t('bins.airflow.up')}</button>
-            <button class="air-btn ${bin.airflow==='down'?'active-down':''}" id="air-dn-${bin.id}"
-              onclick="setAir(${bin.id},'down')" disabled>${t('bins.airflow.down')}</button>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-5);text-align:center;margin-bottom:4px;">${t('dash.status')}</div>
-          <select class="m-status-sel" onchange="state.bins[${bin.id-1}].status=this.value" disabled>
-            <option value="intake" ${bin.status==='intake'?'selected':''}>${t('bins.status.intake')}</option>
-            <option value="drying" ${bin.status==='drying'?'selected':''}>${t('bins.status.drying')}</option>
-            <option value="ready" ${bin.status==='ready'?'selected':''}>${t('bins.status.ready')}</option>
-            <option value="shelling" ${bin.status==='shelling'?'selected':''}>${t('bins.status.shelling')}</option>
-          </select>
-        </div>
-      </div>
-    </div>`).join('')
-    :`<div class="empty-state"><div class="empty-icon">💧</div><div class="empty-title">${t('bins.emptyState')}</div></div>`;
 }
 
 
@@ -384,4 +344,15 @@ function renderLaborPage() {
       <td class="fs12 text-muted truncate" style="max-width:140px;">${l.notes || '—'}</td>
     </tr>`).join('')
     : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👷</div><div class="empty-title">No Labor Logs found</div></div></td></tr>`;
+}
+
+// Predictable state management subscription
+if (window.Store) {
+  window.Store.subscribe((newState) => {
+    if (newState.currentPage) {
+       // Disable re-rendering if user is in an active form to prevent jumping or lost inputs
+       // For a simple app, we can just call renderPage. If issues arise, we can check focus.
+       renderPage(newState.currentPage);
+    }
+  });
 }

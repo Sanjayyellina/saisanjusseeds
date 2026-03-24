@@ -1,5 +1,6 @@
 // ============================================================
 // CRYPTO — HASH & VERIFY
+"use strict";
 // Yellina Seeds Private Limited — Operations Platform
 // ============================================================
 

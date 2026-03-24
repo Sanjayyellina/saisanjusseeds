@@ -1,6 +1,7 @@
 // ================================================================
 // MULTI-LANGUAGE SUPPORT (i18n)
 // Yellina Seeds Private Limited — Operations Platform
+"use strict";
 // ================================================================
 
 let currentLang = localStorage.getItem('yellina_lang') || 'en';
