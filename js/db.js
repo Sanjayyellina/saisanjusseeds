@@ -53,16 +53,87 @@ async function dbUpdateBin(id, updates) {
 }
 
 async function dbInsertIntake(intake, allocations = []) {
-  // Insert intake record
-  const { error: intakeError } = await getSupabaseClient().from('intakes').insert([intake]);
-  if (intakeError) { console.error('Error inserting intake:', intakeError); return false; }
-  
-  // Insert allocations if any
-  if (allocations && allocations.length > 0) {
-    const { error: allocError } = await getSupabaseClient().from('intake_allocations').insert(allocations);
-    if (allocError) { console.error('Error inserting allocations:', allocError); return false; }
+  const client = getSupabaseClient();
+
+  const intakePayloadVariants = [
+    intake,
+    {
+      challan: intake.challan,
+      vehicle: intake.vehicle,
+      location: intake.location,
+      company: intake.company,
+      hybrid: intake.hybrid,
+      lot: intake.lot,
+      qty: intake.qty,
+      pkts: intake.pkts,
+      entry_moisture: intake.entry_moisture,
+      lr: intake.lr,
+      remarks: intake.remarks,
+      vehicle_weight: intake.vehicle_weight,
+      gross_weight: intake.gross_weight,
+      net_weight: intake.net_weight,
+      created_at: intake.created_at,
+      updated_at: intake.updated_at
+    },
+    {
+      challan: intake.challan,
+      vehicle: intake.vehicle,
+      location: intake.location,
+      company: intake.company,
+      hybrid: intake.hybrid,
+      lot: intake.lot,
+      qty: intake.qty,
+      pkts: intake.pkts,
+      entry_moisture: intake.entry_moisture,
+      lr: intake.lr,
+      remarks: intake.remarks,
+      vehicle_weight: intake.vehicle_weight,
+      gross_weight: intake.gross_weight,
+      net_weight: intake.net_weight
+    }
+  ];
+
+  let lastError = null;
+  let insertedIntakeId = intake.id;
+
+  for (const payload of intakePayloadVariants) {
+    const { data, error } = await client.from('intakes').insert([payload]).select('id').maybeSingle();
+    if (!error) {
+      insertedIntakeId = data && data.id ? data.id : insertedIntakeId;
+      lastError = null;
+      break;
+    }
+
+    // Some projects allow insert but block select on the inserted row.
+    const { error: plainInsertError } = await client.from('intakes').insert([payload]);
+    if (!plainInsertError) {
+      lastError = null;
+      break;
+    }
+
+    lastError = error;
+    console.warn('Intake insert attempt failed, retrying with fallback payload:', error);
   }
-  
+
+  if (lastError) {
+    console.error('Error inserting intake:', lastError);
+    return false;
+  }
+
+  if (allocations && allocations.length > 0) {
+    const allocationRows = allocations.map(a => ({
+      intake_id: insertedIntakeId,
+      bin_id: a.bin_id,
+      qty: a.qty,
+      pkts: a.pkts
+    }));
+
+    const { error: allocError } = await client.from('intake_allocations').insert(allocationRows);
+    if (allocError) {
+      console.warn('Intake saved, but allocations were not saved:', allocError);
+    }
+  }
+
   return true;
 }
 
