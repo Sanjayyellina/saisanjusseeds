@@ -122,7 +122,7 @@ async function saveIntake(){
   const dtInput=document.getElementById('i-datetime')?.value;
   const now=dtInput ? new Date(dtInput) : new Date();
   const dateStr=now.toISOString();
-  const intakeId='INT-'+String(state.intakes.length+1).padStart(3,'0');
+  const intakeId='INT-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
   
   const intakeRecord = {
       id: intakeId,
