@@ -13,12 +13,38 @@ async function initApp() {
   if (appShell) appShell.style.display = 'none';
 }
 
+// Toggle the user dropdown menu
+window.toggleUserMenu = function() {
+  const menu = document.getElementById('user-menu');
+  if (menu) menu.classList.toggle('open');
+};
+// Close menu when clicking outside
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('user-menu');
+  const avatar = document.getElementById('user-avatar');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== avatar) {
+    menu.classList.remove('open');
+  }
+});
+
 // Called after successful login to load data and show the app
 async function bootApp() {
   const loginScreen = document.getElementById('login-screen');
   const appShell = document.getElementById('app-shell');
   if (loginScreen) loginScreen.style.display = 'none';
   if (appShell) appShell.style.display = 'block';
+
+  // Set avatar initial from logged-in user's email
+  try {
+    const { data: { user } } = await dbClient.auth.getUser();
+    if (user && user.email) {
+      const initial = user.email.charAt(0).toUpperCase();
+      const avatarEl = document.getElementById('user-avatar');
+      if (avatarEl) { avatarEl.textContent = initial; avatarEl.title = user.email; }
+      const emailEl = document.getElementById('user-menu-email');
+      if (emailEl) emailEl.textContent = user.email;
+    }
+  } catch(e) { /* silent */ }
 
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 

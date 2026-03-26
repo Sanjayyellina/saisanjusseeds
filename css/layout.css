@@ -73,7 +73,34 @@
   display:flex; align-items:center; justify-content:center;
   font-size:12px; font-weight:700; color:#fff; cursor:pointer;
   border:2px solid var(--gold-border);
+  user-select:none; flex-shrink:0;
 }
+
+/* User dropdown menu */
+.user-menu {
+  position:absolute; top:calc(var(--topbar-h) - 6px); right:12px;
+  background:var(--surface); border:1px solid var(--surface-4);
+  border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.15);
+  min-width:200px; z-index:9999;
+  display:none; flex-direction:column;
+  overflow:hidden;
+}
+.user-menu.open { display:flex; }
+.user-menu-email {
+  padding:12px 14px 10px;
+  font-size:12px; font-weight:600; color:var(--text-secondary);
+  word-break:break-all;
+}
+.user-menu-divider {
+  height:1px; background:var(--surface-4); margin:0;
+}
+.user-menu-item {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 14px; font-size:13px; font-weight:500;
+  color:var(--text); cursor:pointer;
+  transition:background .15s;
+}
+.user-menu-item:hover { background:var(--surface-2); }
 
 /* ============================================================
    SIDEBAR

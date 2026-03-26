@@ -73,7 +73,7 @@ const translations = {
     intake: {
       title: 'Intake Register',
       subtitle: 'All incoming corn loads',
-      newIntake: '+ New Intake',
+      newIntake: 'New Intake',
       table: {
         location: 'From',
         lot: 'Lot No',
@@ -257,7 +257,7 @@ const translations = {
     intake: {
       title: 'आवक रजिस्टर',
       subtitle: 'सभी आने वाले मक्के के लोड',
-      newIntake: '+ नई आवक',
+      newIntake: 'नई आवक',
       table: {
         location: 'स्थान से',
         lot: 'लॉट नंबर',
@@ -441,7 +441,7 @@ const translations = {
     intake: {
       title: 'దిగుమతి రిజిస్టర్',
       subtitle: 'అన్ని మొక్కజొన్న లోడ్లు',
-      newIntake: '+ కొత్త దిగుమతి',
+      newIntake: 'కొత్త దిగుమతి',
       table: {
         location: 'నుండి',
         lot: 'లాట్ నం',
