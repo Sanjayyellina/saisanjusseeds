@@ -134,6 +134,15 @@ async function bootApp() {
   if (binHistory) state.binHistory = binHistory;
 
   if (window.Store) window.Store.emitChange();
+
+  // Show pending badge if there are queued writes from a previous offline session
+  if (window.OfflineQueue) {
+    OfflineQueue.updateBadge();
+    // If we're back online and have pending items, sync them now
+    if (navigator.onLine && OfflineQueue.count() > 0) {
+      setTimeout(() => OfflineQueue.sync(), 2000);
+    }
+  }
 }
 
 // Forgot password — simple prompt for now
@@ -153,5 +162,21 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('SW registration failed:', err));
   });
 }
+
+// Online/offline event handlers
+window.addEventListener('online', () => {
+  console.log('Connection restored — syncing offline queue…');
+  if (window.OfflineQueue) {
+    OfflineQueue.updateBadge();
+    // Small delay to let connection stabilise before syncing
+    setTimeout(() => OfflineQueue.sync(), 1500);
+  }
+});
+
+window.addEventListener('offline', () => {
+  console.log('Connection lost — writes will be queued locally');
+  if (window.OfflineQueue) OfflineQueue.updateBadge();
+  if (typeof showToast === 'function') showToast('You\'re offline — entries will be saved locally and synced when connected', 'info');
+});
 
 initApp();

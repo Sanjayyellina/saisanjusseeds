@@ -879,6 +879,15 @@
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toasts"></div>
 
+<!-- OFFLINE BAR — shown when device has no internet -->
+<div class="offline-bar" id="offline-bar">
+  <div class="offline-dot"></div>
+  <span id="offline-bar-text">You're offline — viewing cached data</span>
+</div>
+
+<!-- SYNC BADGE — shown when there are pending writes to sync -->
+<div class="sync-badge" id="sync-badge"></div>
+
 </div><!-- /#app-shell -->
 
 <!-- ============================================================
@@ -886,7 +895,8 @@
      ============================================================ -->
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="js/error-boundary.js"></script>
-<script src="js/db.js"></script>
+<script src="js/offline-queue.js"></script>
+<script src="js/db.js?v=2"></script>
 <!-- Modular JavaScript -->
 <script src="js/state.js"></script>
 <script src="js/seed.js"></script>
@@ -899,6 +909,6 @@
 <script src="js/actions.js?v=2"></script>
 <script src="js/receipt.js"></script>
 <script src="js/clock.js?v=2"></script>
-<script src="js/init.js?v=3"></script>
+<script src="js/init.js?v=4"></script>
 </body>
 </html>

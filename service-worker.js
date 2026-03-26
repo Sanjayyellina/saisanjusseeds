@@ -4,7 +4,7 @@
    ============================================================ */
 'use strict';
 
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 const CACHE_NAME = `yellina-seeds-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -17,6 +17,7 @@ const STATIC_ASSETS = [
   '/js/clock.js',
   '/js/crypto.js',
   '/js/error-boundary.js',
+  '/js/offline-queue.js',
   '/js/i18n.js',
   '/js/receipt.js',
   '/js/seed.js',

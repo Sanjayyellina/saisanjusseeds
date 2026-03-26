@@ -9,12 +9,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // Initialize Supabase client
 const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- Fetch Functions ---
+// ============================================================
+// READ FUNCTIONS (always try network, fall back to cache)
+// ============================================================
 
-/**
- * Fetches all bins from the 'bins' table, ordered by ID.
- * @returns {Promise<Array<Object>|null>} Array of bin objects or null on error.
- */
 async function dbFetchBins() {
   try {
     const { data, error } = await dbClient.from('bins').select('*').order('id', { ascending: true });
@@ -27,10 +25,6 @@ async function dbFetchBins() {
   }
 }
 
-/**
- * Fetches all intake records from the 'intakes' table, ordered by creation date descending.
- * @returns {Promise<Array<Object>|null>} Array of intake objects or null on error.
- */
 async function dbFetchIntakes() {
   try {
     const { data, error } = await dbClient
@@ -45,10 +39,6 @@ async function dbFetchIntakes() {
   }
 }
 
-/**
- * Fetches all dispatch records from the 'dispatches' table, ordered by creation date descending.
- * @returns {Promise<Array<Object>|null>} Array of dispatch objects or null on error.
- */
 async function dbFetchDispatches() {
   try {
     const { data, error } = await dbClient.from('dispatches').select('*').order('created_at', { ascending: false });
@@ -60,10 +50,6 @@ async function dbFetchDispatches() {
   }
 }
 
-/**
- * Fetches all maintenance logs from the 'maintenance_logs' table, ordered by date descending.
- * @returns {Promise<Array<Object>|null>} Array of maintenance log objects or null on error.
- */
 async function dbFetchMaintenance() {
   try {
     const { data, error } = await dbClient.from('maintenance_logs').select('*').order('date', { ascending: false });
@@ -75,10 +61,6 @@ async function dbFetchMaintenance() {
   }
 }
 
-/**
- * Fetches all labor logs from the 'labor_logs' table, ordered by date descending.
- * @returns {Promise<Array<Object>|null>} Array of labor log objects or null on error.
- */
 async function dbFetchLabor() {
   try {
     const { data, error } = await dbClient.from('labor_logs').select('*').order('date', { ascending: false });
@@ -87,87 +69,6 @@ async function dbFetchLabor() {
   } catch (err) {
     console.error('Error fetching labor:', err);
     return null;
-  }
-}
-
-// --- Mutation Functions ---
-
-async function dbUpdateBin(id, updates) {
-  try {
-    const { error } = await dbClient.from('bins').update(updates).eq('id', id);
-    if (error) throw error;
-    return true;
-  } catch (err) {
-    console.error(`Error updating bin ${id}:`, err);
-    if (typeof showToast === 'function') showToast(`Failed to update bin: ${err.message}`, 'error');
-    return false;
-  }
-}
-
-async function dbInsertIntake(intake, allocations = []) {
-  try {
-    // Insert intake record
-    const { error: intakeError } = await dbClient.from('intakes').insert([intake]);
-    if (intakeError) throw intakeError;
-    
-    // Insert allocations if any
-    if (allocations && allocations.length > 0) {
-      const { error: allocError } = await dbClient.from('intake_allocations').insert(allocations);
-      if (allocError) throw allocError;
-    }
-    
-    return true;
-  } catch (err) {
-    console.error('Error inserting intake:', err);
-    if (typeof showToast === 'function') showToast(`DB Error: ${err.message}`, 'error');
-    return false;
-  }
-}
-
-async function dbInsertDispatch(dispatch) {
-  try {
-    const { error } = await dbClient.from('dispatches').insert([dispatch]);
-    if (error) throw error;
-    return true;
-  } catch (err) {
-    console.error('Error inserting dispatch:', err);
-    if (typeof showToast === 'function') showToast(`Failed to save dispatch: ${err.message}`, 'error');
-    return false;
-  }
-}
-
-async function dbInsertMaintenance(record) {
-  try {
-    const { data, error } = await dbClient.from('maintenance_logs').insert([record]).select().single();
-    if (error) throw error;
-    return data;
-  } catch (err) {
-    console.error('Error inserting maintenance record:', err);
-    if (typeof showToast === 'function') showToast(`Failed to save maintenance: ${err.message}`, 'error');
-    return false;
-  }
-}
-
-async function dbInsertLabor(record) {
-  try {
-    const { data, error } = await dbClient.from('labor_logs').insert([record]).select().single();
-    if (error) throw error;
-    return data;
-  } catch (err) {
-    console.error('Error inserting labor record:', err);
-    if (typeof showToast === 'function') showToast(`Failed to save labor: ${err.message}`, 'error');
-    return false;
-  }
-}
-
-async function dbInsertBinHistory(record) {
-  try {
-    const { error } = await dbClient.from('bin_history').insert([record]);
-    if (error) throw error;
-    return true;
-  } catch (err) {
-    console.error('Error inserting bin history:', err);
-    return false;
   }
 }
 
@@ -182,16 +83,169 @@ async function dbFetchBinHistory() {
   }
 }
 
-// Helper to log activities (for Analytics / Export)
-async function dbLogActivity(action_type, description) {
+// ============================================================
+// DIRECT WRITE FUNCTIONS (used by OfflineQueue.sync and when online)
+// These go straight to Supabase — no queue check.
+// ============================================================
+
+async function _directUpdateBin(id, updates) {
+  try {
+    const { error } = await dbClient.from('bins').update(updates).eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error(`_directUpdateBin ${id}:`, err);
+    return false;
+  }
+}
+
+async function _directInsertIntake(intake, allocations = []) {
+  try {
+    const { error: intakeError } = await dbClient.from('intakes').insert([intake]);
+    if (intakeError) throw intakeError;
+    if (allocations && allocations.length > 0) {
+      const { error: allocError } = await dbClient.from('intake_allocations').insert(allocations);
+      if (allocError) throw allocError;
+    }
+    return true;
+  } catch (err) {
+    console.error('_directInsertIntake:', err);
+    return false;
+  }
+}
+
+async function _directInsertDispatch(dispatch) {
+  try {
+    const { error } = await dbClient.from('dispatches').insert([dispatch]);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('_directInsertDispatch:', err);
+    return false;
+  }
+}
+
+async function _directInsertMaintenance(record) {
+  try {
+    const { data, error } = await dbClient.from('maintenance_logs').insert([record]).select().single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('_directInsertMaintenance:', err);
+    return null;
+  }
+}
+
+async function _directInsertLabor(record) {
+  try {
+    const { data, error } = await dbClient.from('labor_logs').insert([record]).select().single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('_directInsertLabor:', err);
+    return null;
+  }
+}
+
+async function _directInsertBinHistory(record) {
+  try {
+    const { error } = await dbClient.from('bin_history').insert([record]);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('_directInsertBinHistory:', err);
+    return false;
+  }
+}
+
+async function _directLogActivity(action_type, description) {
   try {
     const { error } = await dbClient.from('activity_logs').insert([{ action_type, description }]);
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error('Error logging activity:', err);
+    console.error('_directLogActivity:', err);
     return false;
   }
+}
+
+// ============================================================
+// PUBLIC WRITE FUNCTIONS
+// Check navigator.onLine — if offline, queue the write and
+// return true immediately (optimistic update) so the UI stays
+// responsive. The queue auto-syncs when connectivity returns.
+// ============================================================
+
+async function dbUpdateBin(id, updates) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('UPDATE_BIN', { id, updates });
+    if (typeof showToast === 'function') showToast('Saved locally — will sync when online', 'info');
+    return true;
+  }
+  const ok = await _directUpdateBin(id, updates);
+  if (!ok && typeof showToast === 'function') showToast(`Failed to update bin: check connection`, 'error');
+  return ok;
+}
+
+async function dbInsertIntake(intake, allocations = []) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_INTAKE', { intake, allocations });
+    if (typeof showToast === 'function') showToast('Intake saved locally — will sync when online', 'info');
+    return true;
+  }
+  const ok = await _directInsertIntake(intake, allocations);
+  if (!ok && typeof showToast === 'function') showToast(`Failed to save intake: check connection`, 'error');
+  return ok;
+}
+
+async function dbInsertDispatch(dispatch) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_DISPATCH', dispatch);
+    if (typeof showToast === 'function') showToast('Dispatch saved locally — will sync when online', 'info');
+    return true;
+  }
+  const ok = await _directInsertDispatch(dispatch);
+  if (!ok && typeof showToast === 'function') showToast(`Failed to save dispatch: check connection`, 'error');
+  return ok;
+}
+
+async function dbInsertMaintenance(record) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_MAINTENANCE', record);
+    if (typeof showToast === 'function') showToast('Log saved locally — will sync when online', 'info');
+    // Return a fake record so the app can add it to local state immediately
+    return { ...record, id: `LOCAL-${Date.now()}` };
+  }
+  const result = await _directInsertMaintenance(record);
+  if (!result && typeof showToast === 'function') showToast(`Failed to save maintenance log`, 'error');
+  return result;
+}
+
+async function dbInsertLabor(record) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_LABOR', record);
+    if (typeof showToast === 'function') showToast('Log saved locally — will sync when online', 'info');
+    return { ...record, id: `LOCAL-${Date.now()}` };
+  }
+  const result = await _directInsertLabor(record);
+  if (!result && typeof showToast === 'function') showToast(`Failed to save labor log`, 'error');
+  return result;
+}
+
+async function dbInsertBinHistory(record) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_BIN_HISTORY', record);
+    return true;
+  }
+  return _directInsertBinHistory(record);
+}
+
+async function dbLogActivity(action_type, description) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('LOG_ACTIVITY', { action_type, description });
+    return true;
+  }
+  return _directLogActivity(action_type, description);
 }
 
 // ============================================================
@@ -227,32 +281,23 @@ async function dbLogout() {
 // Global functions for the HTML buttons
 window.doLogin = async function() {
   const email = document.getElementById('login-email').value;
-  const pass = document.getElementById('login-password').value;
-  const btn = document.getElementById('login-btn');
+  const pass  = document.getElementById('login-password').value;
+  const btn   = document.getElementById('login-btn');
   const errEl = document.getElementById('login-error');
-  
+
   if(errEl) errEl.style.display = 'none';
   if(!email || !pass) {
     if(errEl) { errEl.textContent = 'Please enter both email and password.'; errEl.style.display = 'block'; }
     return;
   }
-  
-  if(btn) {
-    btn.innerText = 'Signing in...';
-    btn.disabled = true;
-  }
-  
+  if(btn) { btn.innerText = 'Signing in...'; btn.disabled = true; }
+
   const success = await dbLogin(email, pass);
   if (success) {
     if(typeof bootApp === 'function') bootApp();
   } else {
-    if(btn) {
-      btn.innerText = 'Sign In';
-      btn.disabled = false;
-    }
+    if(btn) { btn.innerText = 'Sign In'; btn.disabled = false; }
   }
-}
+};
 
-window.doLogout = function() {
-  dbLogout();
-}
+window.doLogout = function() { dbLogout(); };
