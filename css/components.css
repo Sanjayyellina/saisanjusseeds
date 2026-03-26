@@ -507,25 +507,11 @@
   }
 }
 
-/* ============================================================
-   OFFLINE INDICATOR (PWA)
-   ============================================================ */
-.offline-bar {
-  position: fixed; top: var(--topbar-h); left: 0; right: 0; z-index: 450;
-  background: linear-gradient(90deg,#F59E0B,#D97706); color:#fff;
-  display:none; align-items:center; justify-content:center;
-  gap:8px; font-size:12px; font-weight:600; padding:8px 16px;
-  letter-spacing:.2px; box-shadow:0 2px 8px rgba(0,0,0,.15);
-}
-.offline-bar.visible { display:flex; }
-.offline-dot { width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.8);animation:offlinePulse 1.5s infinite; }
+/* Offline / Sync badges */
+.offline-bar{position:fixed;top:var(--topbar-h);left:0;right:0;z-index:450;background:linear-gradient(90deg,#F59E0B,#D97706);color:#fff;display:none;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:600;padding:8px 16px;letter-spacing:.2px;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.offline-bar.visible{display:flex;}
+.offline-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.8);animation:offlinePulse 1.5s infinite;}
 @keyframes offlinePulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-.sync-badge {
-  position:fixed; bottom:90px; right:28px; z-index:600;
-  background:var(--ink); color:var(--gold); border-radius:var(--radius-lg);
-  padding:10px 16px; font-size:12px; font-weight:600;
-  display:none; align-items:center; gap:8px;
-  box-shadow:var(--shadow-lg); cursor:pointer; transition:all var(--transition);
-}
-.sync-badge.visible { display:flex; }
-.sync-badge:hover { transform:translateY(-2px); }
+.sync-badge{position:fixed;bottom:90px;right:28px;z-index:600;background:var(--ink);color:var(--gold);border-radius:var(--radius-lg);padding:10px 16px;font-size:12px;font-weight:600;display:none;align-items:center;gap:8px;box-shadow:var(--shadow-lg);cursor:pointer;transition:all var(--transition);}
+.sync-badge.visible{display:flex;}
+.sync-badge:hover{transform:translateY(-2px);}
