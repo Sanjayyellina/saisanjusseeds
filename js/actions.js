@@ -16,14 +16,14 @@ function toggleSidebar() {
 function openIntakeModal() {
   document.getElementById('i-bin-rows').innerHTML = '';
   addIntakeBinRow();
-  ['i-challan','i-vehicle','i-location','i-hybrid','i-lot','i-qty','i-pkts','i-moisture','i-lr','i-remarks','i-veh-weight','i-gross-weight'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['i-challan','i-vehicle','i-location','i-hybrid','i-lot','i-qty','i-pkts','i-moisture','i-lr','i-remarks','i-veh-weight','i-gross-weight','i-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   openModal('intake-modal');
 }
 
 function openDispatchModal() {
   document.getElementById('d-bin-rows').innerHTML = '';
   addDispatchBinRow();
-  ['d-party','d-address','d-vehicle','d-hybrid','d-lot','d-bags','d-qty','d-moisture','d-amount','d-lr','d-remarks'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['d-party','d-address','d-vehicle','d-hybrid','d-lot','d-bags','d-qty','d-moisture','d-amount','d-lr','d-remarks','d-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); 
   openModal('dispatch-modal');
 }
 
@@ -119,7 +119,8 @@ async function saveIntake(){
   if (allocations.length === 0) { toast('Please assign at least one bin','error'); return; }
   if (Math.abs(totalAllocated - qty) > 0.01) { toast(`Allocated tons (${totalAllocated}) does not match Intake qty (${qty})`, 'error'); return; }
 
-  const now=new Date();
+  const dtInput=document.getElementById('i-datetime').value;
+  const now=dtInput ? new Date(dtInput) : new Date();
   const dateStr=now.toISOString();
   const intakeId='INT-'+String(state.intakes.length+1).padStart(3,'0');
   
@@ -231,7 +232,8 @@ async function saveDispatch(){
   if (binError) { toast('Please select a bin for every row or remove empty rows', 'error'); return; }
   // binAllocations is optional — dispatch can have no bins selected
 
-  const now=new Date();
+  const dtInput=document.getElementById('d-datetime')?.value;
+  const now=dtInput ? new Date(dtInput) : new Date();
   const receiptId=`YDS-2026-${String(state.receiptCounter++).padStart(6,'0')}`;
   // For backward-compat store first bin id (or null) in d.bin; full list in d.bins
   const d={
