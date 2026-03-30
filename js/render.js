@@ -17,13 +17,11 @@ function renderPage(name){
 function renderDashboard(){
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const active=state.bins.filter(b=>b.status!=='empty');
-  const ready=state.bins.filter(b=>b.status==='ready');
   const drying=state.bins.filter(b=>b.status==='drying'||b.status==='intake');
   const totalQty=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
   const avgM=active.length?(active.reduce((s,b)=>s+(b.currentMoisture||0),0)/active.length).toFixed(1):'—';
 
   document.getElementById('kpi-intake').textContent=totalQty.toFixed(1);
-  document.getElementById('kpi-ready').textContent=ready.length;
   document.getElementById('kpi-drying').textContent=drying.length;
   document.getElementById('kpi-dispatched').textContent=state.dispatches.length;
   document.getElementById('kpi-moisture').textContent=avgM+(avgM!=='—'?'%':'');
@@ -40,7 +38,7 @@ function renderDashboard(){
   document.getElementById('recent-tbody').innerHTML=recent.length?recent.map(i=>{
     const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
-    const statusChipClass={drying:'chip-amber',ready:'chip-green',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
+    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
     const statusLabel=binStatus.charAt(0).toUpperCase()+binStatus.slice(1);
     return`<tr>
       <td class="text-muted fs12">${i.date}</td>
@@ -69,7 +67,7 @@ function renderIntakePage(){
   document.getElementById('intake-full-tbody').innerHTML=state.intakes.length?state.intakes.map((i,idx)=>{
     const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
-    const statusChipClass={drying:'chip-amber',ready:'chip-green',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
+    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
     const statusLabel=binStatus.charAt(0).toUpperCase()+binStatus.slice(1);
     return`<tr>
       <td class="mono text-muted fs12">${idx+1}</td>
@@ -144,7 +142,6 @@ function renderManagerPage(){
           <select class="m-status-sel" onchange="(state.bins.find(b=>b.id===${bin.id})||{}).status=this.value">
             <option value="intake" ${bin.status==='intake'?'selected':''}>${t('bins.status.intake')}</option>
             <option value="drying" ${bin.status==='drying'?'selected':''}>${t('bins.status.drying')}</option>
-            <option value="ready" ${bin.status==='ready'?'selected':''}>${t('bins.status.ready')}</option>
             <option value="shelling" ${bin.status==='shelling'?'selected':''}>${t('bins.status.shelling')}</option>
           </select>
         </div>
@@ -331,7 +328,7 @@ function renderAnalytics(){
     </div>`;
 
   // ── Bin utilization: real status breakdown ──
-  const binGroups={empty:0,intake:0,drying:0,ready:0,shelling:0};
+  const binGroups={empty:0,intake:0,drying:0,shelling:0};
   state.bins.forEach(b=>binGroups[b.status]=(binGroups[b.status]||0)+1);
   const used=20-binGroups.empty;
   const pct=Math.round((used/20)*100);
@@ -346,7 +343,7 @@ function renderAnalytics(){
       <span>${used} Active</span><span>${pct}%</span><span>${20-binGroups.empty===0?20:binGroups.empty} Free</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;">
-      ${Object.entries({'🟡 Intake':binGroups.intake,'🟠 Drying':binGroups.drying,'🟢 Ready':binGroups.ready,'🟣 Shelling':binGroups.shelling}).map(([lbl,cnt])=>cnt>0?`
+      ${Object.entries({'🟡 Intake':binGroups.intake,'🟠 Drying':binGroups.drying,'🟣 Shelling':binGroups.shelling}).map(([lbl,cnt])=>cnt>0?`
         <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 8px;background:var(--surface-2);border-radius:6px;">
           <span>${lbl}</span><span class="fw700 mono">${cnt} bin${cnt!==1?'s':''}</span>
         </div>`:'').join('')}
