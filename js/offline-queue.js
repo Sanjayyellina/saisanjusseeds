@@ -104,6 +104,9 @@ const OfflineQueue = {
           case 'INSERT_INTAKE':
             ok = await _directInsertIntake(op.payload.intake, op.payload.allocations || []);
             break;
+          case 'UPDATE_INTAKE':
+            ok = await _directUpdateIntake(op.payload.intakeId, op.payload.updates, op.payload.allocations || []);
+            break;
           case 'INSERT_DISPATCH':
             ok = await _directInsertDispatch(op.payload);
             break;

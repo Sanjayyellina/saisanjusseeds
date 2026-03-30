@@ -78,7 +78,9 @@ function renderIntakePage(){
       <td><span class="mono fw700" style="color:${getMoistureColor(i.entryMoisture)};">${i.entryMoisture}%</span></td>
       <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
       <td><span class="chip chip-blue">Intake</span></td>
-      <td>${i.bin?`<button class="btn btn-ghost btn-sm" onclick="openBinModal(${i.bin})">${t('actions.view')} Bin</button>`:'—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${i.bin})">${t('actions.view')} Bin</button>`:''}
+      </td>
     </tr>`).join('')
     :`<tr><td colspan="15"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">${t('dash.noIntakes')}</div><div class="empty-sub">Start by logging a new truck intake above</div></div></td></tr>`;
 }

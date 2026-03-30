@@ -13,10 +13,53 @@ function toggleSidebar() {
   if(sidebar) sidebar.classList.toggle('open');
 }
 
+let _editingIntakeId = null;
+
 function openIntakeModal() {
+  _editingIntakeId = null;
   document.getElementById('i-bin-rows').innerHTML = '';
   addIntakeBinRow();
   ['i-challan','i-vehicle','i-location','i-hybrid','i-lot','i-qty','i-pkts','i-moisture','i-lr','i-remarks','i-veh-weight','i-gross-weight','i-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.querySelector('#intake-modal .modal-title').textContent = 'New Intake Entry';
+  document.querySelector('#intake-modal .btn-solid span').textContent = 'Save Intake';
+  openModal('intake-modal');
+}
+
+function openEditIntakeModal(intakeId) {
+  const intake = state.intakes.find(i => i.id === intakeId);
+  if (!intake) { toast('Intake not found', 'error'); return; }
+  _editingIntakeId = intakeId;
+
+  // Fill form fields
+  document.getElementById('i-challan').value = intake.challan || '';
+  document.getElementById('i-vehicle').value = intake.vehicle || '';
+  document.getElementById('i-location').value = intake.location || '';
+  document.getElementById('i-company').value = intake.company || '';
+  document.getElementById('i-hybrid').value = intake.hybrid || '';
+  document.getElementById('i-lot').value = intake.lot || '';
+  document.getElementById('i-qty').value = intake.qty || '';
+  document.getElementById('i-pkts').value = intake.pkts || '';
+  document.getElementById('i-moisture').value = intake.entryMoisture || '';
+  document.getElementById('i-lr').value = intake.lr || '';
+  document.getElementById('i-remarks').value = intake.remarks || '';
+  document.getElementById('i-veh-weight').value = intake.vehicleWeight || '';
+  document.getElementById('i-gross-weight').value = intake.grossWeight || '';
+  document.getElementById('i-datetime').value = '';
+
+  // Populate bin allocation rows
+  document.getElementById('i-bin-rows').innerHTML = '';
+  const allocs = intake.allocations && intake.allocations.length ? intake.allocations : intake.bins.map(b => ({ binId: b, qty: intake.qty, pkts: intake.pkts }));
+  allocs.forEach(a => {
+    addIntakeBinRow();
+    const rows = document.querySelectorAll('.i-bin-row');
+    const lastRow = rows[rows.length - 1];
+    lastRow.querySelector('.i-bin-select').value = a.binId;
+    lastRow.querySelector('.i-bin-qty').value = a.qty || '';
+    lastRow.querySelector('.i-bin-pkts').value = a.pkts || '';
+  });
+
+  document.querySelector('#intake-modal .modal-title').textContent = 'Edit Intake';
+  document.querySelector('#intake-modal .btn-solid span').textContent = 'Update Intake';
   openModal('intake-modal');
 }
 
@@ -119,14 +162,15 @@ async function saveIntake(){
   if (allocations.length === 0) { toast('Please assign at least one bin','error'); return; }
   if (Math.abs(totalAllocated - qty) > 0.01) { toast(`Allocated tons (${totalAllocated}) does not match Intake qty (${qty})`, 'error'); return; }
 
+  const isEdit = !!_editingIntakeId;
+  const intakeId = isEdit ? _editingIntakeId : 'INT-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
+
   const dtInput=document.getElementById('i-datetime')?.value;
   const now=dtInput ? new Date(dtInput) : new Date();
   const dateStr=now.toISOString();
-  const intakeId='INT-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
-  
-  const intakeRecord = {
-      id: intakeId,
-      challan, 
+
+  const intakeFields = {
+      challan,
       vehicle,
       location: document.getElementById('i-location').value,
       company: document.getElementById('i-company').value,
@@ -139,12 +183,11 @@ async function saveIntake(){
       remarks: document.getElementById('i-remarks').value,
       vehicle_weight: parseFloat(document.getElementById('i-veh-weight').value)||0,
       gross_weight: parseFloat(document.getElementById('i-gross-weight').value)||0,
-      net_weight: 0,
-      created_at: dateStr
+      net_weight: 0
   };
-  
-  intakeRecord.net_weight = intakeRecord.gross_weight && intakeRecord.vehicle_weight ? intakeRecord.gross_weight - intakeRecord.vehicle_weight : 0;
-  
+
+  intakeFields.net_weight = intakeFields.gross_weight && intakeFields.vehicle_weight ? intakeFields.gross_weight - intakeFields.vehicle_weight : 0;
+
   const dbAllocations = allocations.map(a => ({
       intake_id: intakeId,
       bin_id: a.binId,
@@ -154,36 +197,82 @@ async function saveIntake(){
 
   const btn = document.querySelector('#intake-modal .btn-solid');
   const ogText = btn.innerHTML;
-  btn.innerHTML = 'Saving...';
+  btn.innerHTML = isEdit ? 'Updating...' : 'Saving...';
   btn.disabled = true;
 
-  const success = await dbInsertIntake(intakeRecord, dbAllocations);
-  
+  let success;
+  if (isEdit) {
+    success = await dbUpdateIntake(intakeId, intakeFields, dbAllocations);
+  } else {
+    const intakeRecord = { id: intakeId, ...intakeFields, created_at: dateStr };
+    success = await dbInsertIntake(intakeRecord, dbAllocations);
+  }
+
   if (success) {
       const binIds = allocations.map(a => a.binId);
-      const entry = {
-        ...intakeRecord,
-        entryMoisture: intakeRecord.entry_moisture,
-        vehicleWeight: intakeRecord.vehicle_weight,
-        grossWeight: intakeRecord.gross_weight,
-        netWeight: intakeRecord.net_weight,
-        bin: binIds[0] || null,
-        bins: binIds,
-        dateTS: now.getTime(),
-        date: now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
-      };
-      state.intakes.unshift(entry);
-      
-      dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} Tons of ${hybrid} (Challan: ${challan})`);
-      
+
+      if (isEdit) {
+        // Revert old bins that were removed from this intake
+        const oldIntake = state.intakes.find(i => i.id === intakeId);
+        if (oldIntake) {
+          const oldAllocs = oldIntake.allocations || [];
+          oldAllocs.forEach(oa => {
+            if (!allocations.find(na => na.binId === oa.binId)) {
+              const ob = state.bins.find(x => x.id === oa.binId);
+              if (ob) {
+                ob.qty = Math.max(0, (ob.qty || 0) - oa.qty);
+                ob.pkts = Math.max(0, (ob.pkts || 0) - oa.pkts);
+                if (ob.qty === 0) { ob.status = 'empty'; ob.hybrid = ''; ob.company = ''; ob.lot = ''; }
+                dbUpdateBin(ob.id, { status: ob.status, hybrid: ob.hybrid, company: ob.company, lot: ob.lot, qty: ob.qty, pkts: ob.pkts });
+              }
+            }
+          });
+        }
+
+        // Update state entry in-place
+        const idx = state.intakes.findIndex(i => i.id === intakeId);
+        if (idx !== -1) {
+          const existing = state.intakes[idx];
+          state.intakes[idx] = {
+            ...existing,
+            ...intakeFields,
+            entryMoisture: intakeFields.entry_moisture,
+            vehicleWeight: intakeFields.vehicle_weight,
+            grossWeight: intakeFields.gross_weight,
+            netWeight: intakeFields.net_weight,
+            bin: binIds[0] || null,
+            bins: binIds,
+            allocations: allocations.map(a => ({ binId: a.binId, qty: a.qty, pkts: a.pkts }))
+          };
+        }
+        dbLogActivity('INTAKE_UPDATED', `Intake ${intakeId} updated — ${qty} Tons of ${hybrid} (Challan: ${challan})`);
+      } else {
+        const intakeRecord = { id: intakeId, ...intakeFields, created_at: dateStr };
+        const entry = {
+          ...intakeRecord,
+          entryMoisture: intakeRecord.entry_moisture,
+          vehicleWeight: intakeRecord.vehicle_weight,
+          grossWeight: intakeRecord.gross_weight,
+          netWeight: intakeRecord.net_weight,
+          bin: binIds[0] || null,
+          bins: binIds,
+          allocations: allocations.map(a => ({ binId: a.binId, qty: a.qty, pkts: a.pkts })),
+          dateTS: now.getTime(),
+          date: now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+        };
+        state.intakes.unshift(entry);
+        dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} Tons of ${hybrid} (Challan: ${challan})`);
+      }
+
       allocations.forEach(a => {
          const b = state.bins.find(x => x.id === a.binId);
          if (!b) { console.warn(`Bin ${a.binId} not found in state`); return; }
-         b.status='intake';b.hybrid=hybrid;b.company=intakeRecord.company;b.lot=intakeRecord.lot;
-         b.qty=(b.qty || 0) + a.qty;b.pkts=(b.pkts || 0) + a.pkts;b.entryMoisture=intakeRecord.entry_moisture;
-         b.currentMoisture=intakeRecord.entry_moisture;b.intakeDate=entry.date;
-         b.intakeDateTS=now.getTime();b.intakeRef=entry.id;b.airflow='up';
-         
+         b.status='intake';b.hybrid=hybrid;b.company=intakeFields.company;b.lot=intakeFields.lot;
+         b.qty=a.qty;b.pkts=a.pkts;b.entryMoisture=intakeFields.entry_moisture;
+         b.currentMoisture=intakeFields.entry_moisture;
+         b.intakeRef=intakeId;b.airflow='up';
+         if (!isEdit) { b.intakeDate=now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});b.intakeDateTS=now.getTime(); }
+
          dbUpdateBin(b.id, {
              status: 'intake', hybrid: b.hybrid, company: b.company, lot: b.lot,
              qty: b.qty, pkts: b.pkts, entry_moisture: b.entryMoisture,
@@ -191,14 +280,15 @@ async function saveIntake(){
              airflow: 'up'
          });
       });
-      
+
+      _editingIntakeId = null;
       closeModal('intake-modal');
-      toast(`Intake saved — Challan ${challan}`);
+      toast(isEdit ? `Intake updated — Challan ${challan}` : `Intake saved — Challan ${challan}`);
       if(window.Store) window.Store.emitChange();
   } else {
-      toast('Failed to save to database', 'error');
+      toast(isEdit ? 'Failed to update intake' : 'Failed to save to database', 'error');
   }
-  
+
   btn.innerHTML = ogText;
   btn.disabled = false;
 }

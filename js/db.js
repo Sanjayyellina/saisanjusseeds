@@ -29,7 +29,7 @@ async function dbFetchIntakes() {
   try {
     const { data, error } = await dbClient
       .from('intakes')
-      .select('*, intake_allocations(bin_id)')
+      .select('*, intake_allocations(bin_id, qty, pkts)')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
@@ -95,6 +95,24 @@ async function _directUpdateBin(id, updates) {
     return true;
   } catch (err) {
     console.error(`_directUpdateBin ${id}:`, err);
+    return false;
+  }
+}
+
+async function _directUpdateIntake(intakeId, updates, allocations = []) {
+  try {
+    const { error: upErr } = await dbClient.from('intakes').update(updates).eq('id', intakeId);
+    if (upErr) throw upErr;
+    // Delete old allocations and insert new ones
+    const { error: delErr } = await dbClient.from('intake_allocations').delete().eq('intake_id', intakeId);
+    if (delErr) throw delErr;
+    if (allocations && allocations.length > 0) {
+      const { error: allocErr } = await dbClient.from('intake_allocations').insert(allocations);
+      if (allocErr) throw allocErr;
+    }
+    return true;
+  } catch (err) {
+    console.error('_directUpdateIntake:', err);
     return false;
   }
 }
@@ -195,6 +213,17 @@ async function dbInsertIntake(intake, allocations = []) {
   }
   const ok = await _directInsertIntake(intake, allocations);
   if (!ok && typeof showToast === 'function') showToast(`Failed to save intake: check connection`, 'error');
+  return ok;
+}
+
+async function dbUpdateIntake(intakeId, updates, allocations = []) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('UPDATE_INTAKE', { intakeId, updates, allocations });
+    if (typeof showToast === 'function') showToast('Intake update saved locally — will sync when online', 'info');
+    return true;
+  }
+  const ok = await _directUpdateIntake(intakeId, updates, allocations);
+  if (!ok && typeof showToast === 'function') showToast('Failed to update intake: check connection', 'error');
   return ok;
 }
 

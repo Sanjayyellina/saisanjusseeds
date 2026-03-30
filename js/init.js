@@ -77,7 +77,8 @@ async function bootApp() {
 
   if (intakes) {
     state.intakes = intakes.map(i => {
-      const binIds = (i.intake_allocations || []).map(a => a.bin_id);
+      const allocs = (i.intake_allocations || []);
+      const binIds = allocs.map(a => a.bin_id);
       return {
         id: i.id,
         challan: i.challan,
@@ -96,6 +97,7 @@ async function bootApp() {
         netWeight: parseFloat(i.net_weight) || 0,
         bin: binIds[0] || null,
         bins: binIds,
+        allocations: allocs.map(a => ({ binId: a.bin_id, qty: parseFloat(a.qty) || 0, pkts: parseInt(a.pkts) || 0 })),
         dateTS: new Date(i.created_at).getTime(),
         date: new Date(i.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       };
