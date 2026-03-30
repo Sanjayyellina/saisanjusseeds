@@ -43,7 +43,7 @@ function renderDashboard(){
       <td><span class="mono fw700 text-gold">${i.challan}</span></td>
       <td class="mono fs12">${i.vehicle}</td>
       <td class="fw700 truncate" style="max-width:160px;">${i.hybrid}</td>
-      <td><span class="fw700 text-gold">${i.qty} ${(i.qty_unit||'T').toUpperCase()}</span></td>
+      <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
       <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
       <td><span class="chip chip-blue">Intake</span></td>
     </tr>`).join('')
@@ -71,7 +71,7 @@ function renderIntakePage(){
       <td class="fs12 text-muted truncate" style="max-width:140px;">${i.location||'—'}</td>
       <td class="fw700">${i.hybrid}</td>
       <td class="mono fs12 text-muted">${i.lot||'—'}</td>
-      <td><span class="fw700 text-gold">${i.qty} ${(i.qty_unit||'T').toUpperCase()}</span></td>
+      <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
       <td class="mono fs12">${i.vehicleWeight||'—'}</td>
       <td class="mono fs12">${i.grossWeight||'—'}</td>
       <td class="mono fw700" style="color:var(--blue);">${i.netWeight||'—'}</td>
@@ -111,7 +111,7 @@ function renderManagerPage(){
       <div class="m-bin-badge">BIN<br>${bin.id}</div>
       <div class="m-info">
         <div class="m-hybrid">${bin.hybrid}</div>
-        <div class="m-meta">${bin.qty}T · ${t('bins.entry')}: <span class="mono fw700">${bin.entryMoisture}%</span> · ${t('bins.status.intake')}: ${bin.intakeDate?bin.intakeDate.split(',')[0]:''} · ${t('bins.day')} ${dateDiff(bin.intakeDateTS)}</div>
+        <div class="m-meta">${bin.qty} Kg · ${t('bins.entry')}: <span class="mono fw700">${bin.entryMoisture}%</span> · ${t('bins.status.intake')}: ${bin.intakeDate?bin.intakeDate.split(',')[0]:''} · ${t('bins.day')} ${dateDiff(bin.intakeDateTS)}</div>
         <div style="margin-top:6px;">
           <div class="moisture-track" style="max-width:200px;"><div class="moisture-bar" style="width:${getMoisturePct(bin.currentMoisture)}%;background:${getMoistureBarColor(bin.currentMoisture)};"></div></div>
         </div>
@@ -161,7 +161,7 @@ function renderManagerPage(){
       <td><span class="mono fw700 text-gold">${i.challan}</span></td>
       <td class="mono">${i.vehicle}</td>
       <td class="fw700">${i.hybrid}</td>
-      <td><span class="fw700 text-gold">${i.qty} ${(i.qty_unit||'T').toUpperCase()}</span></td>
+      <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
       <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>'<span class="chip chip-blue">BIN-'+b+'</span>').join(' ')||'—'}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit Intake">✏️ Edit</button></td>
     </tr>`).join('');
@@ -181,7 +181,7 @@ function renderDispatchPage(){
       <td class="fw700">${d.party}</td>
       <td class="truncate" style="max-width:160px;">${d.hybrid}</td>
       <td class="mono">${d.bags}</td>
-      <td class="mono fw700">${(d.qty/1000).toFixed(3)}T</td>
+      <td class="mono fw700">${parseInt(d.qty).toLocaleString('en-IN')} Kg</td>
       <td><span class="mono" style="color:var(--green);font-weight:700;">${d.moisture||'—'}%</span></td>
       <td class="fw700 text-green">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
       <td class="mono fs12">${d.vehicle}</td>
@@ -200,7 +200,7 @@ function renderReceiptsPage(){
       </div>
       <div class="fw700" style="margin-bottom:4px;">${d.party}</div>
       <div class="fs12 text-muted">${d.hybrid}</div>
-      <div class="fs12 text-muted" style="margin-top:2px;">${d.bags} ${t('dash.bags')} · ${(d.qty/1000).toFixed(3)}T · ${d.date}</div>
+      <div class="fs12 text-muted" style="margin-top:2px;">${d.bags} ${t('dash.bags')} · ${parseInt(d.qty).toLocaleString('en-IN')} Kg · ${d.date}</div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--surface-3);display:flex;justify-content:space-between;align-items:center;">
         <span class="fw700 text-green">₹${parseInt(d.amount).toLocaleString('en-IN')}</span>
         <span class="mono" style="font-size:9px;color:var(--ink-5);">${d.hash.substring(0,16)}…</span>
@@ -253,7 +253,7 @@ function renderAnalytics(){
   const barColors=['#93C5FD','#86EFAC','#FCD34D','#C4B5FD','#FCA5A5','#6EE7B7','#0F1923'];
   document.getElementById('intake-bar-chart').innerHTML=last7.map((d,i)=>`
     <div class="bar-wrap">
-      <div class="bar-col" data-tip="${dailyQty[i].toFixed(1)}T" style="background:${barColors[i]};height:${dailyQty[i]>0?(dailyQty[i]/chartMax)*100:2}%;${i===6?'opacity:1;':'opacity:0.8;'}"></div>
+      <div class="bar-col" data-tip="${dailyQty[i].toFixed(1)} Kg" style="background:${barColors[i]};height:${dailyQty[i]>0?(dailyQty[i]/chartMax)*100:2}%;${i===6?'opacity:1;':'opacity:0.8;'}"></div>
       <span class="bar-x-label">${i===6?t('analytics.today'):dayNames[d.getDay()]}</span>
     </div>`).join('');
 
@@ -312,11 +312,11 @@ function renderAnalytics(){
   const avgMoistureFinal=state.dispatches.filter(d=>d.moisture>0).length>0
     ?(state.dispatches.filter(d=>d.moisture>0).reduce((s,d)=>s+d.moisture,0)/state.dispatches.filter(d=>d.moisture>0).length).toFixed(1)
     :'—';
-  const intakeTotalKg=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0)*1000,0);
+  const intakeTotalKg=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
   const yieldPct=intakeTotalKg>0?((totalDispKg/intakeTotalKg)*100).toFixed(1):'—';
   document.getElementById('dispatch-perf').innerHTML=`
     <div style="display:flex;flex-direction:column;gap:10px;">
-      ${[['Receipts Issued',state.dispatches.length,''],['Total Dispatched',(totalDispKg/1000).toFixed(3)+'T','text-gold'],['Total Bags',totalBags.toLocaleString('en-IN'),''],['Avg Final Moisture',avgMoistureFinal+(avgMoistureFinal!=='—'?'%':''),'text-green'],['Yield %',yieldPct+(yieldPct!=='—'?'%':''),'']].map(([k,v,cls])=>`
+      ${[['Receipts Issued',state.dispatches.length,''],['Total Dispatched',parseInt(totalDispKg).toLocaleString('en-IN')+' Kg','text-gold'],['Total Bags',totalBags.toLocaleString('en-IN'),''],['Avg Final Moisture',avgMoistureFinal+(avgMoistureFinal!=='—'?'%':''),'text-green'],['Yield %',yieldPct+(yieldPct!=='—'?'%':''),'']].map(([k,v,cls])=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);">
         <span class="fs12 text-muted">${k}</span><span class="fw700 ${cls} mono" style="font-size:12px;">${v}</span>
       </div>`).join('')}
@@ -330,7 +330,7 @@ function renderAnalytics(){
   const totalQtyInBins=state.bins.filter(b=>b.status!=='empty').reduce((s,b)=>s+parseFloat(b.qty||0),0);
   document.getElementById('bin-util-chart').innerHTML=`
     <div style="font-family:'Playfair Display',serif;font-size:52px;font-weight:800;color:var(--ink);line-height:1;">${used}<span style="font-size:24px;color:var(--ink-5);">/20</span></div>
-    <div class="text-muted fs12" style="margin:4px 0 8px;">Bins Active · ${totalQtyInBins.toFixed(1)}T total</div>
+    <div class="text-muted fs12" style="margin:4px 0 8px;">Bins Active · ${parseInt(totalQtyInBins).toLocaleString('en-IN')} Kg total</div>
     <div style="height:8px;background:var(--surface-3);border-radius:99px;overflow:hidden;margin-bottom:10px;">
       <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--gold-dark));border-radius:99px;transition:width .6s;"></div>
     </div>
