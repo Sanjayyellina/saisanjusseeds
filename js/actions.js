@@ -58,12 +58,10 @@ function openEditIntakeModal(intakeId) {
     const lastRow = allVRows[allVRows.length - 1];
     lastRow.querySelector('.i-vehicle-input').value = v;
     // Parse weight and unit (e.g. "39470 kg" or just "39470")
-    const vwParts = (vehWeightParts[idx] || '').match(/^([\d.]+)\s*(\w*)$/);
-    lastRow.querySelector('.i-veh-weight-input').value = vwParts ? vwParts[1] : (vehWeightParts[idx] || '');
-    if (vwParts && vwParts[2]) lastRow.querySelector('.i-veh-weight-unit').value = vwParts[2].toLowerCase() === 'tons' ? 'tons' : 'kg';
-    const gwParts = (grossWeightParts[idx] || '').match(/^([\d.]+)\s*(\w*)$/);
-    lastRow.querySelector('.i-gross-weight-input').value = gwParts ? gwParts[1] : (grossWeightParts[idx] || '');
-    if (gwParts && gwParts[2]) lastRow.querySelector('.i-gross-weight-unit').value = gwParts[2].toLowerCase() === 'tons' ? 'tons' : 'kg';
+    const vwVal = (vehWeightParts[idx] || '').replace(/[^\d.]/g, '');
+    lastRow.querySelector('.i-veh-weight-input').value = vwVal;
+    const gwVal = (grossWeightParts[idx] || '').replace(/[^\d.]/g, '');
+    lastRow.querySelector('.i-gross-weight-input').value = gwVal;
   });
 
   // Populate LR rows
@@ -91,7 +89,6 @@ function openEditIntakeModal(intakeId) {
         lastRow.querySelector('.i-lot-input').value = l;
         if (idx === 0) {
           lastRow.querySelector('.i-lot-qty').value = intake.qty || '';
-          lastRow.querySelector('.i-lot-unit').value = intake.qty_unit || 'kg';
           lastRow.querySelector('.i-lot-bags').value = intake.pkts || '';
         }
       });
@@ -105,7 +102,6 @@ function openEditIntakeModal(intakeId) {
       const lastRow = allLotRows[allLotRows.length - 1];
       lastRow.querySelector('.i-lot-input').value = l.lot || '';
       lastRow.querySelector('.i-lot-qty').value = l.qty || '';
-      lastRow.querySelector('.i-lot-unit').value = l.unit || 'kg';
       lastRow.querySelector('.i-lot-bags').value = l.bags || '';
     });
   }
@@ -119,7 +115,6 @@ function openEditIntakeModal(intakeId) {
     const lastRow = allBinRows[allBinRows.length - 1];
     lastRow.querySelector('.i-bin-select').value = a.binId;
     lastRow.querySelector('.i-bin-qty').value = a.qty || '';
-    lastRow.querySelector('.i-bin-unit').value = a.unit || 'kg';
     lastRow.querySelector('.i-bin-pkts').value = a.pkts || '';
   });
 
@@ -178,18 +173,12 @@ function addVehicleRow() {
     <div class="form-row cols3" style="align-items:flex-end;">
       <div class="form-group"><label class="form-label">Vehicle Number *</label><input class="form-input i-vehicle-input" placeholder="e.g. AP39WF7419" style="text-transform:uppercase;"></div>
       <div class="form-group">
-        <label class="form-label">Vehicle Weight</label>
-        <div style="display:flex;gap:4px;">
-          <input class="form-input i-veh-weight-input" type="number" placeholder="e.g. 8500" style="flex:1;">
-          <select class="form-select i-veh-weight-unit" style="width:70px;"><option value="kg">Kg</option><option value="tons">Tons</option></select>
-        </div>
+        <label class="form-label">Vehicle Weight (Kg)</label>
+        <input class="form-input i-veh-weight-input" type="number" placeholder="e.g. 8500">
       </div>
       <div class="form-group">
-        <label class="form-label">Gross Weight</label>
-        <div style="display:flex;gap:4px;">
-          <input class="form-input i-gross-weight-input" type="number" placeholder="e.g. 44500" style="flex:1;">
-          <select class="form-select i-gross-weight-unit" style="width:70px;"><option value="kg">Kg</option><option value="tons">Tons</option></select>
-        </div>
+        <label class="form-label">Gross Weight (Kg)</label>
+        <input class="form-input i-gross-weight-input" type="number" placeholder="e.g. 44500">
       </div>
     </div>`;
   container.appendChild(row);
@@ -228,11 +217,8 @@ function addLotRow() {
     <div class="form-row cols3" style="align-items:flex-end;">
       <div class="form-group"><label class="form-label">Lot No</label><input class="form-input i-lot-input" placeholder="e.g. 025042"></div>
       <div class="form-group">
-        <label class="form-label">Quantity *</label>
-        <div style="display:flex;gap:4px;">
-          <input class="form-input i-lot-qty" type="number" step="0.1" placeholder="e.g. 35.5" style="flex:1;">
-          <select class="form-select i-lot-unit" style="width:70px;"><option value="kg">Kg</option><option value="tons">Tons</option></select>
-        </div>
+        <label class="form-label">Quantity (Kg) *</label>
+        <input class="form-input i-lot-qty" type="number" step="0.1" placeholder="e.g. 35500">
       </div>
       <div class="form-group"><label class="form-label">No. of Bags</label><input class="form-input i-lot-bags" type="number" placeholder="e.g. 92"></div>
     </div>`;
@@ -266,11 +252,8 @@ function addIntakeBinRow() {
   row.innerHTML = `
     <div class="form-group"><label class="form-label">Assign to Bin *</label><select class="form-select i-bin-select">${options}</select></div>
     <div class="form-group">
-      <label class="form-label">Allocated Qty *</label>
-      <div style="display:flex;gap:4px;">
-        <input class="form-input i-bin-qty" type="number" step="0.1" placeholder="e.g. 10.5" style="flex:1;">
-        <select class="form-select i-bin-unit" style="width:70px;"><option value="kg">Kg</option><option value="tons">Tons</option></select>
-      </div>
+      <label class="form-label">Allocated Qty (Kg) *</label>
+      <input class="form-input i-bin-qty" type="number" step="0.1" placeholder="e.g. 10500">
     </div>
     <div class="form-group" style="position:relative;">
       <label class="form-label">Bags</label>
@@ -294,17 +277,15 @@ async function saveIntake(){
   const challan=document.getElementById('i-challan').value.trim();
   const hybrid=document.getElementById('i-hybrid').value.trim();
 
-  // Gather multiple vehicles with units
+  // Gather multiple vehicles (all in Kg)
   const vehicleRows = document.querySelectorAll('.i-vehicle-row');
-  let vehicleNums = [], vehWeights = [], grossWeights = [], vehWeightUnits = [], grossWeightUnits = [];
+  let vehicleNums = [], vehWeights = [], grossWeights = [];
   vehicleRows.forEach(r => {
     const v = (r.querySelector('.i-vehicle-input').value || '').trim().toUpperCase();
     if (v) {
       vehicleNums.push(v);
       vehWeights.push(parseFloat(r.querySelector('.i-veh-weight-input').value) || 0);
-      vehWeightUnits.push(r.querySelector('.i-veh-weight-unit')?.value || 'kg');
       grossWeights.push(parseFloat(r.querySelector('.i-gross-weight-input').value) || 0);
-      grossWeightUnits.push(r.querySelector('.i-gross-weight-unit')?.value || 'kg');
     }
   });
   const vehicle = vehicleNums.join(', ');
@@ -318,7 +299,7 @@ async function saveIntake(){
   });
   const lr = lrNums.join(', ');
 
-  // Gather multiple Lots with qty, unit, and bags
+  // Gather multiple Lots with qty (Kg) and bags
   const lotRows = document.querySelectorAll('.i-lot-row');
   let lotsData = [];
   let totalQty = 0;
@@ -326,21 +307,20 @@ async function saveIntake(){
   lotRows.forEach(r => {
     const lotNo = (r.querySelector('.i-lot-input').value || '').trim();
     const lotQty = parseFloat(r.querySelector('.i-lot-qty').value) || 0;
-    const lotUnit = r.querySelector('.i-lot-unit')?.value || 'kg';
     const lotBags = parseInt(r.querySelector('.i-lot-bags').value) || 0;
     if (lotNo || lotQty) {
-      lotsData.push({ lot: lotNo, qty: lotQty, unit: lotUnit, bags: lotBags });
+      lotsData.push({ lot: lotNo, qty: lotQty, unit: 'kg', bags: lotBags });
       totalQty += lotQty;
       totalBags += lotBags;
     }
   });
   const lot = lotsData.map(l => l.lot).filter(Boolean).join(', ');
   const qty = totalQty;
-  const qtyUnit = lotsData.length ? lotsData[0].unit : 'kg';
+  const qtyUnit = 'kg';
 
   if(!challan||!vehicle||!hybrid||!qty){toast('Please fill all required fields — DR No, Vehicle, Hybrid, and at least one Lot with Qty','error');return;}
 
-  // gather bin allocations with units
+  // gather bin allocations (all in Kg)
   const rows = document.querySelectorAll('.i-bin-row');
   let allocations = [];
   let totalAllocated = 0;
@@ -349,11 +329,10 @@ async function saveIntake(){
   rows.forEach(r => {
     const bId = r.querySelector('.i-bin-select').value;
     const bQty = parseFloat(r.querySelector('.i-bin-qty').value);
-    const bUnit = r.querySelector('.i-bin-unit')?.value || 'kg';
     const bPkts = parseInt(r.querySelector('.i-bin-pkts').value) || 0;
 
     if (bId && !isNaN(bQty)) {
-      allocations.push({ binId: parseInt(bId), qty: bQty, unit: bUnit, pkts: bPkts });
+      allocations.push({ binId: parseInt(bId), qty: bQty, unit: 'kg', pkts: bPkts });
       totalAllocated += bQty;
     } else if (bId || !isNaN(bQty)) {
         allocError = true;
@@ -387,8 +366,8 @@ async function saveIntake(){
       entry_moisture: parseFloat(document.getElementById('i-moisture').value)||0,
       lr,
       remarks: document.getElementById('i-remarks').value,
-      vehicle_weight: vehWeights.map((w, i) => w + ' ' + (vehWeightUnits[i]||'kg')).join(', '),
-      gross_weight: grossWeights.map((w, i) => w + ' ' + (grossWeightUnits[i]||'kg')).join(', '),
+      vehicle_weight: vehWeights.join(', '),
+      gross_weight: grossWeights.join(', '),
       net_weight: 0
   };
 
