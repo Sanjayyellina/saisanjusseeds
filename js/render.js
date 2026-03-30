@@ -37,16 +37,20 @@ function renderDashboard(){
   document.getElementById('dash-bins').innerHTML=state.bins.map(b=>renderBinTile(b)).join('');
 
   const recent=[...state.intakes].reverse().slice(0,6);
-  document.getElementById('recent-tbody').innerHTML=recent.length?recent.map(i=>`
-    <tr>
+  document.getElementById('recent-tbody').innerHTML=recent.length?recent.map(i=>{
+    const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
+    const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
+    const statusChipClass={drying:'chip-amber',ready:'chip-green',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
+    const statusLabel=binStatus.charAt(0).toUpperCase()+binStatus.slice(1);
+    return`<tr>
       <td class="text-muted fs12">${i.date}</td>
       <td><span class="mono fw700 text-gold">${i.challan}</span></td>
       <td class="mono fs12">${i.vehicle}</td>
       <td class="fw700 truncate" style="max-width:160px;">${i.hybrid}</td>
       <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
-      <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
-      <td><span class="chip chip-blue">Intake</span></td>
-    </tr>`).join('')
+      <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
+      <td><span class="chip ${statusChipClass}">${statusLabel}</span></td>
+    </tr>`;}).join('')
     :`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">${t('dash.noIntakes')}</div></div></td></tr>`;
 
   document.getElementById('recent-dispatch-tbody').innerHTML=state.dispatches.length?[...state.dispatches].reverse().slice(0,5).map(d=>`
@@ -62,8 +66,12 @@ function renderDashboard(){
 function renderIntakePage(){
   const total=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
   document.getElementById('intake-total-weight').textContent=total.toFixed(2);
-  document.getElementById('intake-full-tbody').innerHTML=state.intakes.length?state.intakes.map((i,idx)=>`
-    <tr>
+  document.getElementById('intake-full-tbody').innerHTML=state.intakes.length?state.intakes.map((i,idx)=>{
+    const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
+    const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
+    const statusChipClass={drying:'chip-amber',ready:'chip-green',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
+    const statusLabel=binStatus.charAt(0).toUpperCase()+binStatus.slice(1);
+    return`<tr>
       <td class="mono text-muted fs12">${idx+1}</td>
       <td class="fs12 text-muted">${i.date}</td>
       <td><span class="mono fw700 text-gold">${i.challan}</span></td>
@@ -76,12 +84,12 @@ function renderIntakePage(){
       <td class="mono fs12">${i.grossWeight||'—'}</td>
       <td class="mono fw700" style="color:var(--blue);">${i.netWeight||'—'}</td>
       <td><span class="mono fw700" style="color:${getMoistureColor(i.entryMoisture)};">${i.entryMoisture}%</span></td>
-      <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
-      <td><span class="chip chip-blue">Intake</span></td>
+      <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
+      <td><span class="chip ${statusChipClass}">${statusLabel}</span></td>
       <td style="white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${i.bin})">${t('actions.view')} Bin</button>`:''}
       </td>
-    </tr>`).join('')
+    </tr>`;}).join('')
     :`<tr><td colspan="15"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">${t('dash.noIntakes')}</div><div class="empty-sub">Start by logging a new truck intake above</div></div></td></tr>`;
 }
 
