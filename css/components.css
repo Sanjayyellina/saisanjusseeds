@@ -105,7 +105,7 @@
 .bin-tile.s-empty   { background: rgba(255,255,255,0.38); border-color: rgba(180,195,210,0.5); border-style: dashed; }
 
 .bin-tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.bin-num-label { font-size: 12px; font-weight: 800; color: var(--ink-2); letter-spacing: 1px; text-transform: uppercase; }
+.bin-num-label { font-size: 14px; font-weight: 800; color: var(--ink-2); letter-spacing: 1px; text-transform: uppercase; }
 
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot-empty   { background: var(--surface-4); }
@@ -116,7 +116,7 @@
 
 /* Active bin — vertical full-width layout */
 .bin-hybrid-name {
-  font-size: 13px; font-weight: 700; color: var(--ink);
+  font-size: 17px; font-weight: 800; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-bottom: 4px;
 }
@@ -142,9 +142,9 @@
   display: inline-flex; align-items: baseline; gap: 4px;
   font-family: 'DM Mono', monospace;
 }
-.bh-elapsed { font-size: 14px; font-weight: 800; /* color set inline via hoursColor */ }
-.bh-sep     { font-size: 11px; font-weight: 400; color: var(--ink-4); }
-.bh-target  { font-size: 13px; font-weight: 700; color: var(--ink-4); }
+.bh-elapsed { font-size: 16px; font-weight: 800; /* color set inline via hoursColor */ }
+.bh-sep     { font-size: 13px; font-weight: 400; color: var(--ink-4); }
+.bh-target  { font-size: 15px; font-weight: 700; color: var(--ink-4); }
 .bin-hours-track { height: 5px; background: rgba(0,0,0,.07); border-radius: 99px; overflow: hidden; }
 .bin-hours-fill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.4,0,.2,1); }
 
