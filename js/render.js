@@ -447,6 +447,227 @@ function renderAnalytics(){
         `</div>`;
     }
   }
+
+  renderAdvancedAnalytics();
+}
+
+// ============================================================
+// ADVANCED ANALYTICS
+// ============================================================
+function renderAdvancedAnalytics() {
+  const history   = state.binHistory  || [];
+  const intakes   = state.intakes     || [];
+  const dispatches= state.dispatches  || [];
+  const bins      = state.bins        || [];
+
+  // ── helpers ──────────────────────────────────────────────
+  function statRow(label, value, cls='') {
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:5px;">
+      <span style="font-size:12px;color:var(--ink-4);">${label}</span>
+      <span style="font-size:12px;font-weight:700;${cls}">${value}</span></div>`;
+  }
+  function emptyMsg(msg) {
+    return `<div style="color:var(--ink-5);text-align:center;padding:20px;font-size:12px;">${msg}</div>`;
+  }
+
+  // ── 1. STOCK FLOW ─────────────────────────────────────────
+  const totalIntakeKg   = intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
+  const totalInDryerKg  = bins.filter(b=>b.status!=='empty').reduce((s,b)=>s+parseFloat(b.qty||0),0);
+  const totalDispKg     = dispatches.reduce((s,d)=>s+parseFloat(d.qty||0),0);
+  const pendingKg       = Math.max(0, totalIntakeKg - totalDispKg);
+  const flowEl = document.getElementById('adv-stock-flow');
+  if (flowEl) {
+    const flowMax = Math.max(totalIntakeKg, 0.1);
+    function flowBar(kg, color, label) {
+      const pct = Math.round((kg / flowMax) * 100);
+      return `<div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+          <span style="color:var(--ink-4);font-weight:600;">${label}</span>
+          <span style="font-weight:700;color:var(--ink);">${parseInt(kg).toLocaleString('en-IN')} Kg</span>
+        </div>
+        <div style="height:16px;background:var(--surface-3);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:99px;transition:width .7s;"></div>
+        </div></div>`;
+    }
+    flowEl.innerHTML =
+      flowBar(totalIntakeKg, 'var(--gold)', '📥 Total Received') +
+      flowBar(totalInDryerKg, 'var(--amber)', '🔥 Currently in Dryer') +
+      flowBar(totalDispKg, 'var(--green)', '📤 Dispatched') +
+      `<div style="display:flex;gap:8px;margin-top:4px;font-size:11px;color:var(--ink-5);">
+        <span>⏳ Pending dispatch: <strong style="color:var(--ink);">${parseInt(pendingKg).toLocaleString('en-IN')} Kg</strong></span>
+      </div>`;
+  }
+
+  // ── 2. SEASON EFFICIENCY ──────────────────────────────────
+  const effEl = document.getElementById('adv-season-eff');
+  if (effEl) {
+    const yieldPct      = totalIntakeKg > 0 ? ((totalDispKg / totalIntakeKg)*100).toFixed(1) : '—';
+    const totalBags     = dispatches.reduce((s,d)=>s+parseInt(d.bags||0),0);
+    const avgKgBag      = totalBags > 0 ? (totalDispKg / totalBags).toFixed(1) : '—';
+    const completedH    = history.filter(h=>h.days_in_bin>0);
+    const avgDays       = completedH.length ? (completedH.reduce((s,h)=>s+h.days_in_bin,0)/completedH.length).toFixed(1) : '—';
+    const moistDrops    = history.filter(h=>h.entry_moisture&&h.final_moisture);
+    const avgDrop       = moistDrops.length ? (moistDrops.reduce((s,h)=>s+(h.entry_moisture-h.final_moisture),0)/moistDrops.length).toFixed(1) : '—';
+    const binUtil       = bins.length > 0 ? Math.round((bins.filter(b=>b.status!=='empty').length/bins.length)*100) : 0;
+    const totalLoads    = intakes.length;
+    const avgLoadKg     = totalLoads > 0 ? (totalIntakeKg / totalLoads).toFixed(0) : '—';
+    effEl.innerHTML =
+      statRow('📦 Yield Retention',     yieldPct !== '—' ? yieldPct+'%' : '—',   yieldPct >= 90 ? 'color:var(--green)' : 'color:var(--amber)') +
+      statRow('💧 Avg Moisture Reduced', avgDrop  !== '—' ? avgDrop+'%' : '—',    'color:var(--blue)') +
+      statRow('⏱️ Avg Days to Dry',      avgDays  !== '—' ? avgDays+'d' : '—',    '') +
+      statRow('🏭 Dryer Utilisation',   binUtil+'%',                               binUtil >= 70 ? 'color:var(--green)' : '') +
+      statRow('🚛 Avg Load Size',        avgLoadKg !== '—' ? avgLoadKg+' Kg' : '—', '') +
+      statRow('🎒 Avg Kg / Bag',         avgKgBag  !== '—' ? avgKgBag+' Kg' : '—', '');
+  }
+
+  // ── 3. DRYING VELOCITY & ETA ──────────────────────────────
+  const velEl = document.getElementById('adv-drying-velocity');
+  if (velEl) {
+    const TARGET = 10;
+    const activeBins = bins.filter(b => b.status === 'drying' || b.status === 'shelling')
+      .filter(b => b.intakeDateTS && b.entryMoisture && b.currentMoisture);
+    if (!activeBins.length) {
+      velEl.innerHTML = emptyMsg('No active bins with moisture data');
+    } else {
+      const rows = activeBins.map(b => {
+        const daysIn    = Math.max(1, Math.floor((Date.now() - b.intakeDateTS) / 86400000));
+        const dropped   = b.entryMoisture - b.currentMoisture;
+        const ratePerDay= dropped > 0 ? (dropped / daysIn).toFixed(2) : 0;
+        const remaining = b.currentMoisture - TARGET;
+        const etaDays   = ratePerDay > 0 ? Math.ceil(remaining / ratePerDay) : null;
+        const pctDone   = Math.min(100, Math.round(((b.entryMoisture - b.currentMoisture) / (b.entryMoisture - TARGET)) * 100));
+        const speed     = ratePerDay >= 0.8 ? {label:'Fast',col:'var(--green)'} : ratePerDay >= 0.4 ? {label:'Normal',col:'var(--amber)'} : {label:'Slow',col:'var(--red)'};
+        const etaStr    = etaDays !== null && remaining > 0 ? `~${etaDays}d left` : remaining <= 0 ? 'Ready ✓' : '—';
+        const label     = `BIN-${b.binLabel || b.id}`;
+        return `<div style="padding:10px 14px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;font-weight:700;color:var(--ink);">${label}</span>
+              <span style="font-size:11px;color:var(--ink-4);">${b.hybrid||'—'}</span>
+              <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:${speed.col}22;color:${speed.col};">${speed.label}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;font-size:11px;">
+              <span style="color:var(--ink-5);">${ratePerDay}%/day</span>
+              <span style="font-weight:700;color:${remaining<=0?'var(--green)':'var(--ink)'};">${etaStr}</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;color:var(--ink-5);width:32px;">${b.entryMoisture}%</span>
+            <div style="flex:1;height:8px;background:var(--surface-3);border-radius:99px;overflow:hidden;">
+              <div style="height:100%;width:${pctDone}%;background:linear-gradient(90deg,var(--amber),var(--green));border-radius:99px;transition:width .6s;"></div>
+            </div>
+            <span style="font-size:10px;color:var(--ink);width:32px;text-align:right;">${b.currentMoisture}%</span>
+          </div>
+          <div style="font-size:10px;color:var(--ink-5);margin-top:3px;">Day ${daysIn} · ${parseInt(b.qty||0).toLocaleString('en-IN')} Kg · ${pctDone}% of drying complete · target 10%</div>
+        </div>`;
+      });
+      velEl.innerHTML = rows.join('');
+    }
+  }
+
+  // ── 4. HYBRID LEADERBOARD ─────────────────────────────────
+  const hybridEl = document.getElementById('adv-hybrid-leader');
+  if (hybridEl) {
+    if (!history.length) {
+      hybridEl.innerHTML = emptyMsg('No completed cycles yet');
+    } else {
+      const hmap = {};
+      history.forEach(h => {
+        const key = (h.hybrid||'Unknown').trim();
+        if (!hmap[key]) hmap[key] = { cycles:0, totalQty:0, totalDrop:0, totalDays:0, dropCount:0, daysCount:0 };
+        hmap[key].cycles++;
+        hmap[key].totalQty += parseFloat(h.qty||0);
+        if (h.entry_moisture && h.final_moisture) { hmap[key].totalDrop += (h.entry_moisture - h.final_moisture); hmap[key].dropCount++; }
+        if (h.days_in_bin > 0) { hmap[key].totalDays += h.days_in_bin; hmap[key].daysCount++; }
+      });
+      const entries = Object.entries(hmap).map(([name, d]) => ({
+        name,
+        cycles:   d.cycles,
+        totalQty: d.totalQty,
+        avgDrop:  d.dropCount ? (d.totalDrop / d.dropCount).toFixed(1) : null,
+        avgDays:  d.daysCount ? (d.totalDays / d.daysCount).toFixed(1) : null,
+        rate:     (d.dropCount && d.daysCount) ? (d.totalDrop / d.totalDays).toFixed(2) : 0
+      })).sort((a,b) => b.rate - a.rate);
+
+      hybridEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:grid;grid-template-columns:1fr 50px 55px 55px 50px;gap:6px;padding:4px 10px;font-size:10px;color:var(--ink-5);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+          <span>Hybrid</span><span style="text-align:center;">Cycles</span><span style="text-align:center;">Avg Drop</span><span style="text-align:center;">Avg Days</span><span style="text-align:right;">%/Day</span>
+        </div>` +
+        entries.slice(0,8).map((e,i) => {
+          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          return `<div style="display:grid;grid-template-columns:1fr 50px 55px 55px 50px;gap:6px;align-items:center;padding:7px 10px;background:${i===0?'var(--green-bg)':'var(--surface-2)'};border-radius:var(--radius);">
+            <span style="font-size:11px;font-weight:700;color:var(--ink);">${medal} ${e.name}</span>
+            <span style="font-size:11px;text-align:center;color:var(--ink-4);">${e.cycles}</span>
+            <span style="font-size:11px;text-align:center;color:var(--blue);font-weight:600;">${e.avgDrop !== null ? e.avgDrop+'%' : '—'}</span>
+            <span style="font-size:11px;text-align:center;color:var(--ink-4);">${e.avgDays !== null ? e.avgDays+'d' : '—'}</span>
+            <span style="font-size:11px;text-align:right;font-weight:700;color:${parseFloat(e.rate)>=0.8?'var(--green)':parseFloat(e.rate)>=0.4?'var(--amber)':'var(--ink-4)'};">${e.rate > 0 ? e.rate : '—'}</span>
+          </div>`;
+        }).join('') +
+        `<div style="font-size:10px;color:var(--ink-5);padding:4px 10px;">%/Day = moisture reduction speed (higher = dries faster)</div>
+      </div>`;
+    }
+  }
+
+  // ── 5. COMPANY VOLUME ─────────────────────────────────────
+  const compEl = document.getElementById('adv-company-vol');
+  if (compEl) {
+    if (!intakes.length) {
+      compEl.innerHTML = emptyMsg('No intake data yet');
+    } else {
+      const cmap = {};
+      intakes.forEach(i => {
+        const key = (i.company||'Unknown').trim() || 'Unknown';
+        if (!cmap[key]) cmap[key] = { loads:0, qty:0 };
+        cmap[key].loads++;
+        cmap[key].qty += parseFloat(i.qty||0);
+      });
+      const sorted = Object.entries(cmap).sort((a,b)=>b[1].qty-a[1].qty);
+      const maxQty = sorted[0]?.[1].qty || 1;
+      const COLS = ['#F5A623','#10B981','#3B82F6','#8B5CF6','#EF4444','#F59E0B','#06B6D4','#EC4899'];
+      compEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;">` +
+        sorted.slice(0,8).map(([name, d], i) => {
+          const pct = Math.round((d.qty / maxQty) * 100);
+          return `<div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+              <span style="font-weight:600;color:var(--ink);">${name}</span>
+              <span style="color:var(--ink-4);">${parseInt(d.qty).toLocaleString('en-IN')} Kg · ${d.loads} loads</span>
+            </div>
+            <div style="height:10px;background:var(--surface-3);border-radius:99px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:${COLS[i%COLS.length]};border-radius:99px;transition:width .6s;opacity:0.85;"></div>
+            </div></div>`;
+        }).join('') +
+        `</div>`;
+    }
+  }
+
+  // ── 6. CUMULATIVE INTAKE TREND (last 14 days) ─────────────
+  const trendEl = document.getElementById('adv-intake-trend');
+  if (trendEl) {
+    const today = new Date(); today.setHours(23,59,59,999);
+    const days14 = Array.from({length:14},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()-(13-i)); return d; });
+    const daily14 = days14.map(day => {
+      const ds = day.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+      return intakes.filter(i => new Date(i.dateTS).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'})===ds)
+        .reduce((s,i)=>s+parseFloat(i.qty||0),0);
+    });
+    const chartMax = Math.max(...daily14, 0.1);
+    const dayLabels = days14.map((d,i) => i===13?'Today':d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}));
+    trendEl.innerHTML = `<div style="display:flex;gap:3px;align-items:flex-end;height:80px;">` +
+      daily14.map((v, i) => {
+        const h = Math.max(4, Math.round((v/chartMax)*72));
+        const isToday = i===13;
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div title="${parseInt(v).toLocaleString('en-IN')} Kg" style="width:100%;height:${h}px;background:${isToday?'var(--gold)':'var(--blue)'};border-radius:3px 3px 0 0;opacity:${isToday?1:0.65};cursor:default;transition:height .4s;"></div>
+          <span style="font-size:9px;color:var(--ink-5);writing-mode:vertical-lr;text-orientation:mixed;transform:rotate(180deg);height:36px;overflow:hidden;">${dayLabels[i]}</span>
+        </div>`;
+      }).join('') +
+      `</div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-5);margin-top:6px;padding:0 2px;">
+        <span>Total 14d: <strong style="color:var(--ink);">${parseInt(daily14.reduce((s,v)=>s+v,0)).toLocaleString('en-IN')} Kg</strong></span>
+        <span>Peak day: <strong style="color:var(--gold);">${parseInt(chartMax).toLocaleString('en-IN')} Kg</strong></span>
+        <span>Active days: <strong style="color:var(--ink);">${daily14.filter(v=>v>0).length}</strong></span>
+      </div>`;
+  }
 }
 
 function renderMaintenancePage() {
