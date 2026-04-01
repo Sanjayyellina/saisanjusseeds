@@ -7,6 +7,9 @@
 // ================================================================
 // UTILS
 // ================================================================
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function getMoistureColor(m){
   if(m>28)return 'var(--blue)';if(m>15)return 'var(--amber)';return 'var(--green)';
 }

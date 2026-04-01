@@ -218,4 +218,6 @@
   .topbar-right .topbar-btn span { display: none; } /* Hide 'New Intake' text, just show icon */
   .page-wrap { padding: 16px; min-width:100%; }
   .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .login-left { display: none !important; }
+  #login-screen > div:last-of-type { padding: 20px; }
 }

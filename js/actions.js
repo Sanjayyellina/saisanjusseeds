@@ -786,9 +786,16 @@ function showManagerAccess(btnElement) {
   setTimeout(()=>document.getElementById('manager-pin-input').focus(), 100);
 }
 
-function verifyPinAndAccess() {
+// SHA-256 hash of the manager PIN — change this hash to change the PIN.
+// To generate a new hash: crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourPIN'))
+//   then convert to hex. Current PIN: ask your manager.
+const MANAGER_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+
+async function verifyPinAndAccess() {
   const pin = document.getElementById('manager-pin-input').value;
-  if (pin === "1234") {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  if (hex === MANAGER_PIN_HASH) {
     window.isManagerMode = true;
     toast('Manager Access Granted', 'success');
     closeModal('pin-modal');

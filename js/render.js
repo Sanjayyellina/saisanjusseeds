@@ -7,6 +7,8 @@
 // ================================================================
 // RENDER PAGES
 // ================================================================
+const esc = escapeHtml; // shorthand for XSS-safe HTML insertion
+
 function renderPage(name){
   const map={dashboard:renderDashboard,intake:renderIntakePage,bins:renderBinsPage,
     moisture:null,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
@@ -56,9 +58,9 @@ function renderDashboard(){
 
   document.getElementById('recent-dispatch-tbody').innerHTML=state.dispatches.length?[...state.dispatches].reverse().slice(0,5).map(d=>`
     <tr>
-      <td><span class="mono fs12 text-gold">${d.receiptId}</span></td>
-      <td class="fw700">${d.party}</td>
-      <td class="mono">${d.bags}</td>
+      <td><span class="mono fs12 text-gold">${esc(d.receiptId)}</span></td>
+      <td class="fw700">${esc(d.party)}</td>
+      <td class="mono">${esc(d.bags)}</td>
       <td class="fw700 text-green">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
     </tr>`).join('')
     :`<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">${t('dash.noDispatches')}</div></div></td></tr>`;
@@ -75,21 +77,21 @@ function renderIntakePage(){
     const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     return`<tr>
       <td class="mono text-muted fs12">${idx+1}</td>
-      <td class="fs12 text-muted">${i.date}</td>
-      <td><span class="mono fw700 text-gold">${i.challan}</span></td>
-      <td class="mono">${i.vehicle}</td>
-      <td class="fs12 text-muted truncate" style="max-width:140px;">${i.location||'—'}</td>
-      <td class="fw700">${i.hybrid}</td>
-      <td class="mono fs12 text-muted">${i.lot||'—'}</td>
-      <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
-      <td class="mono fs12">${i.vehicleWeight||'—'}</td>
-      <td class="mono fs12">${i.grossWeight||'—'}</td>
-      <td class="mono fw700" style="color:var(--blue);">${i.netWeight||'—'}</td>
-      <td><span class="mono fw700" style="color:${getMoistureColor(i.entryMoisture)};">${i.entryMoisture}%</span></td>
+      <td class="fs12 text-muted">${esc(i.date)}</td>
+      <td><span class="mono fw700 text-gold">${esc(i.challan)}</span></td>
+      <td class="mono">${esc(i.vehicle)}</td>
+      <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(i.location||'—')}</td>
+      <td class="fw700">${esc(i.hybrid)}</td>
+      <td class="mono fs12 text-muted">${esc(i.lot||'—')}</td>
+      <td><span class="fw700 text-gold">${esc(i.qty)} Kg</span></td>
+      <td class="mono fs12">${esc(i.vehicleWeight||'—')}</td>
+      <td class="mono fs12">${esc(i.grossWeight||'—')}</td>
+      <td class="mono fw700" style="color:var(--blue);">${esc(i.netWeight||'—')}</td>
+      <td><span class="mono fw700" style="color:${getMoistureColor(i.entryMoisture)};">${esc(i.entryMoisture)}%</span></td>
       <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${getBinLabel(b)}</span>`).join(' ')||'—'}</td>
       <td><span class="chip ${statusChipClass}">${statusLabel}</span></td>
       <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${i.bin})">${t('actions.view')} Bin</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${esc(i.id)}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${parseInt(i.bin)||0})">${t('actions.view')} Bin</button>`:''}
       </td>
     </tr>`;}).join('')
     :`<tr><td colspan="15"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">${t('dash.noIntakes')}</div><div class="empty-sub">Start by logging a new truck intake above</div></div></td></tr>`;
@@ -120,8 +122,8 @@ function renderManagerPage(){
     <div class="m-card" style="border: 2px solid var(--gold);">
       <div class="m-bin-badge">BIN<br>${bin.binLabel||bin.id}</div>
       <div class="m-info">
-        <div class="m-hybrid">${bin.hybrid}</div>
-        <div class="m-meta">${bin.qty} Kg · ${t('bins.entry')}: <span class="mono fw700">${bin.entryMoisture}%</span> · ${t('bins.status.intake')}: ${bin.intakeDate?bin.intakeDate.split(',')[0]:''} · ${t('bins.day')} ${dateDiff(bin.intakeDateTS)}</div>
+        <div class="m-hybrid">${esc(bin.hybrid)}</div>
+        <div class="m-meta">${esc(bin.qty)} Kg · ${t('bins.entry')}: <span class="mono fw700">${esc(bin.entryMoisture)}%</span> · ${t('bins.status.intake')}: ${bin.intakeDate?esc(bin.intakeDate.split(',')[0]):''} · ${t('bins.day')} ${dateDiff(bin.intakeDateTS)}</div>
         <div style="margin-top:6px;">
           <div class="moisture-track" style="max-width:200px;"><div class="moisture-bar" style="width:${getMoisturePct(bin.currentMoisture)}%;background:${getMoistureBarColor(bin.currentMoisture)};"></div></div>
         </div>
@@ -165,13 +167,13 @@ function renderManagerPage(){
   if (state.intakes.length) {
     html += state.intakes.map((i, idx) => `<tr>
       <td class="mono text-muted fs12">${idx+1}</td>
-      <td class="fs12 text-muted">${i.date}</td>
-      <td><span class="mono fw700 text-gold">${i.challan}</span></td>
-      <td class="mono">${i.vehicle}</td>
-      <td class="fw700">${i.hybrid}</td>
-      <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
+      <td class="fs12 text-muted">${esc(i.date)}</td>
+      <td><span class="mono fw700 text-gold">${esc(i.challan)}</span></td>
+      <td class="mono">${esc(i.vehicle)}</td>
+      <td class="fw700">${esc(i.hybrid)}</td>
+      <td><span class="fw700 text-gold">${esc(i.qty)} Kg</span></td>
       <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>'<span class="chip chip-blue">BIN-'+getBinLabel(b)+'</span>').join(' ')||'—'}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit Intake">✏️ Edit</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${esc(i.id)}')" title="Edit Intake">✏️ Edit</button></td>
     </tr>`).join('');
   } else {
     html += `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">No intakes yet</div></div></td></tr>`;
@@ -184,31 +186,31 @@ function renderManagerPage(){
 function renderDispatchPage(){
   document.getElementById('dispatch-full-tbody').innerHTML=state.dispatches.length?[...state.dispatches].reverse().map(d=>`
     <tr>
-      <td><span class="mono text-gold fw700 fs12">${d.receiptId}</span></td>
-      <td class="fs12 text-muted">${d.date}</td>
-      <td class="fw700">${d.party}</td>
-      <td class="truncate" style="max-width:160px;">${d.hybrid}</td>
-      <td class="mono">${d.bags}</td>
+      <td><span class="mono text-gold fw700 fs12">${esc(d.receiptId)}</span></td>
+      <td class="fs12 text-muted">${esc(d.date)}</td>
+      <td class="fw700">${esc(d.party)}</td>
+      <td class="truncate" style="max-width:160px;">${esc(d.hybrid)}</td>
+      <td class="mono">${esc(d.bags)}</td>
       <td class="mono fw700">${parseInt(d.qty).toLocaleString('en-IN')} Kg</td>
-      <td><span class="mono" style="color:var(--green);font-weight:700;">${d.moisture||'—'}%</span></td>
+      <td><span class="mono" style="color:var(--green);font-weight:700;">${esc(d.moisture||'—')}%</span></td>
       <td class="fw700 text-green">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
-      <td class="mono fs12">${d.vehicle}</td>
+      <td class="mono fs12">${esc(d.vehicle)}</td>
       <td><span class="chip chip-green">✓ ${t('actions.view') || 'Signed'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="viewReceipt('${d.receiptId}')">${t('actions.view')}</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="viewReceipt('${esc(d.receiptId)}')">${t('actions.view')}</button></td>
     </tr>`).join('')
     :`<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">${t('dash.noDispatches')}</div><div class="empty-sub">Create a dispatch to generate a signed receipt</div></div></td></tr>`;
 }
 
 function renderReceiptsPage(){
   document.getElementById('receipts-grid').innerHTML=state.dispatches.length?[...state.dispatches].reverse().map(d=>`
-    <div onclick="viewReceipt('${d.receiptId}')" style="background:var(--surface);border:1px solid var(--surface-4);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all var(--transition);box-shadow:var(--shadow-xs);" onmouseover="this.style.boxShadow='var(--shadow)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='var(--shadow-xs)';this.style.transform=''">
+    <div onclick="viewReceipt('${esc(d.receiptId)}')" style="background:var(--surface);border:1px solid var(--surface-4);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all var(--transition);box-shadow:var(--shadow-xs);" onmouseover="this.style.boxShadow='var(--shadow)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='var(--shadow-xs)';this.style.transform=''">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-        <span class="mono fw700 text-gold fs12">${d.receiptId}</span>
+        <span class="mono fw700 text-gold fs12">${esc(d.receiptId)}</span>
         <span class="chip chip-green">${t('receipts.verified')}</span>
       </div>
-      <div class="fw700" style="margin-bottom:4px;">${d.party}</div>
-      <div class="fs12 text-muted">${d.hybrid}</div>
-      <div class="fs12 text-muted" style="margin-top:2px;">${d.bags} ${t('dash.bags')} · ${parseInt(d.qty).toLocaleString('en-IN')} Kg · ${d.date}</div>
+      <div class="fw700" style="margin-bottom:4px;">${esc(d.party)}</div>
+      <div class="fs12 text-muted">${esc(d.hybrid)}</div>
+      <div class="fs12 text-muted" style="margin-top:2px;">${esc(d.bags)} ${t('dash.bags')} · ${parseInt(d.qty).toLocaleString('en-IN')} Kg · ${esc(d.date)}</div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--surface-3);display:flex;justify-content:space-between;align-items:center;">
         <span class="fw700 text-green">₹${parseInt(d.amount).toLocaleString('en-IN')}</span>
         <span class="mono" style="font-size:9px;color:var(--ink-5);">${d.hash.substring(0,16)}…</span>
@@ -1029,12 +1031,12 @@ function renderMaintenancePage() {
   document.getElementById('maintenance-tbody').innerHTML = state.maintenance.length ? state.maintenance.map(m => `
     <tr>
       <td class="fs12 text-muted">${new Date(m.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
-      <td class="fw700">${m.reported_by || '—'}</td>
-      <td class="fw700">${m.work_done}</td>
-      <td class="mono">${m.equipment_name}</td>
-      <td class="fs12 text-muted truncate" style="max-width:140px;">${m.issue_description || '—'}</td>
-      <td class="mono fs12">${m.checked_by || '—'}</td>
-      <td class="fs12 truncate" style="max-width:140px;">${m.items_bought || '—'}</td>
+      <td class="fw700">${esc(m.reported_by || '—')}</td>
+      <td class="fw700">${esc(m.work_done)}</td>
+      <td class="mono">${esc(m.equipment_name)}</td>
+      <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(m.issue_description || '—')}</td>
+      <td class="mono fs12">${esc(m.checked_by || '—')}</td>
+      <td class="fs12 truncate" style="max-width:140px;">${esc(m.items_bought || '—')}</td>
       <td><span class="fw700 text-gold">₹${parseInt(m.cost_amount).toLocaleString('en-IN')}</span></td>
     </tr>`).join('')
     : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
@@ -1044,11 +1046,11 @@ function renderLaborPage() {
   document.getElementById('labor-tbody').innerHTML = state.labor.length ? state.labor.map(l => `
     <tr>
       <td class="fs12 text-muted">${new Date(l.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
-      <td class="mono fs12 text-gold">${l.shift}</td>
-      <td class="fw700">${l.role}</td>
-      <td><span class="mono fw700 text-gold">${l.headcount}</span></td>
-      <td class="fs12 truncate" style="max-width:200px;" title="${l.people_names || ''}">${l.people_names || '—'}</td>
-      <td class="fs12 text-muted truncate" style="max-width:140px;">${l.notes || '—'}</td>
+      <td class="mono fs12 text-gold">${esc(l.shift)}</td>
+      <td class="fw700">${esc(l.role)}</td>
+      <td><span class="mono fw700 text-gold">${esc(l.headcount)}</span></td>
+      <td class="fs12 truncate" style="max-width:200px;" title="${esc(l.people_names || '')}">${esc(l.people_names || '—')}</td>
+      <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(l.notes || '—')}</td>
     </tr>`).join('')
     : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👷</div><div class="empty-title">No Labor Logs found</div></div></td></tr>`;
 }
