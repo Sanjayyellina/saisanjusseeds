@@ -176,6 +176,25 @@ function copyReceiptHash() {
   }
 }
 
+window.shareReceiptWhatsApp = function() {
+  const d = _currentReceiptId ? state.dispatches.find(x => x.receiptId === _currentReceiptId) : null;
+  if (!d) return;
+  const msg = [
+    '🌾 *Yellina Seeds — Dispatch Invoice*',
+    '',
+    `*Invoice:* ${d.receiptId}`,
+    `*To:* ${d.party}`,
+    `*Hybrid:* ${d.hybrid}`,
+    `*Bags:* ${d.bags.toLocaleString('en-IN')} | *Qty:* ${parseInt(d.qty).toLocaleString('en-IN')} Kg`,
+    `*Final Moisture:* ${d.moisture ? d.moisture + '%' : '—'}`,
+    `*Amount:* ₹${parseInt(d.amount).toLocaleString('en-IN')}`,
+    `*Date:* ${d.date}`,
+    '',
+    `Verify at: https://yellinaseeds.com → Receipts → ${d.receiptId}`
+  ].join('\n');
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+};
+
 function printReceipt() {
   const el = document.getElementById('print-receipt');
   if (!el) return;

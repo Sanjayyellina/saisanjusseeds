@@ -15,6 +15,66 @@ window._dispatchPage = window._dispatchPage || 0;
 window.goIntakePage = function(dir) { window._intakePage = Math.max(0, window._intakePage + dir); renderIntakePage(); };
 window.goDispatchPage = function(dir) { window._dispatchPage = Math.max(0, window._dispatchPage + dir); renderDispatchPage(); };
 
+// ── Notification Bell ─────────────────────────────────────────
+function _buildAlerts() {
+  const alerts = [];
+  (state.bins || []).forEach(b => {
+    if (b.status === 'empty') return;
+    const hours = b.intakeDateTS ? Math.floor((Date.now() - b.intakeDateTS) / 3600000) : 0;
+    const lbl = `BIN-${b.binLabel || b.id}`;
+    if (hours > Config.TARGET_HRS)
+      alerts.push({lv:'red', icon:'🔴', msg:`${lbl} overdue`, sub:`${hours}h in dryer (target ${Config.TARGET_HRS}h)`, id:b.id});
+    else if ((b.currentMoisture||99) <= Config.TARGET_MOISTURE)
+      alerts.push({lv:'green', icon:'✅', msg:`${lbl} ready to dispatch`, sub:`${b.currentMoisture}% moisture — target reached`, id:b.id});
+    else if ((b.currentMoisture||0) >= Config.MOISTURE_HIGH)
+      alerts.push({lv:'amber', icon:'🟡', msg:`${lbl} very high moisture`, sub:`${b.currentMoisture}% — needs monitoring`, id:b.id});
+  });
+  return alerts;
+}
+
+function _updateNotifBell() {
+  const alerts = _buildAlerts();
+  const overdue = alerts.filter(a => a.lv === 'red');
+  const btn  = document.getElementById('notif-btn');
+  const badge = document.getElementById('notif-badge');
+  if (!btn || !badge) return;
+  if (alerts.length > 0) {
+    badge.textContent = alerts.length;
+    badge.style.display = 'block';
+    btn.classList.toggle('has-alerts', overdue.length > 0);
+  } else {
+    badge.style.display = 'none';
+    btn.classList.remove('has-alerts');
+  }
+  // Update document title
+  document.title = overdue.length > 0 ? `(${overdue.length}) Yellina Seeds` : 'Yellina Seeds';
+  // Populate panel body
+  const body = document.getElementById('notif-panel-body');
+  if (body) {
+    body.innerHTML = alerts.length
+      ? alerts.map(a => `<div class="notif-item" onclick="openBinModal(${a.id});toggleNotifPanel()">
+          <div class="notif-item-icon">${a.icon}</div>
+          <div><div class="notif-item-text">${a.msg}</div><div class="notif-item-sub">${a.sub}</div></div>
+        </div>`).join('')
+      : `<div class="notif-empty">✅ All bins normal — no alerts</div>`;
+  }
+}
+
+window.toggleNotifPanel = function() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+};
+
+// Close notif panel when clicking outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('notif-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
 function _renderPagination(elId, currentPage, total, gofn) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -44,9 +104,24 @@ function renderDashboard(){
   const totalQty=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
   const avgM=active.length?(active.reduce((s,b)=>s+(b.currentMoisture||0),0)/active.length).toFixed(1):'—';
 
+  // Today's stats for delta labels
+  const todayStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const todayIntakeQty=state.intakes.filter(i=>i.date===todayStr).reduce((s,i)=>s+parseFloat(i.qty||0),0);
+  const todayDispatches=state.dispatches.filter(d=>d.date===todayStr);
+  const todayRev=todayDispatches.reduce((s,d)=>s+parseInt(d.amount||0),0);
+
+  // Ready to dispatch = bins at or below target moisture
+  const readyBins=active.filter(b=>(b.currentMoisture||99)<=Config.TARGET_MOISTURE);
+
   document.getElementById('kpi-intake').textContent=totalQty.toFixed(1);
+  const kpiIntakeD=document.getElementById('kpi-intake-d');
+  if(kpiIntakeD)kpiIntakeD.textContent=todayIntakeQty>0?`↑ ${todayIntakeQty.toFixed(0)} Kg today`:'↑ Today';
+
   document.getElementById('kpi-drying').textContent=drying.length;
   document.getElementById('kpi-dispatched').textContent=state.dispatches.length;
+  const kpiDispD=document.querySelector('#kpi-dispatched+.kpi-label+.kpi-delta')||document.querySelectorAll('#kpi-grid .kpi-delta')[2];
+  if(kpiDispD&&todayRev>0)kpiDispD.textContent='₹'+todayRev.toLocaleString('en-IN')+' today';
+
   document.getElementById('kpi-moisture').textContent=avgM+(avgM!=='—'?'%':'');
   const md=avgM!=='—'?parseFloat(avgM):null;
   if(md){
@@ -54,6 +129,14 @@ function renderDashboard(){
     dm.textContent=md<15?t('dash.onTarget'):md<25?t('dash.progressing'):t('dash.high');
     dm.className='kpi-delta '+(md<15?'delta-up':md<25?'delta-flat':'delta-down');
   }
+
+  const kpiReady=document.getElementById('kpi-ready');
+  if(kpiReady)kpiReady.textContent=readyBins.length;
+  const kpiReadyD=document.getElementById('kpi-ready-d');
+  if(kpiReadyD)kpiReadyD.textContent=readyBins.length>0?readyBins.map(b=>`BIN-${b.binLabel||b.id}`).join(', '):'Bins at target';
+
+  // ── Notification Bell ────────────────────────────────────────
+  _updateNotifBell();
 
   document.getElementById('dash-bins').innerHTML=state.bins.map(b=>renderBinTile(b)).join('');
 
