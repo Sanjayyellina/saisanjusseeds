@@ -10,7 +10,7 @@
 <!-- Modular Stylesheets -->
 <link rel="stylesheet" href="css/variables.css?v=20">
 <link rel="stylesheet" href="css/layout.css?v=20">
-<link rel="stylesheet" href="css/components.css?v=36">
+<link rel="stylesheet" href="css/components.css?v=37">
 </head>
 <body>
 
@@ -825,7 +825,7 @@
       </div>
       <div id="i-lot-rows"></div>
       <div class="form-row cols2">
-        <div class="form-group"><label class="form-label">Entry Moisture %</label><input class="form-input" id="i-moisture" type="number" step="0.1" placeholder="36.6"></div>
+        <div class="form-group"><label class="form-label">Entry Moisture %</label><input class="form-input" id="i-moisture" type="number" step="0.1" min="0" max="60" placeholder="36.6"></div>
       </div>
       <div class="form-section">
         <span class="form-section-icon">🏭</span> <span data-i18n="intake.modal.alloc">Bin Assignments</span>
@@ -892,12 +892,12 @@
         <!-- Populated dynamically by addDispatchBinRow() -->
       </div>
       <div class="form-row cols3">
-        <div class="form-group"><label class="form-label" data-i18n="dash.bags">No. of Bags *</label><input class="form-input" id="d-bags" type="number" placeholder="339"></div>
-        <div class="form-group"><label class="form-label" data-i18n="dispatch.modal.totalQty">Total Qty (Kg) *</label><input class="form-input" id="d-qty" type="number" placeholder="11775"></div>
-        <div class="form-group"><label class="form-label" data-i18n="dispatch.modal.moisture">Final Moisture %</label><input class="form-input" id="d-moisture" type="number" step="0.1" placeholder="10.3"></div>
+        <div class="form-group"><label class="form-label" data-i18n="dash.bags">No. of Bags *</label><input class="form-input" id="d-bags" type="number" min="1" max="99999" placeholder="339"></div>
+        <div class="form-group"><label class="form-label" data-i18n="dispatch.modal.totalQty">Total Qty (Kg) *</label><input class="form-input" id="d-qty" type="number" min="1" max="9999999" placeholder="11775"></div>
+        <div class="form-group"><label class="form-label" data-i18n="dispatch.modal.moisture">Final Moisture %</label><input class="form-input" id="d-moisture" type="number" step="0.1" min="0" max="60" placeholder="10.3"></div>
       </div>
       <div class="form-row cols2">
-        <div class="form-group"><label class="form-label" data-i18n="dash.amount">Amount (₹) *</label><input class="form-input" id="d-amount" type="number" placeholder="230000"></div>
+        <div class="form-group"><label class="form-label" data-i18n="dash.amount">Amount (₹) *</label><input class="form-input" id="d-amount" type="number" min="1" max="999999999" placeholder="230000"></div>
         <div class="form-group"><label class="form-label">LR Number</label><input class="form-input" id="d-lr" placeholder="e.g. 68"></div>
       </div>
       <div class="form-row cols1"><div class="form-group"><label class="form-label">Remarks</label><textarea class="form-textarea" id="d-remarks" placeholder="Notes…"></textarea></div></div>
@@ -1039,7 +1039,7 @@
       </div></div>
       <div class="form-row"><div class="form-group">
           <label class="form-label" data-i18n="maint.cost">Payment/Cost (₹)</label>
-          <input type="number" id="maint-cost" class="form-input" placeholder="Amount">
+          <input type="number" id="maint-cost" class="form-input" placeholder="Amount" min="0" max="9999999">
       </div></div>
       <div class="form-row cols1"><div class="form-group">
           <label class="form-label" data-i18n="maint.items">Items Bought</label>
@@ -1085,7 +1085,7 @@
       </div></div>
       <div class="form-row"><div class="form-group">
           <label class="form-label" data-i18n="labor.headcount">Headcount (Number of People)</label>
-          <input type="number" id="labor-headcount" class="form-input" placeholder="e.g. 5" min="1">
+          <input type="number" id="labor-headcount" class="form-input" placeholder="e.g. 5" min="1" max="999">
       </div></div>
       <div class="form-row cols1"><div class="form-group">
           <label class="form-label" data-i18n="labor.people">People (Names)</label>
@@ -1126,8 +1126,8 @@
       </div>
       <div class="form-section"><span class="form-section-icon">⚖️</span> Weighing</div>
       <div class="form-row cols3">
-        <div class="form-group"><label class="form-label">Gross Weight (Kg) <span style="color:var(--ink-5);font-weight:400;">(loaded)</span></label><input class="form-input" id="t-gross" type="number" placeholder="e.g. 28500" oninput="calcTruckNetWeight()"></div>
-        <div class="form-group"><label class="form-label">Tare Weight (Kg) <span style="color:var(--ink-5);font-weight:400;">(empty)</span></label><input class="form-input" id="t-tare" type="number" placeholder="e.g. 8500" oninput="calcTruckNetWeight()"></div>
+        <div class="form-group"><label class="form-label">Gross Weight (Kg) <span style="color:var(--ink-5);font-weight:400;">(loaded)</span></label><input class="form-input" id="t-gross" type="number" min="0" max="999999" placeholder="e.g. 28500" oninput="calcTruckNetWeight()"></div>
+        <div class="form-group"><label class="form-label">Tare Weight (Kg) <span style="color:var(--ink-5);font-weight:400;">(empty)</span></label><input class="form-input" id="t-tare" type="number" min="0" max="999999" placeholder="e.g. 8500" oninput="calcTruckNetWeight()"></div>
         <div class="form-group"><label class="form-label">Net Weight (Kg)</label>
           <div class="form-input" id="t-net-display" style="background:var(--gold-pale);border-color:var(--gold-border);color:var(--gold-dark);font-weight:700;font-family:'DM Mono',monospace;display:flex;align-items:center;">—</div>
         </div>
@@ -1181,8 +1181,8 @@
         <div class="form-group"><label class="form-label">Hybrid</label><input class="form-input" id="by-hybrid" placeholder="e.g. YS-07"></div>
       </div>
       <div class="form-row cols2">
-        <div class="form-group"><label class="form-label">Qty Removed (Kg) *</label><input class="form-input" id="by-qty" type="number" placeholder="e.g. 200"></div>
-        <div class="form-group"><label class="form-label">Bags Removed</label><input class="form-input" id="by-bags" type="number" placeholder="e.g. 5"></div>
+        <div class="form-group"><label class="form-label">Qty Removed (Kg) *</label><input class="form-input" id="by-qty" type="number" min="0" max="9999999" placeholder="e.g. 200"></div>
+        <div class="form-group"><label class="form-label">Bags Removed</label><input class="form-input" id="by-bags" type="number" min="0" max="99999" placeholder="e.g. 5"></div>
       </div>
       <div class="form-row cols2">
         <div class="form-group"><label class="form-label">Reason *</label>
@@ -1241,9 +1241,9 @@
 <script src="js/selects.js?v=3"></script>
 <script src="js/binTile.js?v=16"></script>
 <script src="js/render.js?v=16"></script>
-<script src="js/actions.js?v=15"></script>
+<script src="js/actions.js?v=16"></script>
 <script src="js/receipt.js?v=5"></script>
 <script src="js/clock.js?v=2"></script>
-<script src="js/init.js?v=8"></script>
+<script src="js/init.js?v=9"></script>
 </body>
 </html>

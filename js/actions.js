@@ -343,6 +343,9 @@ async function saveIntake(){
   const qtyUnit = 'kg';
 
   if(!challan||!vehicle||!hybrid||!qty){toast('Please fill all required fields — DR No, Vehicle, Hybrid, and at least one Lot with Qty','error');return;}
+  if(qty<=0){toast('Total quantity must be greater than 0','error');return;}
+  const moistureVal=parseFloat(document.getElementById('i-moisture').value);
+  if(document.getElementById('i-moisture').value&&(moistureVal<0||moistureVal>60)){toast('Entry moisture must be between 0% and 60%','error');return;}
 
   // gather bin allocations (all in Kg)
   const rows = document.querySelectorAll('.i-bin-row');
@@ -518,6 +521,9 @@ async function saveDispatch(){
   const qty=parseFloat(document.getElementById('d-qty').value);
   const amount=parseFloat(document.getElementById('d-amount').value);
   if(!party||!vehicle||!hybrid||!bags||!qty||!amount){toast('Fill all required fields (*)','error');return;}
+  if(bags<=0||qty<=0||amount<=0){toast('Bags, Qty, and Amount must all be greater than 0','error');return;}
+  const dMoisture=parseFloat(document.getElementById('d-moisture').value);
+  if(document.getElementById('d-moisture').value&&(dMoisture<0||dMoisture>60)){toast('Moisture must be between 0% and 60%','error');return;}
 
   // Gather bin allocations
   const binRows = document.querySelectorAll('.d-bin-row');

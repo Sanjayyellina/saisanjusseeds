@@ -4,7 +4,49 @@
 "use strict";
 // ============================================================
 
-// Always sign out on page load so login is required every visit
+// ── Boot spinner helpers ──────────────────────────────────────
+function _showBootSpinner() {
+  let el = document.getElementById('boot-spinner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'boot-spinner';
+    el.innerHTML = `
+      <div class="bsp-card">
+        <div class="bsp-ring-wrap">
+          <div class="bsp-ring"></div>
+          <img src="/assets/logo.jpg" class="bsp-logo" alt="Yellina Seeds">
+        </div>
+        <div class="bsp-label">Loading operations data…</div>
+        <div class="bsp-sub">Yellina Seeds Pvt. Ltd. — Sathupally</div>
+      </div>`;
+    document.body.appendChild(el);
+  }
+  el.classList.remove('bsp-hidden');
+}
+
+function _hideBootSpinner() {
+  const el = document.getElementById('boot-spinner');
+  if (el) {
+    el.classList.add('bsp-hidden');
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+  }
+}
+
+function _showBootError() {
+  const el = document.getElementById('boot-spinner');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="bsp-card">
+      <div style="font-size:44px;margin-bottom:4px">⚠️</div>
+      <div class="bsp-label" style="color:var(--red)">Failed to load data</div>
+      <div class="bsp-sub" style="margin-bottom:20px;max-width:260px;">
+        Could not connect to the database.<br>Check your internet connection and try again.
+      </div>
+      <button class="btn btn-gold" style="height:40px;font-size:13px;" onclick="bootApp()">↺ &nbsp;Retry</button>
+    </div>`;
+}
+
+// ── Always sign out on page load so login is required every visit ──
 async function initApp() {
   await dbClient.auth.signOut();
   const loginScreen = document.getElementById('login-screen');
@@ -27,8 +69,11 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Called after successful login to load data and show the app
+// ── Called after successful login to load data and show the app ──
 async function bootApp() {
+  // Show/update spinner immediately
+  _showBootSpinner();
+
   const loginScreen = document.getElementById('login-screen');
   const appShell = document.getElementById('app-shell');
   if (loginScreen) loginScreen.style.display = 'none';
@@ -46,19 +91,34 @@ async function bootApp() {
     }
   } catch(e) { /* silent */ }
 
-  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
 
   // Fetch all data in parallel for faster boot
-  const [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals] = await Promise.all([
-    dbFetchBins(),
-    dbFetchIntakes(),
-    dbFetchDispatches(),
-    dbFetchMaintenance(),
-    dbFetchLabor(),
-    dbFetchBinHistory(),
-    dbFetchEntryTrucks(),
-    dbFetchBackyardRemovals()
-  ]);
+  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals;
+  try {
+    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals] = await Promise.all([
+      dbFetchBins(),
+      dbFetchIntakes(),
+      dbFetchDispatches(),
+      dbFetchMaintenance(),
+      dbFetchLabor(),
+      dbFetchBinHistory(),
+      dbFetchEntryTrucks(),
+      dbFetchBackyardRemovals()
+    ]);
+  } catch (err) {
+    console.error('bootApp: fetch error', err);
+    _showBootError();
+    return;
+  }
+
+  // Critical check: bins must load for app to function
+  if (!bins) {
+    _showBootError();
+    return;
+  }
 
   if (bins && bins.length > 0) {
     state.bins = bins.map(b => ({
@@ -131,7 +191,7 @@ async function bootApp() {
       date: new Date(d.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }));
     if (state.dispatches.length > 0) {
-      const maxReceipt = Math.max(...state.dispatches.map(d => parseInt(d.receipt_id.split('-')[2]) || 0));
+      const maxReceipt = Math.max(...state.dispatches.map(d => parseInt(d.receiptId.split('-')[2]) || 0));
       state.receiptCounter = Math.max(1001, maxReceipt + 1);
     }
   }
@@ -176,12 +236,14 @@ async function bootApp() {
     }));
   }
 
+  // Hide spinner BEFORE emitting change so first render is visible
+  _hideBootSpinner();
+
   if (window.Store) window.Store.emitChange();
 
   // Show pending badge if there are queued writes from a previous offline session
   if (window.OfflineQueue) {
     OfflineQueue.updateBadge();
-    // If we're back online and have pending items, sync them now
     if (navigator.onLine && OfflineQueue.count() > 0) {
       setTimeout(() => OfflineQueue.sync(), 2000);
     }
@@ -211,7 +273,6 @@ window.addEventListener('online', () => {
   console.log('Connection restored — syncing offline queue…');
   if (window.OfflineQueue) {
     OfflineQueue.updateBadge();
-    // Small delay to let connection stabilise before syncing
     setTimeout(() => OfflineQueue.sync(), 1500);
   }
 });
@@ -219,7 +280,7 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
   console.log('Connection lost — writes will be queued locally');
   if (window.OfflineQueue) OfflineQueue.updateBadge();
-  if (typeof showToast === 'function') showToast('You\'re offline — entries will be saved locally and synced when connected', 'info');
+  if (typeof toast === 'function') toast('You\'re offline — entries will be saved locally and synced when connected', 'info');
 });
 
 initApp();
