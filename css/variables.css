@@ -96,7 +96,7 @@
    ============================================================ */
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 html { font-size:14px; -webkit-font-smoothing:antialiased; scroll-behavior:smooth; }
-body { background: linear-gradient(160deg, #EEF5EB 0%, #F5F8F3 40%, #F3F0E8 100%); background-attachment: fixed; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 62L40 44C37 40 27 35 27 25C27 16 36 12 40 28C44 12 53 16 53 25C53 35 43 40 40 44Z' fill='%2322543D' opacity='.05'/%3E%3C/svg%3E"); background-size: 80px 80px; color:var(--ink); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
+body { background: linear-gradient(160deg, #EEF5EB 0%, #F5F8F3 40%, #F3F0E8 100%); background-attachment: fixed; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%2322543D' opacity='.05'%3E%3Cpath d='M40 65C36 57 13 52 15 34C17 17 34 16 40 42Z'/%3E%3Cpath d='M40 65C44 57 67 52 65 34C63 17 46 16 40 42Z'/%3E%3C/g%3E%3C/svg%3E"); background-size: 80px 80px; color:var(--ink); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
 a { color:inherit; text-decoration:none; }
 button, input, select, textarea { font-family:inherit; }
 svg { display:block; flex-shrink:0; }
