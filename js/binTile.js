@@ -62,7 +62,7 @@ function renderBinTile(bin, isManager = false){
         <div class="bin-hours-wrap">
           <div class="bin-hours-label">
             <span style="font-size:10px;color:var(--ink-5);">&#x23F1; In bin</span>
-            <span class="bin-hours-val" style="color:${hoursColor};">${hours}h <span class="bin-hours-total">/ ${TARGET_HRS}h</span></span>
+            <span class="bin-hours-val" style="color:${hoursColor};">${hours}h <span class="bin-hours-total">/ ${Config.TARGET_HRS}h</span></span>
           </div>
           <div class="bin-hours-track">
             <div class="bin-hours-fill" style="width:${hoursPct}%;background:${hoursColor};"></div>
