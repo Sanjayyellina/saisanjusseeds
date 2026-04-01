@@ -99,7 +99,7 @@ const translations = {
     dispatch: {
       title: 'Dispatch Register',
       subtitle: 'Outgoing loads and receipts',
-      newDispatch: '+ New Dispatch',
+      newDispatch: 'New Dispatch',
       modal: {
         title: 'New Dispatch',
         receiver: 'Receiver',
@@ -283,7 +283,7 @@ const translations = {
     dispatch: {
       title: 'डिस्पैच रजिस्टर',
       subtitle: 'जाने वाले लोड और रसीदें',
-      newDispatch: '+ नया डिस्पैच',
+      newDispatch: 'नया डिस्पैच',
       modal: {
         title: 'नया डिस्पैच',
         receiver: 'प्राप्तकर्ता',
@@ -467,7 +467,7 @@ const translations = {
     dispatch: {
       title: 'డిస్పాచ్ రిజిస్టర్',
       subtitle: 'బయటికి వెళ్లే లోడ్లు',
-      newDispatch: '+ కొత్త డిస్పాచ్',
+      newDispatch: 'కొత్త డిస్పాచ్',
       modal: {
         title: 'కొత్త డిస్పాచ్',
         receiver: 'స్వీకర్త',
