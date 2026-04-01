@@ -116,9 +116,9 @@
 
 /* Active bin — vertical full-width layout */
 .bin-hybrid-name {
-  font-size: 17px; font-weight: 800; color: var(--ink);
+  font-size: 20px; font-weight: 800; color: #0F5132;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-bottom: 4px;
+  margin-bottom: 4px; letter-spacing: .3px;
 }
 .bin-gauge-center {
   display: flex; justify-content: center; align-items: center;
