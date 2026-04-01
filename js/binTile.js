@@ -32,7 +32,7 @@ function renderBinTile(bin, isManager = false){
     ? new Date(+bin.intakeDateTS).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'2-digit'})
     : null;
   const hoursPct = Math.min(100, Math.round((hours / Config.TARGET_HRS) * 100));
-  const hoursColor = hours >= Config.TARGET_HRS ? 'var(--red)' : hours >= Config.TARGET_HRS * 0.8 ? 'var(--amber)' : 'var(--leaf)';
+  const hoursColor = hours >= Config.TARGET_HRS ? 'var(--red)' : hours >= Config.TARGET_HRS * 0.8 ? 'var(--amber)' : '#0D9488';
 
   const RADIUS = 28;
   const CIRCUM = 2 * Math.PI * RADIUS;

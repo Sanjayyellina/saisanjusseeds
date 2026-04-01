@@ -166,13 +166,13 @@
 /* Airflow arrow badge — sits in tile header */
 .air-arrow {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 50%;
-  font-size: 13px; font-weight: 900; line-height: 1;
-  border: 1.5px solid currentColor;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: 17px; font-weight: 900; line-height: 1;
+  border: 2px solid currentColor;
   flex-shrink: 0;
 }
-.air-arrow.air-up   { color: #0284C7; background: rgba(2,132,199,.12); border-color: rgba(2,132,199,.35); }
-.air-arrow.air-down { color: #D97706; background: rgba(217,119,6,.12); border-color: rgba(217,119,6,.35); }
+.air-arrow.air-up   { color: #0284C7; background: rgba(2,132,199,.14); border-color: rgba(2,132,199,.4); }
+.air-arrow.air-down { color: #D97706; background: rgba(217,119,6,.14); border-color: rgba(217,119,6,.4); }
 
 /* Empty bin */
 .bin-empty-label { font-size: 12px; font-weight: 600; color: var(--ink-3); text-align: center; padding: 8px 0 4px; letter-spacing: .3px; }
