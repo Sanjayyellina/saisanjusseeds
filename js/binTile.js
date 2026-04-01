@@ -62,6 +62,7 @@ function renderBinTile(bin, isManager = false){
 
     <div class="bin-tile-head">
       <span class="bin-num-label">BIN-${lbl}</span>
+      <span class="air-arrow ${bin.airflow === 'up' ? 'air-up' : 'air-down'}">${bin.airflow === 'up' ? '&#x2191;' : '&#x2193;'}</span>
       <span class="bin-status-badge bst-${bin.status}">${statusLabel}</span>
     </div>
 
@@ -94,7 +95,6 @@ function renderBinTile(bin, isManager = false){
       </div>
       <div class="bin-hours-meta">
         <span class="bin-hours-lbl-text">&#x23F1; ${hours}h / ${Config.TARGET_HRS}h</span>
-        <span class="air-tag ${bin.airflow === 'up' ? 'air-up' : 'air-down'}">${bin.airflow === 'up' ? '&#x2191; Top' : '&#x2193; Bot'}</span>
       </div>
     </div>
 
