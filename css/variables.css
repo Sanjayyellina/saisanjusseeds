@@ -96,7 +96,7 @@
    ============================================================ */
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 html { font-size:14px; -webkit-font-smoothing:antialiased; scroll-behavior:smooth; }
-body { background: linear-gradient(160deg, #EEF5EB 0%, #F5F8F3 40%, #F3F0E8 100%); background-attachment: fixed; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%2322543D' opacity='.05'%3E%3Cpath d='M40 65C36 57 13 52 15 34C17 17 34 16 40 42Z'/%3E%3Cpath d='M40 65C44 57 67 52 65 34C63 17 46 16 40 42Z'/%3E%3C/g%3E%3C/svg%3E"); background-size: 80px 80px; color:var(--ink); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
+body { background-color: #F3EEE4; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Crect x='0' y='0' width='90' height='.7' fill='%23C4AE8C' opacity='.28'/%3E%3Crect x='0' y='0' width='.7' height='90' fill='%23C4AE8C' opacity='.28'/%3E%3Cpath d='M30 65L30 48C26 44 14 37 16 24C18 11 28 9 30 28Z' fill='%2322543D' opacity='.11'/%3E%3Cpath d='M60 65L60 48C64 44 76 37 74 24C72 11 62 9 60 28Z' fill='%2322543D' opacity='.11'/%3E%3C/svg%3E"); background-size: 90px 90px; background-attachment: fixed; color:var(--ink); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
 a { color:inherit; text-decoration:none; }
 button, input, select, textarea { font-family:inherit; }
 svg { display:block; flex-shrink:0; }
