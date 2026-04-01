@@ -610,8 +610,7 @@ function openBinModal(binId){
       <div class="form-group">
         <label class="form-label">Status</label>
         <select class="form-select" id="bm-s" onchange="document.getElementById('bm-details-container').style.display=this.value==='empty'?'none':'grid';document.getElementById('bm-details-divider').style.display=this.value==='empty'?'none':'block';">
-          <option value="intake" ${bin.status==='intake'?'selected':''}>Intake</option>
-          <option value="drying" ${bin.status==='drying'?'selected':''}>Drying</option>
+          <option value="drying" ${bin.status!=='shelling'&&bin.status!=='empty'?'selected':''}>Drying</option>
           <option value="shelling" ${bin.status==='shelling'?'selected':''}>Shelling</option>
           <option value="empty" ${bin.status==='empty'?'selected':''}>Empty (Clear Bin)</option>
         </select>

@@ -38,8 +38,9 @@ function renderDashboard(){
   document.getElementById('recent-tbody').innerHTML=recent.length?recent.map(i=>{
     const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
-    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
-    const statusLabel=binStatus.charAt(0).toUpperCase()+binStatus.slice(1);
+    const effectiveStatus=binStatus==='intake'?'drying':binStatus;
+    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-amber';
+    const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     return`<tr>
       <td class="text-muted fs12">${i.date}</td>
       <td><span class="mono fw700 text-gold">${i.challan}</span></td>
@@ -68,8 +69,9 @@ function renderIntakePage(){
   document.getElementById('intake-full-tbody').innerHTML=state.intakes.length?state.intakes.map((i,idx)=>{
     const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
-    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey',intake:'chip-blue'}[binStatus]||'chip-blue';
-    const statusLabel=binStatus.charAt(0).toUpperCase()+binStatus.slice(1);
+    const effectiveStatus=binStatus==='intake'?'drying':binStatus;
+    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-amber';
+    const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     return`<tr>
       <td class="mono text-muted fs12">${idx+1}</td>
       <td class="fs12 text-muted">${i.date}</td>
@@ -141,8 +143,7 @@ function renderManagerPage(){
         <div>
           <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-5);text-align:center;margin-bottom:4px;">${t('dash.status')}</div>
           <select class="m-status-sel" onchange="(state.bins.find(b=>b.id===${bin.id})||{}).status=this.value">
-            <option value="intake" ${bin.status==='intake'?'selected':''}>${t('bins.status.intake')}</option>
-            <option value="drying" ${bin.status==='drying'?'selected':''}>${t('bins.status.drying')}</option>
+            <option value="drying" ${bin.status!=='shelling'&&bin.status!=='empty'?'selected':''}>${t('bins.status.drying')}</option>
             <option value="shelling" ${bin.status==='shelling'?'selected':''}>${t('bins.status.shelling')}</option>
           </select>
         </div>
