@@ -32,7 +32,7 @@ function renderBinTile(bin, isManager = false){
   const moisturePct = Math.min(100, Math.max(2, (m / 42) * 100));
   const dashFill = (moisturePct / 100) * CIRCUM;
   const dashOffset = CIRCUM * 0.25; // start at top (quarter turn)
-  const gaugeColor = m > 28 ? '#3B82F6' : m > 15 ? '#F59E0B' : '#16A34A';
+  const gaugeColor = m > 28 ? '#3B82F6' : m > 15 ? '#34D399' : '#16A34A';
 
   const gaugeSvg = `<svg width="68" height="68" viewBox="0 0 64 64">
     <circle cx="32" cy="32" r="${RADIUS}" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="5"/>

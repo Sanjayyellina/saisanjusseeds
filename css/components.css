@@ -90,7 +90,7 @@
 .bin-tile.s-shelling::after{ background: linear-gradient(90deg,var(--purple),#A78BFA); }
 
 /* Subtle colour wash on active bins */
-.bin-tile.s-drying  { background: rgba(220,252,231,0.82); border-color: rgba(134,239,172,0.6); }
+.bin-tile.s-drying  { background: rgba(240,253,244,0.88); border-color: rgba(187,247,208,0.5); }
 .bin-tile.s-shelling{ background: rgba(245,243,255,0.82); border-color: rgba(221,214,254,0.6); }
 .bin-tile.s-intake  { background: rgba(239,246,255,0.82); border-color: rgba(191,219,254,0.6); }
 .bin-tile.s-empty   { background: rgba(255,255,255,0.55); border-color: rgba(228,233,240,0.6); border-style: dashed; }

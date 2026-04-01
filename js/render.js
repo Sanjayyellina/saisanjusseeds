@@ -42,7 +42,7 @@ function renderDashboard(){
     const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
-    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-amber';
+    const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
     const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     return`<tr>
       <td class="text-muted fs12">${i.date}</td>
@@ -73,7 +73,7 @@ function renderIntakePage(){
     const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
-    const statusChipClass={drying:'chip-amber',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-amber';
+    const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
     const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     return`<tr>
       <td class="mono text-muted fs12">${idx+1}</td>
