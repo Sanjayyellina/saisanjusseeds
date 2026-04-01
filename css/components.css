@@ -52,7 +52,7 @@
    ============================================================ */
 .section-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .section-title { font-size:15px; font-weight:700; color:var(--ink); }
-.section-subtitle { font-size:12px; color:var(--ink-4); margin-top:1px; }
+.section-subtitle { font-size:12px; font-weight:500; color:var(--ink-3); margin-top:1px; }
 
 /* ============================================================
    BIN GRID
@@ -93,10 +93,10 @@
 .bin-tile.s-drying  { background: rgba(240,253,244,0.97); border-color: rgba(134,239,172,0.7); }
 .bin-tile.s-shelling{ background: rgba(245,243,255,0.97); border-color: rgba(196,181,253,0.7); }
 .bin-tile.s-intake  { background: rgba(239,246,255,0.97); border-color: rgba(147,197,253,0.7); }
-.bin-tile.s-empty   { background: rgba(255,255,255,0.82); border-color: rgba(200,210,220,0.7); border-style: dashed; }
+.bin-tile.s-empty   { background: rgba(255,255,255,0.95); border-color: rgba(180,195,210,0.8); border-style: dashed; }
 
 .bin-tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.bin-num-label { font-size: 12px; font-weight: 800; color: var(--ink-3); letter-spacing: 1px; text-transform: uppercase; }
+.bin-num-label { font-size: 12px; font-weight: 800; color: var(--ink-2); letter-spacing: 1px; text-transform: uppercase; }
 
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot-empty   { background: var(--surface-4); }
@@ -128,7 +128,7 @@
 .air-down { background: rgba(245,158,11,.1); color: var(--amber); }
 
 /* Empty bin */
-.bin-empty-label { font-size: 12px; color: var(--ink-4); text-align: center; padding: 8px 0 4px; letter-spacing: .3px; }
+.bin-empty-label { font-size: 12px; font-weight: 600; color: var(--ink-3); text-align: center; padding: 8px 0 4px; letter-spacing: .3px; }
 
 /* ============================================================
    CARDS / PANELS
@@ -188,7 +188,7 @@
 .btn-solid:hover { background:var(--ink-2); box-shadow:var(--shadow-sm); transform:translateY(-1px); }
 .btn-gold  { background:linear-gradient(135deg,var(--gold),var(--gold-dark)); color:#fff; box-shadow:0 2px 8px rgba(245,166,35,.35); }
 .btn-gold:hover { filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 4px 16px rgba(245,166,35,.4); }
-.btn-ghost { background:transparent; border:1.5px solid var(--surface-4); color:var(--ink-3); }
+.btn-ghost { background:rgba(255,255,255,0.92); border:1.5px solid var(--surface-4); color:var(--ink-2); }
 .btn-ghost:hover { border-color:var(--gold-border); background:var(--gold-pale); color:var(--gold-dark); }
 .btn-sm { height:30px; padding:0 12px; font-size:11px; }
 .btn-danger { background:var(--red-bg); color:var(--red); border:1.5px solid var(--red-bdr); }
