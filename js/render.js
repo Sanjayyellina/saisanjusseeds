@@ -988,15 +988,18 @@ function renderFaangAnalytics() {
       const maxDow = Math.max(...dowCounts, 1);
       const maxHour = Math.max(...hourCounts, 1);
 
-      const dowHTML = `<div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:600;color:var(--ink-4);margin-bottom:6px;">Loads by Day of Week</div>
-        <div style="display:flex;gap:4px;align-items:flex-end;height:48px;">
+      const dowHTML = `<div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--forest-mid);margin-bottom:10px;letter-spacing:.2px;">Loads by Day of Week</div>
+        <div style="display:flex;gap:6px;align-items:flex-end;height:120px;border-bottom:2px solid var(--surface-3);padding-bottom:2px;">
           ${dayNames.map((d,i) => {
-            const h = dowCounts[i] > 0 ? Math.max(8, Math.round((dowCounts[i]/maxDow)*44)) : 3;
+            const h = dowCounts[i] > 0 ? Math.max(14, Math.round((dowCounts[i]/maxDow)*96)) : 4;
             const isWeekend = i===0||i===6;
-            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-              <div title="${dowCounts[i]} loads · ${parseInt(dowKg[i]).toLocaleString('en-IN')} Kg" style="width:100%;height:${h}px;background:${isWeekend?'#CBD5E1':'var(--gold)'};border-radius:3px 3px 0 0;opacity:.85;"></div>
-              <span style="font-size:9px;color:var(--ink-5);">${d}</span>
+            const barColor = isWeekend ? '#94A3B8' : 'var(--gold)';
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:flex-end;">
+              ${dowCounts[i] > 0 ? `<span style="font-size:10px;font-weight:700;color:var(--ink-2);">${dowCounts[i]}</span>` : '<span style="font-size:10px;">&nbsp;</span>'}
+              <div title="${dowCounts[i]} loads · ${parseInt(dowKg[i]).toLocaleString('en-IN')} Kg"
+                   style="width:100%;height:${h}px;background:${barColor};border-radius:4px 4px 0 0;"></div>
+              <span style="font-size:10px;font-weight:600;color:var(--ink-3);margin-top:5px;">${d}</span>
             </div>`;
           }).join('')}
         </div>
@@ -1010,13 +1013,16 @@ function renderFaangAnalytics() {
       const peakBlockIdx = blockCounts.indexOf(Math.max(...blockCounts));
 
       const hourHTML = `<div>
-        <div style="font-size:11px;font-weight:600;color:var(--ink-4);margin-bottom:6px;">Peak Arrival Hours · Peak: <span style="color:var(--gold);">${blocks[peakBlockIdx]}–${blocks[(peakBlockIdx+1)%6]||'12am'}</span></div>
-        <div style="display:flex;gap:4px;align-items:flex-end;height:40px;">
+        <div style="font-size:12px;font-weight:700;color:var(--forest-mid);margin-bottom:10px;">Peak Arrival Hours · <span style="color:var(--gold-dark);">${blocks[peakBlockIdx]}–${blocks[(peakBlockIdx+1)%6]||'12am'}</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-end;height:96px;border-bottom:2px solid var(--surface-3);padding-bottom:2px;">
           ${blocks.map((lbl,i) => {
-            const h = blockCounts[i] > 0 ? Math.max(4, Math.round((blockCounts[i]/maxBlock)*36)) : 3;
-            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-              <div title="${blockCounts[i]} loads" style="width:100%;height:${h}px;background:${i===peakBlockIdx?'var(--blue)':'#BFDBFE'};border-radius:3px 3px 0 0;"></div>
-              <span style="font-size:9px;color:var(--ink-5);">${lbl}</span>
+            const h = blockCounts[i] > 0 ? Math.max(12, Math.round((blockCounts[i]/maxBlock)*76)) : 4;
+            const isPeak = i === peakBlockIdx;
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:flex-end;">
+              ${blockCounts[i] > 0 ? `<span style="font-size:10px;font-weight:700;color:${isPeak?'var(--blue)':'var(--ink-3)'};">${blockCounts[i]}</span>` : '<span style="font-size:10px;">&nbsp;</span>'}
+              <div title="${blockCounts[i]} loads"
+                   style="width:100%;height:${h}px;background:${isPeak?'var(--blue)':'#BFDBFE'};border-radius:4px 4px 0 0;"></div>
+              <span style="font-size:10px;font-weight:600;color:var(--ink-3);margin-top:5px;">${lbl}</span>
             </div>`;
           }).join('')}
         </div>
