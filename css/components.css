@@ -86,11 +86,11 @@
 }
 .bin-tile.s-empty::after   { background: var(--surface-4); opacity: 0.5; }
 .bin-tile.s-intake::after  { background: linear-gradient(90deg,var(--blue),#60A5FA); }
-.bin-tile.s-drying::after  { background: linear-gradient(90deg,var(--amber),var(--gold)); }
+.bin-tile.s-drying::after  { background: linear-gradient(90deg,var(--leaf),var(--leaf-light)); }
 .bin-tile.s-shelling::after{ background: linear-gradient(90deg,var(--purple),#A78BFA); }
 
 /* Subtle colour wash on active bins */
-.bin-tile.s-drying  { background: rgba(255,251,235,0.82); border-color: rgba(253,230,138,0.6); }
+.bin-tile.s-drying  { background: rgba(220,252,231,0.82); border-color: rgba(134,239,172,0.6); }
 .bin-tile.s-shelling{ background: rgba(245,243,255,0.82); border-color: rgba(221,214,254,0.6); }
 .bin-tile.s-intake  { background: rgba(239,246,255,0.82); border-color: rgba(191,219,254,0.6); }
 .bin-tile.s-empty   { background: rgba(255,255,255,0.55); border-color: rgba(228,233,240,0.6); border-style: dashed; }
@@ -101,7 +101,7 @@
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot-empty   { background: var(--surface-4); }
 .dot-intake  { background: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
-.dot-drying  { background: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,.25); animation: dryingPulse 1.8s ease-in-out infinite; }
+.dot-drying  { background: var(--leaf); box-shadow: 0 0 0 3px rgba(22,163,74,.25); animation: dryingPulse 1.8s ease-in-out infinite; }
 .dot-shelling{ background: var(--purple); box-shadow: 0 0 0 3px rgba(139,92,246,.2); }
 @keyframes dryingPulse { 0%,100%{ box-shadow:0 0 0 3px rgba(245,158,11,.25); } 50%{ box-shadow:0 0 0 6px rgba(245,158,11,.05); } }
 
@@ -541,15 +541,15 @@
 /* ============================================================
    PER-TAB BACKGROUNDS
    ============================================================ */
-/* Per-tab: soft glass-tinted backgrounds */
-body[data-page="dashboard"]    { background: linear-gradient(145deg, #FFF8EC 0%, #FEF3C7 60%, #FFF8F0 100%); }
-body[data-page="intake"]       { background: linear-gradient(145deg, #F0FDF4 0%, #DCFCE7 60%, #F0FDF9 100%); }
-body[data-page="bins"]         { background: linear-gradient(145deg, #ECFDF5 0%, #D1FAE5 60%, #E8FDF7 100%); }
-body[data-page="dispatch"]     { background: linear-gradient(145deg, #FFFBEB 0%, #FEF9C3 60%, #FFFBF0 100%); }
-body[data-page="receipts"]     { background: linear-gradient(145deg, #F8FAFC 0%, #EEF2FF 60%, #F5F8FF 100%); }
-body[data-page="analytics"]    { background: linear-gradient(145deg, #EFF6FF 0%, #DBEAFE 60%, #EEF6FF 100%); }
-body[data-page="maintenance"]  { background: linear-gradient(145deg, #FFF7ED 0%, #FFEDD5 60%, #FFF5EC 100%); }
-body[data-page="labor"]        { background: linear-gradient(145deg, #F5F3FF 0%, #EDE9FE 60%, #F3F1FF 100%); }
-body[data-page="manager"]      { background: linear-gradient(145deg, #F8FAFC 0%, #E2E8F0 60%, #F5F7FA 100%); }
-body[data-page="entry-trucks"] { background: linear-gradient(145deg, #FFFBEB 0%, #FEF3C7 60%, #FFF8EC 100%); }
-body[data-page="backyard"]     { background: linear-gradient(145deg, #F0FDF4 0%, #DCFCE7 60%, #ECFDF5 100%); }
+/* Per-tab: uniform beige */
+body[data-page="dashboard"],
+body[data-page="intake"],
+body[data-page="bins"],
+body[data-page="dispatch"],
+body[data-page="receipts"],
+body[data-page="analytics"],
+body[data-page="maintenance"],
+body[data-page="labor"],
+body[data-page="manager"],
+body[data-page="entry-trucks"],
+body[data-page="backyard"] { background: #F5F0E8; }
