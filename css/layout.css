@@ -18,7 +18,7 @@
   border-right:1px solid var(--surface-4);
   height:100%;
 }
-.logo-img { width:32px; height:32px; object-fit:contain; }
+.logo-img { width:44px; height:44px; object-fit:contain; }
 .brand-text { display:flex; flex-direction:column; line-height:1.1; }
 .brand-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:800; color:var(--ink); letter-spacing:.2px; }
 .brand-tagline { font-size:10px; font-weight:500; color:var(--ink-5); letter-spacing:.8px; text-transform:uppercase; }
