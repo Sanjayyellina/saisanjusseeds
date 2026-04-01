@@ -83,6 +83,61 @@ async function dbFetchBinHistory() {
   }
 }
 
+async function dbFetchEntryTrucks() {
+  try {
+    const { data, error } = await dbClient.from('entry_trucks').select('*').order('arrival_time', { ascending: false });
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error fetching entry trucks:', err);
+    return null;
+  }
+}
+
+async function dbFetchBackyardRemovals() {
+  try {
+    const { data, error } = await dbClient.from('backyard_removals').select('*').order('removed_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error fetching backyard removals:', err);
+    return null;
+  }
+}
+
+async function dbInsertTruck(truck) {
+  try {
+    const { error } = await dbClient.from('entry_trucks').insert([truck]);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('dbInsertTruck:', err);
+    return false;
+  }
+}
+
+async function dbUpdateTruck(id, updates) {
+  try {
+    const { error } = await dbClient.from('entry_trucks').update(updates).eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('dbUpdateTruck:', err);
+    return false;
+  }
+}
+
+async function dbInsertBackyardRemoval(record) {
+  try {
+    const { error } = await dbClient.from('backyard_removals').insert([record]);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('dbInsertBackyardRemoval:', err);
+    return false;
+  }
+}
+
 // ============================================================
 // DIRECT WRITE FUNCTIONS (used by OfflineQueue.sync and when online)
 // These go straight to Supabase — no queue check.

@@ -23,6 +23,8 @@ const initialState = {
   maintenance: [],
   labor: [],
   binHistory: [],
+  entryTrucks: [],
+  backyardRemovals: [],
   receiptCounter:1001,
   activeReceiptHash:null,
   currentPage: 'dashboard'

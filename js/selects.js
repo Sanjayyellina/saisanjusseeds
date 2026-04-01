@@ -38,4 +38,12 @@ function populateModalSelects(){
       selectEl.innerHTML = options;
       if (currentVal) selectEl.value = currentVal;
   });
+
+  // Populate truck selector in intake modal
+  const truckSel = document.getElementById('i-truck-select');
+  if (truckSel) {
+    const activeTrucks = (state.entryTrucks || []).filter(t => t.status === 'waiting' || t.status === 'intake');
+    truckSel.innerHTML = '<option value="">— Enter truck details manually below —</option>' +
+      activeTrucks.map(t => `<option value="${t.id}">${t.vehicleNo}${t.company ? ' — ' + t.company : ''}${t.netWeight > 0 ? ' (' + t.netWeight.toLocaleString('en-IN') + ' Kg net)' : ''} [${t.status}]</option>`).join('');
+  }
 }

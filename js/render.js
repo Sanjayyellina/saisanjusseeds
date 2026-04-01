@@ -10,7 +10,8 @@
 function renderPage(name){
   const map={dashboard:renderDashboard,intake:renderIntakePage,bins:renderBinsPage,
     moisture:null,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
-    analytics:renderAnalytics, manager: renderManagerPage, maintenance: renderMaintenancePage, labor: renderLaborPage};
+    analytics:renderAnalytics, manager: renderManagerPage, maintenance: renderMaintenancePage, labor: renderLaborPage,
+    'entry-trucks': renderEntryTrucksPage, backyard: renderBackyardPage};
   if(map[name])map[name]();
 }
 
@@ -1050,6 +1051,113 @@ function renderLaborPage() {
       <td class="fs12 text-muted truncate" style="max-width:140px;">${l.notes || '—'}</td>
     </tr>`).join('')
     : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👷</div><div class="empty-title">No Labor Logs found</div></div></td></tr>`;
+}
+
+function renderEntryTrucksPage() {
+  // KPIs
+  const trucks = state.entryTrucks || [];
+  const waiting = trucks.filter(t => t.status === 'waiting');
+  const inIntake = trucks.filter(t => t.status === 'intake');
+  const completed = trucks.filter(t => t.status === 'completed');
+  const totalNet = trucks.reduce((s, t) => s + (t.netWeight || 0), 0);
+
+  const kpis = document.getElementById('truck-kpis');
+  if (kpis) kpis.innerHTML = `
+    <div class="kpi-card kpi-gold"><div class="kpi-icon">🚛</div><div class="kpi-val">${trucks.length}</div><div class="kpi-label">Total Trucks</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-icon">⏳</div><div class="kpi-val">${waiting.length}</div><div class="kpi-label">Waiting</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-icon">✅</div><div class="kpi-val">${inIntake.length}</div><div class="kpi-label">In Intake</div></div>
+    <div class="kpi-card kpi-blue"><div class="kpi-icon">⚖️</div><div class="kpi-val">${(totalNet/1000).toFixed(1)}T</div><div class="kpi-label">Total Net Weight</div></div>
+  `;
+
+  // Active filter
+  const activeFilter = document.querySelector('#truck-filter-tabs [data-filter].btn-solid');
+  const filter = activeFilter ? activeFilter.getAttribute('data-filter') : 'all';
+  const filtered = filter === 'all' ? trucks : trucks.filter(t => t.status === filter);
+
+  const grid = document.getElementById('truck-cards-grid');
+  if (!grid) return;
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🚛</div><div class="empty-title">No trucks ${filter !== 'all' ? `with status "${filter}"` : 'registered yet'}</div><div class="empty-sub">Click "Register Truck" to add a truck when one arrives at the facility</div></div>`;
+    return;
+  }
+
+  const statusColors = { waiting: 'amber', intake: 'green', completed: 'gray', dispatching: 'blue' };
+  const statusLabels = { waiting: '⏳ Waiting', intake: '✅ In Intake', completed: '☑️ Completed', dispatching: '🚚 Dispatching' };
+
+  grid.innerHTML = filtered.map(t => {
+    const color = statusColors[t.status] || 'gray';
+    const label = statusLabels[t.status] || t.status;
+    const netDisplay = t.netWeight > 0 ? `${t.netWeight.toLocaleString('en-IN')} Kg` : '—';
+    const grossDisplay = t.grossWeight > 0 ? `${t.grossWeight.toLocaleString('en-IN')} Kg` : '—';
+    const tareDisplay = t.tareWeight > 0 ? `${t.tareWeight.toLocaleString('en-IN')} Kg` : '—';
+
+    return `<div style="background:var(--surface);border:1.5px solid var(--surface-4);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-xs);transition:all var(--transition);" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--shadow)'" onmouseleave="this.style.transform='';this.style.boxShadow='var(--shadow-xs)'">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);letter-spacing:.5px;">${t.vehicleNo}</div>
+        <span class="chip chip-${color}">${label}</span>
+      </div>
+      ${t.company ? `<div style="font-size:12px;font-weight:600;color:var(--ink-3);margin-bottom:4px;">🏭 ${t.company}</div>` : ''}
+      ${t.fromLocation ? `<div style="font-size:11px;color:var(--ink-5);margin-bottom:8px;">📍 ${t.fromLocation}</div>` : ''}
+      ${t.driverName ? `<div style="font-size:12px;color:var(--ink-4);margin-bottom:4px;">👤 ${t.driverName}${t.driverPhone ? ` · ${t.driverPhone}` : ''}</div>` : ''}
+      <div style="margin:12px 0;padding:10px;background:var(--gold-pale);border:1px solid var(--gold-border);border-radius:var(--radius);">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+          <div><div style="font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--ink-5);text-transform:uppercase;">Gross</div><div style="font-size:12px;font-weight:600;color:var(--ink);font-family:'DM Mono',monospace;">${grossDisplay}</div></div>
+          <div><div style="font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--ink-5);text-transform:uppercase;">Tare</div><div style="font-size:12px;font-weight:600;color:var(--ink);font-family:'DM Mono',monospace;">${tareDisplay}</div></div>
+          <div><div style="font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--gold-dark);text-transform:uppercase;">Net ✓</div><div style="font-size:14px;font-weight:800;color:var(--gold-dark);font-family:'DM Mono',monospace;">${netDisplay}</div></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-5);margin-bottom:12px;">🕐 Arrived: ${t.arrivalDisplay}</div>
+      ${t.notes ? `<div style="font-size:11px;color:var(--ink-4);margin-bottom:10px;padding:6px 8px;background:var(--surface-2);border-radius:var(--radius-sm);">📝 ${t.notes}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        ${t.status === 'waiting' ? `<button class="btn btn-sm btn-gold" onclick="markTruckIntake('${t.id}')" style="flex:1;">Assign to Intake</button>` : ''}
+        ${t.status === 'intake' ? `<button class="btn btn-sm btn-ghost" onclick="markTruckCompleted('${t.id}')" style="flex:1;">Mark Completed</button>` : ''}
+        <button class="btn btn-sm btn-ghost" onclick="editTruck('${t.id}')">Edit</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBackyardPage() {
+  const removals = state.backyardRemovals || [];
+
+  // KPIs
+  const totalKg = removals.reduce((s, r) => s + r.qtyRemoved, 0);
+  const totalBags = removals.reduce((s, r) => s + r.bagsRemoved, 0);
+  const kpis = document.getElementById('backyard-kpis');
+  if (kpis) kpis.innerHTML = `
+    <div class="kpi-card kpi-red"><div class="kpi-icon">⚖️</div><div class="kpi-val">${totalKg.toLocaleString('en-IN')}</div><div class="kpi-label">Total Kg Removed</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-icon">🗑️</div><div class="kpi-val">${totalBags}</div><div class="kpi-label">Bags Removed</div></div>
+    <div class="kpi-card kpi-blue"><div class="kpi-icon">📋</div><div class="kpi-val">${removals.length}</div><div class="kpi-label">Total Records</div></div>
+  `;
+
+  const tbody = document.getElementById('backyard-tbody');
+  if (!tbody) return;
+
+  if (!removals.length) {
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="text-align:center;padding:40px;color:var(--ink-5);">No stock removals recorded yet</td></tr>`;
+    return;
+  }
+
+  const reasonLabels = { damaged:'Damaged', quality:'Quality Issues', pest:'Pest/Infestation', excess:'Excess', moisture:'High Moisture', other:'Other' };
+  const reasonColors = { damaged:'chip-red', quality:'chip-amber', pest:'chip-red', excess:'chip-gray', moisture:'chip-blue', other:'chip-gray' };
+
+  tbody.innerHTML = removals.map(r => {
+    const intake = r.intakeId ? (state.intakes.find(i => i.id === r.intakeId) || null) : null;
+    const bin = r.binId ? (state.bins.find(b => b.id === r.binId) || null) : null;
+    return `<tr>
+      <td class="text-muted fs12">${r.removedAtDisplay}</td>
+      <td>${intake ? `<span class="mono fw700 text-gold">${intake.challan}</span>` : r.intakeId ? `<span class="mono fs12">${r.intakeId.slice(0,8)}…</span>` : '<span class="text-muted">—</span>'}</td>
+      <td>${bin ? `<span class="chip chip-blue">BIN-${bin.binLabel || bin.id}</span>` : '<span class="text-muted">—</span>'}</td>
+      <td class="fw700">${r.hybrid || '—'}</td>
+      <td class="mono fs12">${r.vehicleNo || '—'}</td>
+      <td><span class="fw700 text-red">${r.qtyRemoved.toLocaleString('en-IN')} Kg</span></td>
+      <td class="mono">${r.bagsRemoved || '—'}</td>
+      <td><span class="chip ${reasonColors[r.reason] || 'chip-gray'}">${reasonLabels[r.reason] || r.reason}</span></td>
+      <td>${r.removedBy || '—'}</td>
+      <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-4);">${r.notes || '—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 // Predictable state management subscription

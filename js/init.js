@@ -49,13 +49,15 @@ async function bootApp() {
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   // Fetch all data in parallel for faster boot
-  const [bins, intakes, dispatches, maint, labor, binHistory] = await Promise.all([
+  const [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals] = await Promise.all([
     dbFetchBins(),
     dbFetchIntakes(),
     dbFetchDispatches(),
     dbFetchMaintenance(),
     dbFetchLabor(),
-    dbFetchBinHistory()
+    dbFetchBinHistory(),
+    dbFetchEntryTrucks(),
+    dbFetchBackyardRemovals()
   ]);
 
   if (bins && bins.length > 0) {
@@ -137,6 +139,42 @@ async function bootApp() {
   if (maint) state.maintenance = maint;
   if (labor) state.labor = labor;
   if (binHistory) state.binHistory = binHistory;
+
+  if (entryTrucks) {
+    state.entryTrucks = entryTrucks.map(t => ({
+      id: t.id,
+      vehicleNo: t.vehicle_no,
+      driverName: t.driver_name || '',
+      driverPhone: t.driver_phone || '',
+      company: t.company || '',
+      fromLocation: t.from_location || '',
+      grossWeight: parseFloat(t.gross_weight) || 0,
+      tareWeight: parseFloat(t.tare_weight) || 0,
+      netWeight: parseFloat(t.net_weight) || 0,
+      arrivalTime: t.arrival_time,
+      arrivalDisplay: new Date(t.arrival_time).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+      status: t.status,
+      intakeId: t.intake_id || null,
+      notes: t.notes || ''
+    }));
+  }
+
+  if (backyardRemovals) {
+    state.backyardRemovals = backyardRemovals.map(r => ({
+      id: r.id,
+      intakeId: r.intake_id || null,
+      binId: r.bin_id || null,
+      vehicleNo: r.vehicle_no || '',
+      hybrid: r.hybrid || '',
+      qtyRemoved: parseFloat(r.qty_removed) || 0,
+      bagsRemoved: parseInt(r.bags_removed) || 0,
+      reason: r.reason,
+      notes: r.notes || '',
+      removedBy: r.removed_by || '',
+      removedAt: r.removed_at,
+      removedAtDisplay: new Date(r.removed_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+    }));
+  }
 
   if (window.Store) window.Store.emitChange();
 

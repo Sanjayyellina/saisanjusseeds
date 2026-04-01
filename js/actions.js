@@ -1053,3 +1053,175 @@ async function saveLabor() {
     btn.disabled = false;
   }
 }
+
+// ================================================================
+// ENTRY TRUCKS
+// ================================================================
+function calcTruckNetWeight() {
+  const gross = parseFloat(document.getElementById('t-gross').value) || 0;
+  const tare = parseFloat(document.getElementById('t-tare').value) || 0;
+  const net = gross - tare;
+  const el = document.getElementById('t-net-display');
+  if (el) el.textContent = net > 0 ? net.toLocaleString('en-IN') + ' Kg' : '—';
+}
+
+let _editingTruckId = null;
+
+function openTruckModal() {
+  _editingTruckId = null;
+  ['t-vehicle','t-company','t-location','t-driver','t-phone','t-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['t-gross','t-tare'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('t-net-display').textContent = '—';
+  document.getElementById('t-status').value = 'waiting';
+  document.getElementById('t-arrival').value = new Date().toISOString().slice(0,16);
+  document.getElementById('truck-modal-title').textContent = 'Register Truck';
+  openModal('truck-modal');
+}
+
+function editTruck(id) {
+  const truck = (state.entryTrucks || []).find(t => t.id === id);
+  if (!truck) return;
+  _editingTruckId = id;
+  document.getElementById('t-vehicle').value = truck.vehicleNo;
+  document.getElementById('t-company').value = truck.company;
+  document.getElementById('t-location').value = truck.fromLocation;
+  document.getElementById('t-driver').value = truck.driverName;
+  document.getElementById('t-phone').value = truck.driverPhone;
+  document.getElementById('t-gross').value = truck.grossWeight || '';
+  document.getElementById('t-tare').value = truck.tareWeight || '';
+  document.getElementById('t-status').value = truck.status;
+  document.getElementById('t-notes').value = truck.notes;
+  document.getElementById('t-arrival').value = truck.arrivalTime ? truck.arrivalTime.slice(0,16) : '';
+  calcTruckNetWeight();
+  document.getElementById('truck-modal-title').textContent = 'Edit Truck';
+  openModal('truck-modal');
+}
+
+async function saveTruck() {
+  const vehicleNo = (document.getElementById('t-vehicle').value || '').toUpperCase().trim();
+  if (!vehicleNo) { toast('Vehicle number is required', 'error'); return; }
+
+  const record = {
+    vehicle_no: vehicleNo,
+    company: document.getElementById('t-company').value.trim() || null,
+    from_location: document.getElementById('t-location').value.trim() || null,
+    driver_name: document.getElementById('t-driver').value.trim() || null,
+    driver_phone: document.getElementById('t-phone').value.trim() || null,
+    gross_weight: parseFloat(document.getElementById('t-gross').value) || 0,
+    tare_weight: parseFloat(document.getElementById('t-tare').value) || 0,
+    status: document.getElementById('t-status').value,
+    notes: document.getElementById('t-notes').value.trim() || null,
+    arrival_time: document.getElementById('t-arrival').value ? new Date(document.getElementById('t-arrival').value).toISOString() : new Date().toISOString()
+  };
+
+  let ok;
+  if (_editingTruckId) {
+    ok = await dbUpdateTruck(_editingTruckId, record);
+  } else {
+    ok = await dbInsertTruck(record);
+  }
+
+  if (ok) {
+    toast(_editingTruckId ? 'Truck updated' : 'Truck registered', 'success');
+    closeModal('truck-modal');
+    await bootApp();
+    showPage('entry-trucks');
+  } else {
+    toast('Failed to save truck', 'error');
+  }
+}
+
+async function markTruckIntake(id) {
+  const ok = await dbUpdateTruck(id, { status: 'intake' });
+  if (ok) {
+    toast('Truck marked as In Intake', 'success');
+    await bootApp();
+    showPage('entry-trucks');
+  }
+}
+
+async function markTruckCompleted(id) {
+  const ok = await dbUpdateTruck(id, { status: 'completed' });
+  if (ok) {
+    toast('Truck marked as Completed', 'success');
+    await bootApp();
+    showPage('entry-trucks');
+  }
+}
+
+function filterTrucks(filter, btn) {
+  document.querySelectorAll('#truck-filter-tabs button').forEach(b => {
+    b.classList.remove('btn-solid');
+    b.classList.add('btn-ghost');
+  });
+  btn.classList.remove('btn-ghost');
+  btn.classList.add('btn-solid');
+  renderEntryTrucksPage();
+}
+
+// Called when a truck is selected in the intake modal
+function onTruckSelected(truckId) {
+  const hiddenInput = document.getElementById('i-truck-id');
+  if (hiddenInput) hiddenInput.value = truckId;
+  if (!truckId) return;
+  const truck = (state.entryTrucks || []).find(t => t.id === truckId);
+  if (!truck) return;
+  // Auto-fill vehicle rows
+  const vehicleInputs = document.querySelectorAll('.i-vehicle-input');
+  if (vehicleInputs.length > 0) vehicleInputs[0].value = truck.vehicleNo;
+  // Auto-fill weights if present
+  const gwInputs = document.querySelectorAll('.i-gross-input');
+  const vwInputs = document.querySelectorAll('.i-tare-input');
+  if (gwInputs.length > 0 && truck.grossWeight) gwInputs[0].value = truck.grossWeight;
+  if (vwInputs.length > 0 && truck.tareWeight) vwInputs[0].value = truck.tareWeight;
+  toast(`Truck ${truck.vehicleNo} selected — details pre-filled`, 'info');
+}
+
+// ================================================================
+// BACKYARD REMOVALS
+// ================================================================
+async function openBackyardModal() {
+  // Populate intake dropdown
+  const byIntake = document.getElementById('by-intake');
+  if (byIntake) {
+    byIntake.innerHTML = '<option value="">— Select Intake —</option>' +
+      (state.intakes || []).map(i => `<option value="${i.id}">${i.challan} — ${i.hybrid} (${i.date})</option>`).join('');
+  }
+  // Populate bin dropdown (only active bins)
+  const byBin = document.getElementById('by-bin');
+  if (byBin) {
+    byBin.innerHTML = '<option value="">— Select Bin —</option>' +
+      (state.bins || []).filter(b => b.status !== 'empty').map(b => `<option value="${b.id}">BIN-${b.binLabel || b.id} — ${b.hybrid || 'Unknown'}</option>`).join('');
+  }
+  ['by-vehicle','by-hybrid','by-removed-by','by-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['by-qty','by-bags'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('by-reason').value = 'damaged';
+  openModal('backyard-modal');
+}
+
+async function saveBackyardRemoval() {
+  const qty = parseFloat(document.getElementById('by-qty').value);
+  if (!qty || qty <= 0) { toast('Quantity removed is required', 'error'); return; }
+
+  const record = {
+    intake_id: document.getElementById('by-intake').value || null,
+    bin_id: document.getElementById('by-bin').value ? parseInt(document.getElementById('by-bin').value) : null,
+    vehicle_no: document.getElementById('by-vehicle').value.trim() || null,
+    hybrid: document.getElementById('by-hybrid').value.trim() || null,
+    qty_removed: qty,
+    bags_removed: parseInt(document.getElementById('by-bags').value) || 0,
+    reason: document.getElementById('by-reason').value,
+    removed_by: document.getElementById('by-removed-by').value.trim() || null,
+    notes: document.getElementById('by-notes').value.trim() || null
+  };
+
+  const ok = await dbInsertBackyardRemoval(record);
+  if (ok) {
+    toast('Stock removal logged', 'success');
+    closeModal('backyard-modal');
+    await bootApp();
+    showPage('backyard');
+  } else {
+    toast('Failed to log removal', 'error');
+  }
+}
