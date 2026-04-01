@@ -552,4 +552,4 @@ body[data-page="maintenance"],
 body[data-page="labor"],
 body[data-page="manager"],
 body[data-page="entry-trucks"],
-body[data-page="backyard"] { background: #F5F0E8; }
+body[data-page="backyard"] { background: rgba(255,255,255,0.72); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
