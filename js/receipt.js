@@ -340,7 +340,7 @@ function globalSearch(q) {
     intakes.forEach(i => {
       const binIds = getBinIds(i);
       const binStr = binIds.map(b => 'BIN-' + getBinLabel(b)).join(', ') || '—';
-      html += `<div class="sd-item" onclick="showPage('intake');closeSearchDropdown()">
+      html += `<div class="sd-item" onclick="navigateToIntake('${i.id}');closeSearchDropdown()">
         <div class="sd-item-icon">🚛</div>
         <div>
           <div class="sd-item-main">${i.challan} &mdash; ${i.hybrid}</div>
@@ -360,6 +360,16 @@ function closeSearchDropdown() {
   const input = document.getElementById('global-search');
   if (input) input.value = '';
 }
+
+// Navigate to a specific intake record and highlight it
+window.navigateToIntake = function(intakeId) {
+  const idx = state.intakes.findIndex(i => i.id == intakeId);
+  if (idx >= 0) {
+    window._intakePage = Math.floor(idx / (window._PAGE_SIZE || 20));
+    window._highlightIntakeId = intakeId;
+  }
+  showPage('intake');
+};
 
 // Close dropdown when clicking outside the search bar
 document.addEventListener('click', function(e) {

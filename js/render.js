@@ -8,6 +8,26 @@
 // RENDER PAGES
 // ================================================================
 const esc = escapeHtml; // shorthand for XSS-safe HTML insertion
+const _PAGE_SIZE = 20;
+window._intakePage = window._intakePage || 0;
+window._dispatchPage = window._dispatchPage || 0;
+
+window.goIntakePage = function(dir) { window._intakePage = Math.max(0, window._intakePage + dir); renderIntakePage(); };
+window.goDispatchPage = function(dir) { window._dispatchPage = Math.max(0, window._dispatchPage + dir); renderDispatchPage(); };
+
+function _renderPagination(elId, currentPage, total, gofn) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const totalPages = Math.ceil(total / _PAGE_SIZE);
+  if (total <= _PAGE_SIZE) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <span style="font-size:12px;color:var(--ink-4);">Page <strong>${currentPage+1}</strong> of ${totalPages} &nbsp;·&nbsp; ${total} records</span>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-sm" onclick="${gofn}(-1)" ${currentPage===0?'disabled style="opacity:.4;"':''}>← Prev</button>
+      <button class="btn btn-ghost btn-sm" onclick="${gofn}(1)" ${currentPage>=totalPages-1?'disabled style="opacity:.4;"':''}>Next →</button>
+    </div>`;
+}
 
 function renderPage(name){
   const map={dashboard:renderDashboard,intake:renderIntakePage,bins:renderBinsPage,
@@ -69,14 +89,20 @@ function renderDashboard(){
 function renderIntakePage(){
   const total=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
   document.getElementById('intake-total-weight').textContent=total.toFixed(2);
-  document.getElementById('intake-full-tbody').innerHTML=state.intakes.length?state.intakes.map((i,idx)=>{
+  const totalPages=Math.ceil(state.intakes.length/_PAGE_SIZE);
+  window._intakePage=Math.min(window._intakePage,Math.max(0,totalPages-1));
+  const pageItems=state.intakes.slice(window._intakePage*_PAGE_SIZE,(window._intakePage+1)*_PAGE_SIZE);
+  const pageOffset=window._intakePage*_PAGE_SIZE;
+  document.getElementById('intake-full-tbody').innerHTML=pageItems.length?pageItems.map((i,idx)=>{
+  const _idx=pageOffset+idx;
     const binIds=getBinIds(i);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
     const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
     const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
-    return`<tr>
-      <td class="mono text-muted fs12">${idx+1}</td>
+    const hlStyle=window._highlightIntakeId===i.id?'background:rgba(245,166,35,.18);transition:background 2s;':'';
+    return`<tr style="${hlStyle}" id="irow-${i.id}">
+      <td class="mono text-muted fs12">${_idx+1}</td>
       <td class="fs12 text-muted">${esc(i.date)}</td>
       <td><span class="mono fw700 text-gold">${esc(i.challan)}</span></td>
       <td class="mono">${esc(i.vehicle)}</td>
@@ -95,6 +121,15 @@ function renderIntakePage(){
       </td>
     </tr>`;}).join('')
     :`<tr><td colspan="15"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">${t('dash.noIntakes')}</div><div class="empty-sub">Start by logging a new truck intake above</div></div></td></tr>`;
+  _renderPagination('intake-pagination', window._intakePage, state.intakes.length, 'goIntakePage');
+  // Scroll to highlighted row
+  if (window._highlightIntakeId) {
+    setTimeout(() => {
+      const el = document.getElementById('irow-'+window._highlightIntakeId);
+      if (el) { el.scrollIntoView({behavior:'smooth',block:'center'}); }
+      setTimeout(() => { window._highlightIntakeId = null; renderIntakePage(); }, 2500);
+    }, 100);
+  }
 }
 
 function renderBinsPage(){
@@ -184,7 +219,11 @@ function renderManagerPage(){
 }
 
 function renderDispatchPage(){
-  document.getElementById('dispatch-full-tbody').innerHTML=state.dispatches.length?[...state.dispatches].reverse().map(d=>`
+  const sorted=[...state.dispatches].reverse();
+  const totalPages=Math.ceil(sorted.length/_PAGE_SIZE);
+  window._dispatchPage=Math.min(window._dispatchPage,Math.max(0,totalPages-1));
+  const pageItems=sorted.slice(window._dispatchPage*_PAGE_SIZE,(window._dispatchPage+1)*_PAGE_SIZE);
+  document.getElementById('dispatch-full-tbody').innerHTML=pageItems.length?pageItems.map(d=>`
     <tr>
       <td><span class="mono text-gold fw700 fs12">${esc(d.receiptId)}</span></td>
       <td class="fs12 text-muted">${esc(d.date)}</td>
@@ -199,6 +238,7 @@ function renderDispatchPage(){
       <td><button class="btn btn-ghost btn-sm" onclick="viewReceipt('${esc(d.receiptId)}')">${t('actions.view')}</button></td>
     </tr>`).join('')
     :`<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">${t('dash.noDispatches')}</div><div class="empty-sub">Create a dispatch to generate a signed receipt</div></div></td></tr>`;
+  _renderPagination('dispatch-pagination', window._dispatchPage, state.dispatches.length, 'goDispatchPage');
 }
 
 function renderReceiptsPage(){
@@ -235,16 +275,14 @@ function renderAnalytics(){
     return(active.reduce((s,b)=>s+(b.entryMoisture-b.currentMoisture),0)/active.length).toFixed(1);
   })();
 
-  document.getElementById('a-total').textContent=total.toFixed(1);
+  document.getElementById('a-total').textContent=total.toLocaleString('en-IN');
   document.getElementById('a-disp').textContent=state.dispatches.length;
-
-  // ── Update KPI cards with real data ──
-  const akpis=document.getElementById('analytics-kpis');
-  if(akpis){
-    const cards=akpis.querySelectorAll('.kpi-val');
-    if(cards[2])cards[2].textContent=avgMoistureDrop+'%';
-    if(cards[3])cards[3].textContent=avgDryDays+'d';
-  }
+  const aRev=document.getElementById('a-rev');
+  if(aRev) aRev.textContent='₹'+rev.toLocaleString('en-IN');
+  const aMdrop=document.getElementById('a-mdrop');
+  if(aMdrop) aMdrop.textContent=avgMoistureDrop>0?avgMoistureDrop+'%':'—';
+  const aDays=document.getElementById('a-days');
+  if(aDays) aDays.textContent=avgDryDays>0?avgDryDays+'d':'—';
 
   // ── Bar chart: daily intake from real intakes grouped by date ──
   const dayNames=[t('analytics.sun'),t('analytics.mon'),t('analytics.tue'),t('analytics.wed'),t('analytics.thu'),t('analytics.fri'),t('analytics.sat')];

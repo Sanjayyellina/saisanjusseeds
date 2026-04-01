@@ -1269,3 +1269,127 @@ async function saveBackyardRemoval() {
     toast('Failed to log removal', 'error');
   }
 }
+
+// ================================================================
+// DAILY PRODUCTION REPORT
+// ================================================================
+window.openDailyReport = function() {
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dateHeader = today.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const todayIntakes = state.intakes.filter(i => {
+    return new Date(i.dateTS).toLocaleDateString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric' }) === todayStr;
+  });
+  const todayDispatches = state.dispatches.filter(d => d.date === todayStr);
+  const activeBins = state.bins.filter(b => b.status !== 'empty');
+  const todayMaint = (state.maintenance || []).filter(m => {
+    const mDate = m.date ? new Date(m.date).toLocaleDateString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+    return mDate === todayStr;
+  });
+
+  const totalIntakeQty = todayIntakes.reduce((s,i) => s + parseFloat(i.qty||0), 0);
+  const totalDispQty = todayDispatches.reduce((s,d) => s + parseFloat(d.qty||0), 0);
+  const totalRev = todayDispatches.reduce((s,d) => s + parseInt(d.amount||0), 0);
+
+  const row = (cells) => `<tr>${cells.map(c => `<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px;">${c}</td>`).join('')}</tr>`;
+  const th = (cells) => `<tr>${cells.map(c => `<th style="padding:7px 10px;background:#F5F5F0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #ddd;text-align:left;">${c}</th>`).join('')}</tr>`;
+  const section = (title, content) => `
+    <div style="margin-bottom:28px;">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#1A3D28;border-bottom:2px solid #1A3D28;padding-bottom:6px;margin-bottom:12px;">${title}</div>
+      ${content}
+    </div>`;
+
+  const intakeTable = todayIntakes.length ? `<table style="width:100%;border-collapse:collapse;">
+    <thead>${th(['DR No','Vehicle','Hybrid','Lot','Qty (Kg)','Bins','Moisture'])}</thead>
+    <tbody>${todayIntakes.map(i => row([
+      `<strong>${i.challan}</strong>`,
+      i.vehicle, i.hybrid, i.lot||'—',
+      parseInt(i.qty).toLocaleString('en-IN'),
+      getBinIds(i).map(b=>'BIN-'+getBinLabel(b)).join(', ')||'—',
+      i.entryMoisture ? i.entryMoisture+'%' : '—'
+    ])).join('')}</tbody>
+  </table>
+  <div style="margin-top:8px;font-size:12px;color:#555;">Total: <strong>${totalIntakeQty.toLocaleString('en-IN')} Kg</strong> across ${todayIntakes.length} load${todayIntakes.length!==1?'s':''}</div>`
+  : '<p style="color:#999;font-size:12px;font-style:italic;">No intakes recorded today.</p>';
+
+  const dispatchTable = todayDispatches.length ? `<table style="width:100%;border-collapse:collapse;">
+    <thead>${th(['Receipt ID','Party','Hybrid','Bags','Qty (Kg)','Moisture','Amount (₹)'])}</thead>
+    <tbody>${todayDispatches.map(d => row([
+      `<strong>${d.receiptId}</strong>`,
+      d.party, d.hybrid,
+      d.bags.toLocaleString('en-IN'),
+      parseInt(d.qty).toLocaleString('en-IN'),
+      d.moisture ? d.moisture+'%' : '—',
+      `<strong>₹${parseInt(d.amount).toLocaleString('en-IN')}</strong>`
+    ])).join('')}</tbody>
+  </table>
+  <div style="margin-top:8px;font-size:12px;color:#555;">Total dispatched: <strong>${totalDispQty.toLocaleString('en-IN')} Kg</strong> &nbsp;|&nbsp; Revenue: <strong>₹${totalRev.toLocaleString('en-IN')}</strong></div>`
+  : '<p style="color:#999;font-size:12px;font-style:italic;">No dispatches today.</p>';
+
+  const binsTable = activeBins.length ? `<table style="width:100%;border-collapse:collapse;">
+    <thead>${th(['Bin','Hybrid','Entry M%','Current M%','Days','Airflow','Status'])}</thead>
+    <tbody>${activeBins.map(b => {
+      const days = b.intakeDateTS ? Math.floor((Date.now()-b.intakeDateTS)/86400000) : '—';
+      return row([
+        `<strong>BIN-${b.binLabel||b.id}</strong>`,
+        b.hybrid||'—',
+        b.entryMoisture ? b.entryMoisture+'%' : '—',
+        b.currentMoisture ? `<strong>${b.currentMoisture}%</strong>` : '—',
+        days,
+        b.airflow === 'up' ? '↑ Top' : '↓ Bottom',
+        b.status.charAt(0).toUpperCase()+b.status.slice(1)
+      ]);
+    }).join('')}</tbody>
+  </table>`
+  : '<p style="color:#999;font-size:12px;font-style:italic;">No active bins.</p>';
+
+  const maintTable = todayMaint.length ? `<table style="width:100%;border-collapse:collapse;">
+    <thead>${th(['Equipment','Issue','Work Done','Checked By','Cost (₹)'])}</thead>
+    <tbody>${todayMaint.map(m => row([
+      m.equipment||'—', m.issue||'—', m.work_completed||'—', m.checked_by||'—',
+      m.cost ? '₹'+parseInt(m.cost).toLocaleString('en-IN') : '—'
+    ])).join('')}</tbody>
+  </table>` : '<p style="color:#999;font-size:12px;font-style:italic;">No maintenance logged today.</p>';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Daily Report — ${todayStr}</title>
+  <style>
+    body { font-family: 'Arial', sans-serif; margin: 0; padding: 32px; color: #0F1923; background: #fff; }
+    @media print { body { padding: 16px; } }
+  </style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1A3D28;padding-bottom:16px;margin-bottom:28px;">
+    <div>
+      <div style="font-size:22px;font-weight:800;color:#1A3D28;">Yellina Seeds Pvt. Ltd.</div>
+      <div style="font-size:13px;color:#666;margin-top:2px;">Daily Operations Report — ${dateHeader}</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#999;">
+      <div>Sathupally, Telangana</div>
+      <div>Generated: ${new Date().toLocaleTimeString('en-IN')}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px;">
+    ${[
+      ['📥 Intake Today', todayIntakes.length + ' loads · ' + totalIntakeQty.toLocaleString('en-IN') + ' Kg', '#F5A623'],
+      ['📤 Dispatched Today', todayDispatches.length + ' dispatches · ' + totalDispQty.toLocaleString('en-IN') + ' Kg', '#10B981'],
+      ['💰 Revenue Today', '₹' + totalRev.toLocaleString('en-IN'), '#8B5CF6'],
+    ].map(([lbl,val,col]) => `<div style="background:#F8F9FA;border-left:4px solid ${col};padding:14px 16px;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#666;margin-bottom:4px;">${lbl}</div>
+      <div style="font-size:16px;font-weight:800;color:#0F1923;">${val}</div>
+    </div>`).join('')}
+  </div>
+  ${section('📥 Intake Register', intakeTable)}
+  ${section('📤 Dispatches', dispatchTable)}
+  ${section('🏭 Active Bin Status', binsTable)}
+  ${section('🔧 Maintenance', maintTable)}
+  <div style="margin-top:40px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center;">
+    Yellina Seeds Pvt. Ltd. — Sathupally | Auto-generated by Operations Platform | ${new Date().toLocaleString('en-IN')}
+  </div>
+  <script>window.onload=function(){window.print();};<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=1000,height=700');
+  if (w) { w.document.write(html); w.document.close(); }
+  else { toast('Please allow pop-ups to generate the report', 'info'); }
+};
