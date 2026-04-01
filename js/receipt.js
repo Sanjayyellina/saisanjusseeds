@@ -303,10 +303,10 @@ function globalSearch(q) {
   const lq = q.toLowerCase();
 
   const dispatches = state.dispatches.filter(d =>
-    d.receiptId.toLowerCase().includes(lq) ||
-    d.party.toLowerCase().includes(lq) ||
-    d.hybrid.toLowerCase().includes(lq) ||
-    d.vehicle.toLowerCase().includes(lq)
+    (d.receiptId || '').toLowerCase().includes(lq) ||
+    (d.party || '').toLowerCase().includes(lq) ||
+    (d.hybrid || '').toLowerCase().includes(lq) ||
+    (d.vehicle || '').toLowerCase().includes(lq)
   ).slice(0, 5);
 
   const intakes = state.intakes.filter(i =>
