@@ -365,32 +365,32 @@ function renderAnalytics(){
   const inProgressBins = state.bins.filter(b => b.status === 'drying' || b.status === 'shelling');
   const inProgressIds = new Set(inProgressBins.map(b => b.id));
 
-  // Total completed cycles across dryer
-  const totalCompleted = Object.values(completedPerBin).reduce((s, v) => s + v, 0);
+  // Total completed BIN cycles (sum of all individual bin cycle counts)
+  const totalBinCyclesCompleted = Object.values(completedPerBin).reduce((s, v) => s + v, 0);
   const totalInProgress = inProgressBins.length;
-  const totalCycles = totalCompleted + totalInProgress;
+
+  // DRYER CYCLE = one full round of the entire dryer
+  // = floor(total completed bin cycles / total number of bins)
+  // e.g. 24 bins × 3 rounds = 72 completed bin cycles → 3 dryer cycles
+  const totalBinCount = state.bins.length || 1;
+  const dryerCycles = Math.floor(totalBinCyclesCompleted / totalBinCount);
 
   // Bin with most completed cycles
-  let topBinId = null, topCycles = 0;
-  Object.entries(completedPerBin).forEach(([id, cnt]) => { if (cnt > topCycles) { topCycles = cnt; topBinId = parseInt(id); } });
-  const topLabel = topBinId ? `BIN-${getBinLabel(topBinId)}` : '—';
+  let topBinId = null, topBinCycles = 0;
+  Object.entries(completedPerBin).forEach(([id, cnt]) => { if (cnt > topBinCycles) { topBinCycles = cnt; topBinId = parseInt(id); } });
 
   // Avg days per completed cycle
   const validDays = history.filter(h => h.days_in_bin > 0).map(h => h.days_in_bin);
   const avgDaysPerCycle = validDays.length ? (validDays.reduce((s, v) => s + v, 0) / validDays.length).toFixed(1) : '—';
 
-  // Avg cycles per bin (only bins that have been used at least once)
-  const binsWithCycles = Object.keys(completedPerBin).length;
-  const avgCycles = binsWithCycles ? (totalCompleted / binsWithCycles).toFixed(1) : '0';
-
   // Render KPI cards
   const cycleKpis = document.getElementById('cycle-kpis');
   if (cycleKpis) {
     cycleKpis.innerHTML = `
-      <div class="kpi-card kpi-blue"><div class="kpi-icon">🔄</div><div class="kpi-val">${totalCycles}</div><div class="kpi-label">Total Dryer Cycles</div></div>
-      <div class="kpi-card kpi-green"><div class="kpi-icon">✅</div><div class="kpi-val">${totalCompleted}</div><div class="kpi-label">Completed Cycles</div></div>
-      <div class="kpi-card kpi-amber"><div class="kpi-icon">⚡</div><div class="kpi-val">${totalInProgress}</div><div class="kpi-label">In Progress</div></div>
-      <div class="kpi-card kpi-purple"><div class="kpi-icon">⏱️</div><div class="kpi-val">${avgDaysPerCycle}${avgDaysPerCycle !== '—' ? 'd' : ''}</div><div class="kpi-label">Avg Days / Cycle</div></div>
+      <div class="kpi-card kpi-blue"><div class="kpi-icon">🏭</div><div class="kpi-val">${dryerCycles}</div><div class="kpi-label">Dryer Cycles<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">full rounds of all ${totalBinCount} bins</div></div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-icon">✅</div><div class="kpi-val">${totalBinCyclesCompleted}</div><div class="kpi-label">Total Bin Cycles<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">completed across all bins</div></div></div>
+      <div class="kpi-card kpi-amber"><div class="kpi-icon">⚡</div><div class="kpi-val">${totalInProgress}</div><div class="kpi-label">In Progress<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">bins currently active</div></div></div>
+      <div class="kpi-card kpi-purple"><div class="kpi-icon">⏱️</div><div class="kpi-val">${avgDaysPerCycle}${avgDaysPerCycle !== '—' ? 'd' : ''}</div><div class="kpi-label">Avg Days / Bin Cycle<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">fill → empty</div></div></div>
     `;
   }
 
