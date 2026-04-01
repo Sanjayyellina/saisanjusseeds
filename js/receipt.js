@@ -297,9 +297,75 @@ function verifyReceipt() {
 }
 
 function globalSearch(q) {
-  if (!q.trim()) return;
+  const dropdown = document.getElementById('search-dropdown');
+  if (!dropdown) return;
+  if (!q.trim()) { dropdown.style.display = 'none'; return; }
   const lq = q.toLowerCase();
-  const disp = state.dispatches.find(d => d.receiptId.toLowerCase().includes(lq) || d.party.toLowerCase().includes(lq));
-  if (disp) { viewReceipt(disp.receiptId); return; }
-  state.intakes.find(i => i.challan.includes(q) || i.vehicle.toLowerCase().includes(lq) || i.hybrid.toLowerCase().includes(lq));
+
+  const dispatches = state.dispatches.filter(d =>
+    d.receiptId.toLowerCase().includes(lq) ||
+    d.party.toLowerCase().includes(lq) ||
+    d.hybrid.toLowerCase().includes(lq) ||
+    d.vehicle.toLowerCase().includes(lq)
+  ).slice(0, 5);
+
+  const intakes = state.intakes.filter(i =>
+    (i.challan || '').toLowerCase().includes(lq) ||
+    (i.vehicle || '').toLowerCase().includes(lq) ||
+    (i.hybrid || '').toLowerCase().includes(lq) ||
+    (i.location || '').toLowerCase().includes(lq)
+  ).slice(0, 5);
+
+  if (!dispatches.length && !intakes.length) {
+    dropdown.innerHTML = '<div class="sd-empty">No results for "' + q + '"</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  let html = '';
+  if (dispatches.length) {
+    html += '<div class="sd-group-title">Receipts / Dispatches</div>';
+    dispatches.forEach(d => {
+      html += `<div class="sd-item" onclick="viewReceipt('${d.receiptId}');closeSearchDropdown()">
+        <div class="sd-item-icon">📦</div>
+        <div>
+          <div class="sd-item-main">${d.receiptId} &mdash; ${d.party}</div>
+          <div class="sd-item-sub">${d.hybrid} &middot; ${d.bags} bags &middot; ₹${parseInt(d.amount).toLocaleString('en-IN')} &middot; ${d.date}</div>
+        </div>
+      </div>`;
+    });
+  }
+  if (intakes.length) {
+    html += '<div class="sd-group-title">Intake Records</div>';
+    intakes.forEach(i => {
+      const binIds = (i.bins && i.bins.length ? i.bins : [i.bin]).filter(Boolean);
+      const binStr = binIds.map(b => 'BIN-' + getBinLabel(b)).join(', ') || '—';
+      html += `<div class="sd-item" onclick="showPage('intake');closeSearchDropdown()">
+        <div class="sd-item-icon">🚛</div>
+        <div>
+          <div class="sd-item-main">${i.challan} &mdash; ${i.hybrid}</div>
+          <div class="sd-item-sub">${i.vehicle} &middot; ${i.qty} Kg &middot; ${binStr} &middot; ${i.date}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  dropdown.innerHTML = html;
+  dropdown.style.display = 'block';
 }
+
+function closeSearchDropdown() {
+  const dropdown = document.getElementById('search-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
+  const input = document.getElementById('global-search');
+  if (input) input.value = '';
+}
+
+// Close dropdown when clicking outside the search bar
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('search-bar-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const dropdown = document.getElementById('search-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+});

@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Modular Stylesheets -->
 <link rel="stylesheet" href="css/variables.css?v=10">
-<link rel="stylesheet" href="css/layout.css?v=10">
+<link rel="stylesheet" href="css/layout.css?v=11">
 <link rel="stylesheet" href="css/components.css?v=13">
 </head>
 <body>
@@ -90,10 +90,11 @@
   </div>
 
   <div class="topbar-center">
-    <div class="search-bar">
+    <div class="search-bar" id="search-bar-wrap">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--ink-5)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="global-search" placeholder="Search DR no, vehicle, hybrid, receipt…" oninput="globalSearch(this.value)">
+      <input id="global-search" placeholder="Search DR no, vehicle, hybrid, receipt…" oninput="globalSearch(this.value)" onkeydown="if(event.key==='Escape')closeSearchDropdown()" autocomplete="off">
       <span style="font-size:11px;color:var(--ink-5);background:var(--surface-3);padding:1px 6px;border-radius:4px;">⌘K</span>
+      <div id="search-dropdown" class="search-dropdown" style="display:none;"></div>
     </div>
   </div>
 
@@ -906,7 +907,7 @@
 <script src="js/binTile.js?v=3"></script>
 <script src="js/render.js?v=7"></script>
 <script src="js/actions.js?v=9"></script>
-<script src="js/receipt.js?v=2"></script>
+<script src="js/receipt.js?v=3"></script>
 <script src="js/clock.js?v=2"></script>
 <script src="js/init.js?v=7"></script>
 </body>
