@@ -140,7 +140,7 @@ function addDispatchBinRow() {
   const activeBins = state.bins.filter(b => b.status !== 'empty');
   let options = '<option value="">— Select bin —</option>';
   activeBins.forEach(b => {
-    options += `<option value="${b.id}">BIN-${b.id} — ${b.hybrid||'?'} (${b.qty||0}T)</option>`;
+    options += `<option value="${b.id}">BIN-${b.binLabel||b.id} — ${b.hybrid||'?'} (${b.qty||0}T)</option>`;
   });
 
   row.innerHTML = `
@@ -246,7 +246,7 @@ function addIntakeBinRow() {
   
   let options = '<option value="">— Select bin —</option>';
   state.bins.forEach(b => {
-    options += `<option value="${b.id}">BIN-${b.id} (${b.status})</option>`;
+    options += `<option value="${b.id}">BIN-${b.binLabel||b.id} (${b.status})</option>`;
   });
 
   row.innerHTML = `
@@ -561,7 +561,7 @@ async function saveDispatch(){
   
   if (success) {
       state.dispatches.unshift(d);
-      const binLabels = binAllocations.length ? binAllocations.map(a=>`BIN-${a.binId}`).join(', ') : 'N/A';
+      const binLabels = binAllocations.length ? binAllocations.map(a=>`BIN-${getBinLabel(a.binId)}`).join(', ') : 'N/A';
       dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Kg / ₹${d.amount}) from ${binLabels}`);
       // Deduct inventory from all selected bins
       binAllocations.forEach(a => {
@@ -585,7 +585,7 @@ async function saveDispatch(){
 
 function openBinModal(binId){
   const bin=state.bins.find(b => b.id === binId);
-  document.getElementById('bin-modal-title').textContent=`BIN-${bin.id} — ${bin.status==='empty'?'Empty':'Update'}`;
+  document.getElementById('bin-modal-title').textContent=`BIN-${bin.binLabel||bin.id} — ${bin.status==='empty'?'Empty':'Update'}`;
   const m=bin.currentMoisture||0;
   const days=dateDiff(bin.intakeDateTS);
   document.getElementById('bin-modal-body').innerHTML=`
@@ -639,7 +639,7 @@ function openBinModal(binId){
 }
 async function saveBinModal(binId){
   const b=state.bins.find(x => x.id === binId);
-  if (!b) { toast(`BIN-${binId} not found`, 'error'); return; }
+  if (!b) { toast(`BIN-${getBinLabel(binId)} not found`, 'error'); return; }
   const oldStatus = b.status;
   const snapshotBefore = { ...b }; // capture state before changes for history
 
@@ -683,7 +683,7 @@ async function saveBinModal(binId){
   const success = await dbUpdateBin(b.id, updates);
   if (success) {
       if (oldStatus !== b.status) {
-          dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.id} changed to ${b.status}`);
+          dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.binLabel||b.id} changed to ${b.status}`);
           // Snapshot bin cycle history when bin is cleared
           if (b.status === 'empty' && snapshotBefore.hybrid) {
               const daysInBin = snapshotBefore.intakeDateTS
@@ -709,7 +709,7 @@ async function saveBinModal(binId){
           }
       }
       closeModal('bin-modal');
-      toast(`BIN-${binId} updated successfully`);
+      toast(`BIN-${getBinLabel(binId)} updated successfully`);
       const ap=document.querySelector('.page.active');
       if(ap && window.Store) window.Store.emitChange();
   } else {
@@ -897,7 +897,7 @@ function executeExport() {
     // Always include Bin History sheet if there is data
     if (state.binHistory && state.binHistory.length > 0) {
         const histSheet = XLSX.utils.json_to_sheet(state.binHistory.map(h => ({
-            BinID: `BIN-${h.bin_id}`,
+            BinID: `BIN-${getBinLabel(h.bin_id)}`,
             Hybrid: h.hybrid,
             Company: h.company || '—',
             LotNo: h.lot || '—',

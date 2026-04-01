@@ -61,6 +61,8 @@ async function bootApp() {
   if (bins && bins.length > 0) {
     state.bins = bins.map(b => ({
       id: b.id,
+      binLabel: b.bin_label || null,
+      sortOrder: b.sort_order || b.id,
       status: b.status,
       hybrid: b.hybrid || '',
       company: b.company || '',

@@ -15,7 +15,7 @@ const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function dbFetchBins() {
   try {
-    const { data, error } = await dbClient.from('bins').select('*').order('id', { ascending: true });
+    const { data, error } = await dbClient.from('bins').select('*').order('sort_order', { ascending: true });
     if (error) throw error;
     return data;
   } catch (err) {

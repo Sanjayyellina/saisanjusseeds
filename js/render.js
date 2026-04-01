@@ -46,7 +46,7 @@ function renderDashboard(){
       <td class="mono fs12">${i.vehicle}</td>
       <td class="fw700 truncate" style="max-width:160px;">${i.hybrid}</td>
       <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
-      <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
+      <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${getBinLabel(b)}</span>`).join(' ')||'—'}</td>
       <td><span class="chip ${statusChipClass}">${statusLabel}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit">✏️ Edit</button></td>
     </tr>`;}).join('')
@@ -83,7 +83,7 @@ function renderIntakePage(){
       <td class="mono fs12">${i.grossWeight||'—'}</td>
       <td class="mono fw700" style="color:var(--blue);">${i.netWeight||'—'}</td>
       <td><span class="mono fw700" style="color:${getMoistureColor(i.entryMoisture)};">${i.entryMoisture}%</span></td>
-      <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${b}</span>`).join(' ')||'—'}</td>
+      <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${getBinLabel(b)}</span>`).join(' ')||'—'}</td>
       <td><span class="chip ${statusChipClass}">${statusLabel}</span></td>
       <td style="white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${i.bin})">${t('actions.view')} Bin</button>`:''}
@@ -115,7 +115,7 @@ function renderManagerPage(){
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">`;
   html += active.length?active.map(bin=>`
     <div class="m-card" style="border: 2px solid var(--gold);">
-      <div class="m-bin-badge">BIN<br>${bin.id}</div>
+      <div class="m-bin-badge">BIN<br>${bin.binLabel||bin.id}</div>
       <div class="m-info">
         <div class="m-hybrid">${bin.hybrid}</div>
         <div class="m-meta">${bin.qty} Kg · ${t('bins.entry')}: <span class="mono fw700">${bin.entryMoisture}%</span> · ${t('bins.status.intake')}: ${bin.intakeDate?bin.intakeDate.split(',')[0]:''} · ${t('bins.day')} ${dateDiff(bin.intakeDateTS)}</div>
@@ -168,7 +168,7 @@ function renderManagerPage(){
       <td class="mono">${i.vehicle}</td>
       <td class="fw700">${i.hybrid}</td>
       <td><span class="fw700 text-gold">${i.qty} Kg</span></td>
-      <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>'<span class="chip chip-blue">BIN-'+b+'</span>').join(' ')||'—'}</td>
+      <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>'<span class="chip chip-blue">BIN-'+getBinLabel(b)+'</span>').join(' ')||'—'}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${i.id}')" title="Edit Intake">✏️ Edit</button></td>
     </tr>`).join('');
   } else {
@@ -302,7 +302,7 @@ function renderAnalytics(){
       const pct=(b.currentMoisture/maxEntry)*100;
       return`<div class="progress-item">
         <div class="progress-hdr">
-          <span class="progress-label">BIN-${b.id} · Day ${days}</span>
+          <span class="progress-label">BIN-${b.binLabel||b.id} · Day ${days}</span>
           <span class="progress-val">${b.currentMoisture.toFixed(1)}% <span style="font-size:10px;color:var(--green);">↓${drop}%</span></span>
         </div>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${getMoistureBarColor(b.currentMoisture)};"></div></div>

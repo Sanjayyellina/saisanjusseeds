@@ -17,15 +17,16 @@ function renderBinTile(bin, isManager = false){
   const hoursColor=hours>=TARGET_HRS?'var(--red)':hours>=TARGET_HRS*0.8?'var(--amber)':'var(--green)';
   const clickAction = isManager ? `onclick="openBinModal(${bin.id})"` : '';
   
+  const lbl = bin.binLabel || bin.id;
   if(bin.status==='empty'){
     return`<div class="bin-tile ${sc}" ${clickAction}>
-      <div class="bin-tile-top"><span class="bin-num-label">BIN-${bin.id}</span><div class="status-dot ${dc}"></div></div>
+      <div class="bin-tile-top"><span class="bin-num-label">BIN-${lbl}</span><div class="status-dot ${dc}"></div></div>
       <div class="bin-empty-label">${t('bins.status.empty')}</div>
     </div>`;
   }
   const m=bin.currentMoisture||0;
   return`<div class="bin-tile ${sc}" ${clickAction}>
-    <div class="bin-tile-top"><span class="bin-num-label">BIN-${bin.id}</span><div class="status-dot ${dc}"></div></div>
+    <div class="bin-tile-top"><span class="bin-num-label">BIN-${lbl}</span><div class="status-dot ${dc}"></div></div>
     <div class="bin-hybrid-name" title="${bin.hybrid}">${bin.hybrid}</div>
     <div class="bin-meta-row">${bin.qty} Kg${bin.pkts?' · '+bin.pkts+' '+t('dash.bags'):''}${days?' · '+t('bins.day')+' '+days:''}</div>
     <div class="bin-hours-row" style="display:flex;align-items:center;gap:6px;margin:4px 0 2px;">

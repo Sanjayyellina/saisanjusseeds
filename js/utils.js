@@ -54,3 +54,9 @@ function filterTable(inputId,tbodyId){
 }
 // Alias so db.js and error-boundary.js can call showToast consistently
 window.showToast = function(msg, type){ toast(msg, type); };
+
+// Return display label for a bin ID (e.g. 1→"1A", 10→"10A", 21→"1B")
+function getBinLabel(id){
+  const b = state.bins.find(b => b.id === id || b.id === parseInt(id));
+  return b && b.binLabel ? b.binLabel : String(id);
+}
