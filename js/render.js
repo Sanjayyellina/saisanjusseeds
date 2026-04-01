@@ -372,8 +372,8 @@ function renderAnalytics(){
   // DRYER CYCLE = one full round of the entire dryer
   // = floor(total completed bin cycles / total number of bins)
   // e.g. 24 bins × 3 rounds = 72 completed bin cycles → 3 dryer cycles
-  const totalBinCount = state.bins.length || 1;
-  const dryerCycles = Math.floor(totalBinCyclesCompleted / totalBinCount);
+  const allBinsCount = state.bins.length || 1;
+  const dryerCycles = Math.floor(totalBinCyclesCompleted / allBinsCount);
 
   // Bin with most completed cycles
   let topBinId = null, topBinCycles = 0;
@@ -387,7 +387,7 @@ function renderAnalytics(){
   const cycleKpis = document.getElementById('cycle-kpis');
   if (cycleKpis) {
     cycleKpis.innerHTML = `
-      <div class="kpi-card kpi-blue"><div class="kpi-icon">🏭</div><div class="kpi-val">${dryerCycles}</div><div class="kpi-label">Dryer Cycles<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">full rounds of all ${totalBinCount} bins</div></div></div>
+      <div class="kpi-card kpi-blue"><div class="kpi-icon">🏭</div><div class="kpi-val">${dryerCycles}</div><div class="kpi-label">Dryer Cycles<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">full rounds of all ${allBinsCount} bins</div></div></div>
       <div class="kpi-card kpi-green"><div class="kpi-icon">✅</div><div class="kpi-val">${totalBinCyclesCompleted}</div><div class="kpi-label">Total Bin Cycles<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">completed across all bins</div></div></div>
       <div class="kpi-card kpi-amber"><div class="kpi-icon">⚡</div><div class="kpi-val">${totalInProgress}</div><div class="kpi-label">In Progress<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">bins currently active</div></div></div>
       <div class="kpi-card kpi-purple"><div class="kpi-icon">⏱️</div><div class="kpi-val">${avgDaysPerCycle}${avgDaysPerCycle !== '—' ? 'd' : ''}</div><div class="kpi-label">Avg Days / Bin Cycle<div style="font-size:10px;font-weight:400;color:var(--ink-5);margin-top:2px;">fill → empty</div></div></div>
