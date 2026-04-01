@@ -537,3 +537,29 @@
 .sync-badge{position:fixed;bottom:90px;right:28px;z-index:600;background:var(--ink);color:var(--gold);border-radius:var(--radius-lg);padding:10px 16px;font-size:12px;font-weight:600;display:none;align-items:center;gap:8px;box-shadow:var(--shadow-lg);cursor:pointer;transition:all var(--transition);}
 .sync-badge.visible{display:flex;}
 .sync-badge:hover{transform:translateY(-2px);}
+
+/* ============================================================
+   PER-TAB BACKGROUNDS
+   ============================================================ */
+/* Dashboard: warm cream */
+body[data-page="dashboard"] { background: linear-gradient(160deg,#F5F0E6 0%,#EFF5EC 40%,#F2EFE8 100%); }
+/* Intake: fresh sage */
+body[data-page="intake"] { background: linear-gradient(160deg,#EBF5E8 0%,#F0F8ED 50%,#EDF5E9 100%); }
+/* Bin monitor: cool teal-sage */
+body[data-page="bins"] { background: linear-gradient(160deg,#E6F3EE 0%,#EBF5F0 50%,#EEF6F0 100%); }
+/* Dispatch: warm wheat-gold */
+body[data-page="dispatch"] { background: linear-gradient(160deg,#FBF7EC 0%,#F8F4E6 50%,#FAF7ED 100%); }
+/* Receipts: clean white-sage */
+body[data-page="receipts"] { background: linear-gradient(160deg,#F5F8F5 0%,#F8F8F5 50%,#F4F7F2 100%); }
+/* Analytics: deeper botanical green */
+body[data-page="analytics"] { background: linear-gradient(160deg,#E4EFE8 0%,#EAF4EC 50%,#E6F0E8 100%); }
+/* Maintenance: warm earth */
+body[data-page="maintenance"] { background: linear-gradient(160deg,#F7F2EA 0%,#F5F0E8 50%,#F8F4EB 100%); }
+/* Labor: soft blue-green */
+body[data-page="labor"] { background: linear-gradient(160deg,#EAF2F5 0%,#EDF5F7 50%,#E8F0F5 100%); }
+/* Manager: neutral */
+body[data-page="manager"] { background: linear-gradient(160deg,#F2F2F0 0%,#F5F5F3 50%,#F0F2F0 100%); }
+/* Entry Trucks: warm earth-brown */
+body[data-page="entry-trucks"] { background: linear-gradient(160deg,#F5EFE6 0%,#F8F4EC 50%,#F5F0E8 100%); }
+/* Backyard: fresh natural green */
+body[data-page="backyard"] { background: linear-gradient(160deg,#E8F5E8 0%,#EDF7ED 50%,#E6F3E6 100%); }

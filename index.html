@@ -8,9 +8,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Modular Stylesheets -->
-<link rel="stylesheet" href="css/variables.css?v=11">
-<link rel="stylesheet" href="css/layout.css?v=12">
-<link rel="stylesheet" href="css/components.css?v=15">
+<link rel="stylesheet" href="css/variables.css?v=12">
+<link rel="stylesheet" href="css/layout.css?v=13">
+<link rel="stylesheet" href="css/components.css?v=16">
 </head>
 <body>
 
@@ -21,58 +21,94 @@
 <!-- ============================================================
      LOGIN SCREEN
      ============================================================ -->
-<div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0F1923 0%,#1E2D3D 50%,#0F1923 100%);align-items:center;justify-content:center;">
-  <!-- Background grain -->
-  <div style="position:absolute;inset:0;opacity:.03;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22/></filter><rect width=%22200%22 height=%22200%22 filter=%22url(%23n)%22 opacity=%221%22/></svg>');background-size:200px;"></div>
+<div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:1000;background:#F2F6F0;align-items:stretch;justify-content:stretch;">
 
-  <div style="position:relative;z-index:1;width:420px;">
-    <!-- Logo + Brand -->
-    <div style="text-align:center;margin-bottom:36px;">
-      <div style="width:64px;height:64px;background:#fff;border-radius:16px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(0,0,0,.3);">
-        <img id="login-logo" src="assets/icon.jpg" style="width:52px;height:52px;object-fit:contain;" onerror="this.parentElement.innerHTML='🌾'">
+  <!-- LEFT PANEL: Dark botanical -->
+  <div class="login-left" style="flex:0 0 42%;background:linear-gradient(165deg,#0E2018 0%,#1A3D28 55%,#1F4730 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 40px;">
+    <!-- SVG leaf tile overlay -->
+    <div style="position:absolute;inset:0;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath d='M36 56L36 38C33 34 23 29 23 20C23 12 32 8 36 24C40 8 49 12 49 20C49 29 39 34 36 38Z' fill='%23ffffff' opacity='.09'/%3E%3C/svg%3E&quot;);background-size:72px 72px;opacity:1;"></div>
+    <!-- Gold glow accent -->
+    <div style="position:absolute;bottom:-80px;left:50%;transform:translateX(-50%);width:400px;height:400px;background:radial-gradient(ellipse,rgba(197,160,60,0.18) 0%,transparent 70%);pointer-events:none;"></div>
+    <!-- Content -->
+    <div style="position:relative;z-index:1;text-align:center;max-width:300px;">
+      <div style="width:72px;height:72px;background:rgba(255,255,255,0.1);backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.2);border-radius:20px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+        <img src="assets/icon.jpg" style="width:54px;height:54px;object-fit:contain;border-radius:10px;" onerror="this.parentElement.innerHTML='🌾'">
       </div>
-      <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:800;color:#fff;letter-spacing:-.3px;">Yellina Seeds</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;margin-top:4px;">Operations Platform</div>
-    </div>
-
-    <!-- Card -->
-    <div style="background:rgba(255,255,255,.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:32px;">
-      <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;">Welcome back</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:24px;">Sign in to your account</div>
-
-      <div id="login-error" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#F87171;margin-bottom:16px;"></div>
-
-      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px;">
-        <div>
-          <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px;">Email</label>
-          <input id="login-email" type="email" placeholder="you@yellinaseeds.com"
-            style="width:100%;height:42px;padding:0 14px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;"
-            onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.15;margin-bottom:10px;">Yellina Seeds</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:32px;">Operations Platform</div>
+      <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(197,160,60,0.6),transparent);margin-bottom:28px;"></div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.75;font-style:italic;">"Rooted in Nature,<br>Growing the Future"</div>
+      <div style="margin-top:36px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;">
+          <span style="font-size:18px;">🌾</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">Seed drying & operations management</span>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px;">Password</label>
-          <input id="login-password" type="password" placeholder="••••••••••"
-            style="width:100%;height:42px;padding:0 14px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;"
-            onkeydown="if(event.key==='Enter')doLogin()">
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;">
+          <span style="font-size:18px;">📊</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">Real-time bin monitoring & analytics</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;">
+          <span style="font-size:18px;">🚛</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">Truck entry, dispatch & receipts</span>
         </div>
       </div>
-
-      <button id="login-btn" onclick="doLogin()"
-        style="width:100%;height:44px;background:linear-gradient(135deg,#F5A623,#C8821A);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px;transition:all .2s;"
-        onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
-        Sign In
-      </button>
-
-      <div style="text-align:center;margin-top:14px;">
-        <a href="#" onclick="showForgotPassword()" style="font-size:12px;color:rgba(255,255,255,.35);text-decoration:none;">Forgot password?</a>
-      </div>
-    </div>
-
-    <!-- User indicator bottom -->
-    <div id="login-demo-note" style="text-align:center;margin-top:16px;font-size:11px;color:rgba(255,255,255,.2);">
-      Secured by Supabase · All data encrypted at rest
     </div>
   </div>
+
+  <!-- RIGHT PANEL: Light form area -->
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#EEF5EB 0%,#F5F8F3 50%,#F8F5EF 100%);background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cpath d='M32 50L32 34C29 30 20 26 20 18C20 10 28 7 32 21C36 7 44 10 44 18C44 26 35 30 32 34Z' fill='%2322543D' opacity='.055'/%3E%3C/svg%3E&quot;);background-size:64px 64px;padding:32px;">
+    <div style="width:100%;max-width:400px;">
+      <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#1A3D28;letter-spacing:-.2px;margin-bottom:4px;">Welcome back</div>
+      <div style="font-size:13px;color:#6B8C70;margin-bottom:28px;">Sign in to continue to the platform</div>
+
+      <!-- Card -->
+      <div style="background:rgba(255,255,255,0.90);backdrop-filter:blur(20px);border:1px solid rgba(180,215,175,0.5);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(15,40,25,0.10),0 4px 16px rgba(15,40,25,0.06);">
+        <div id="login-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:#DC2626;margin-bottom:16px;"></div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:22px;">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4A6E52;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px;">Email</label>
+            <input id="login-email" type="email" placeholder="you@yellinaseeds.com"
+              style="width:100%;height:44px;padding:0 14px;background:#fff;border:1.5px solid #C8DEC5;border-radius:10px;color:#1A3D28;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;"
+              onfocus="this.style.borderColor='#22A05A';this.style.boxShadow='0 0 0 3px rgba(34,160,90,0.1)'"
+              onblur="this.style.borderColor='#C8DEC5';this.style.boxShadow=''"
+              onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#4A6E52;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px;">Password</label>
+            <input id="login-password" type="password" placeholder="••••••••••"
+              style="width:100%;height:44px;padding:0 14px;background:#fff;border:1.5px solid #C8DEC5;border-radius:10px;color:#1A3D28;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;"
+              onfocus="this.style.borderColor='#22A05A';this.style.boxShadow='0 0 0 3px rgba(34,160,90,0.1)'"
+              onblur="this.style.borderColor='#C8DEC5';this.style.boxShadow=''"
+              onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+        </div>
+
+        <button id="login-btn" onclick="doLogin()"
+          style="width:100%;height:46px;background:linear-gradient(135deg,#1A5C36,#22A05A);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px;transition:all .2s;box-shadow:0 4px 16px rgba(26,92,54,0.28);"
+          onmouseover="this.style.filter='brightness(1.08)';this.style.transform='translateY(-1px)'"
+          onmouseout="this.style.filter='';this.style.transform=''">
+          Sign In
+        </button>
+
+        <div style="text-align:center;margin-top:14px;">
+          <a href="#" onclick="showForgotPassword()" style="font-size:12px;color:#7A9E7E;text-decoration:none;">Forgot password?</a>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:18px;font-size:11px;color:#9AB49C;">
+        <span style="display:inline-flex;align-items:center;gap:6px;">🔒 Secured by Supabase · All data encrypted at rest</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile: hide left panel via media query -->
+  <style>
+    @media(max-width:768px){
+      .login-left{display:none!important;}
+      #login-screen>div:last-of-type{padding:20px;}
+    }
+  </style>
 </div>
 
 <div id="app-shell" style="display:none">
@@ -1209,7 +1245,7 @@
 <script src="js/state.js?v=3"></script>
 <script src="js/seed.js"></script>
 <script src="js/crypto.js"></script>
-<script src="js/utils.js?v=2"></script>
+<script src="js/utils.js?v=3"></script>
 <script src="js/i18n.js?v=5"></script>
 <script src="js/selects.js?v=3"></script>
 <script src="js/binTile.js?v=4"></script>

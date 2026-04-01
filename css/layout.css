@@ -31,7 +31,7 @@
   border-radius:var(--radius); padding:0 14px; height:36px;
   width:340px; transition:all var(--transition);
 }
-.search-bar:focus-within { border-color:var(--gold); background:#fff; box-shadow:0 0 0 3px rgba(245,166,35,.12); }
+.search-bar:focus-within { border-color:var(--leaf); background:#fff; box-shadow:0 0 0 3px rgba(34,160,90,.12); }
 .search-bar input { flex:1; background:none; border:none; outline:none; font-size:13px; color:var(--ink); }
 .search-bar input::placeholder { color:var(--ink-5); }
 
@@ -80,10 +80,10 @@
 /* Avatar */
 .avatar {
   width:32px; height:32px; border-radius:50%;
-  background:linear-gradient(135deg,var(--gold) 0%,var(--gold-dark) 100%);
+  background:linear-gradient(135deg,#22A05A 0%,#1A5C36 100%);
   display:flex; align-items:center; justify-content:center;
   font-size:12px; font-weight:700; color:#fff; cursor:pointer;
-  border:2px solid var(--gold-border);
+  border:2px solid rgba(34,160,90,0.3);
   user-select:none; flex-shrink:0;
 }
 
@@ -139,17 +139,18 @@
 }
 .nav-item:hover { background:var(--surface-2); color:var(--ink); }
 .nav-item.active {
-  background:var(--gold-pale); color:var(--gold-dark);
+  background: rgba(34,160,90,.10);
+  color: var(--forest-mid, #22543D);
   font-weight:600;
 }
 .nav-item.active::before {
   content:''; position:absolute; left:-12px; top:50%; transform:translateY(-50%);
-  width:3px; height:20px; background:var(--gold); border-radius:0 3px 3px 0;
+  width:3px; height:20px; background: #22543D; border-radius:0 3px 3px 0;
 }
 .nav-icon { width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .nav-badge {
   margin-left:auto; min-width:18px; height:18px; padding:0 5px;
-  border-radius:9px; background:var(--gold); color:#fff;
+  border-radius:9px; background:var(--leaf); color:#fff;
   font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
 }
 .nav-divider { height:1px; background:var(--surface-3); margin:8px 0; }
@@ -159,8 +160,8 @@
   border-top:1px solid var(--surface-3);
 }
 .company-card {
-  background:linear-gradient(135deg,var(--leaf-pale),rgba(34,197,94,.08));
-  border:1px solid var(--leaf-bdr);
+  background: linear-gradient(135deg, rgba(34,160,90,0.08), rgba(22,163,74,0.04));
+  border: 1px solid rgba(34,160,90,0.2);
   border-radius:var(--radius); padding:12px 14px;
 }
 .company-name { font-size:12px; font-weight:700; color:var(--ink); }
