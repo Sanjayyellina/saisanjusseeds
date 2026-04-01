@@ -675,6 +675,353 @@ function renderAdvancedAnalytics() {
         <span>Active days: <strong style="color:var(--ink);">${daily14.filter(v=>v>0).length}</strong></span>
       </div>`;
   }
+
+  renderFaangAnalytics();
+}
+
+// ============================================================
+// INTELLIGENCE CENTRE — FAANG-LEVEL ANALYTICS
+// ============================================================
+function renderFaangAnalytics() {
+  const history   = state.binHistory  || [];
+  const intakes   = state.intakes     || [];
+  const dispatches= state.dispatches  || [];
+  const bins      = state.bins        || [];
+  const TARGET_MOISTURE = 10;
+
+  // ── A. OPERATIONAL HEALTH SCORE ───────────────────────────
+  const healthEl = document.getElementById('faang-health');
+  if (healthEl) {
+    // Component 1: Dryer Utilisation (30 pts)
+    const totalBins = bins.length || 1;
+    const activeBinCount = bins.filter(b => b.status !== 'empty').length;
+    const utilScore = Math.min(30, Math.round((activeBinCount / totalBins) * 30));
+
+    // Component 2: Moisture Efficiency (25 pts) — avg final moisture vs target
+    const completedWithMoisture = history.filter(h => parseFloat(h.final_moisture) > 0);
+    let moistScore = 0;
+    if (completedWithMoisture.length > 0) {
+      const avgFinal = completedWithMoisture.reduce((s,h) => s + parseFloat(h.final_moisture), 0) / completedWithMoisture.length;
+      // Perfect = <=10%, worst = >=20%
+      moistScore = Math.min(25, Math.max(0, Math.round(((20 - avgFinal) / 10) * 25)));
+    }
+
+    // Component 3: Cycle Throughput (20 pts) — cycles completed this season
+    const totalCyclesCompleted = history.length;
+    // Scale: 0 cycles=0, 20+ cycles=20 pts
+    const cycleScore = Math.min(20, totalCyclesCompleted);
+
+    // Component 4: Yield Retention (15 pts) — dispatched/intake ratio
+    const totalIntakeKg  = intakes.reduce((s,i) => s + parseFloat(i.qty||0), 0);
+    const totalDispKg    = dispatches.reduce((s,d) => s + parseFloat(d.qty||0), 0);
+    let yieldScore = 0;
+    if (totalIntakeKg > 0) {
+      const yieldRatio = totalDispKg / totalIntakeKg;
+      yieldScore = Math.min(15, Math.round(yieldRatio * 15));
+    }
+
+    // Component 5: Dispatch Activity (10 pts) — has recent dispatches
+    const recentDispatch = dispatches.filter(d => (Date.now() - d.dateTS) < 7*86400000).length;
+    const dispScore = Math.min(10, recentDispatch * 2);
+
+    const totalScore = utilScore + moistScore + cycleScore + yieldScore + dispScore;
+    const scoreColor = totalScore >= 75 ? '#10B981' : totalScore >= 50 ? '#F59E0B' : '#EF4444';
+    const scoreLabel = totalScore >= 75 ? 'Excellent' : totalScore >= 50 ? 'Good' : totalScore >= 25 ? 'Fair' : 'Low Activity';
+
+    // SVG arc gauge
+    const R = 54, CX = 64, CY = 64;
+    const startAngle = -210, sweepMax = 240; // degrees
+    const sweepAngle = (totalScore / 100) * sweepMax;
+    function polarToXY(cx, cy, r, angleDeg) {
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+    function describeArc(cx, cy, r, startDeg, endDeg) {
+      const s = polarToXY(cx, cy, r, startDeg);
+      const e = polarToXY(cx, cy, r, endDeg);
+      const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+      return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y}`;
+    }
+    const bgArc    = describeArc(CX, CY, R, startAngle, startAngle + sweepMax);
+    const fillArc  = totalScore > 0 ? describeArc(CX, CY, R, startAngle, startAngle + sweepAngle) : '';
+
+    const gaugeHTML = `<svg width="128" height="128" viewBox="0 0 128 128" style="flex-shrink:0;">
+      <path d="${bgArc}" fill="none" stroke="#E5E7EB" stroke-width="10" stroke-linecap="round"/>
+      ${fillArc ? `<path d="${fillArc}" fill="none" stroke="${scoreColor}" stroke-width="10" stroke-linecap="round" style="transition:stroke-dasharray .8s;"/>` : ''}
+      <text x="${CX}" y="${CY - 6}" text-anchor="middle" font-size="26" font-weight="800" fill="${scoreColor}" font-family="DM Mono,monospace">${totalScore}</text>
+      <text x="${CX}" y="${CY + 12}" text-anchor="middle" font-size="9" fill="#6B7280" font-family="sans-serif">out of 100</text>
+      <text x="${CX}" y="${CY + 26}" text-anchor="middle" font-size="10" font-weight="700" fill="${scoreColor}" font-family="sans-serif">${scoreLabel}</text>
+    </svg>`;
+
+    const components = [
+      ['Dryer Utilisation', utilScore, 30, '#F5A623'],
+      ['Moisture Efficiency', moistScore, 25, '#10B981'],
+      ['Cycle Throughput', cycleScore, 20, '#3B82F6'],
+      ['Yield Retention', yieldScore, 15, '#8B5CF6'],
+      ['Dispatch Activity', dispScore, 10, '#F59E0B'],
+    ];
+    const compHTML = `<div style="flex:1;display:flex;flex-direction:column;gap:8px;">` +
+      components.map(([label, score, max, col]) => {
+        const pct = Math.round((score/max)*100);
+        return `<div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+            <span style="color:var(--ink-4);">${label}</span>
+            <span style="font-weight:700;color:var(--ink);">${score}<span style="color:var(--ink-5);font-weight:400;">/${max}</span></span>
+          </div>
+          <div style="height:6px;background:var(--surface-3);border-radius:99px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:99px;transition:width .6s;"></div>
+          </div></div>`;
+      }).join('') + `</div>`;
+
+    healthEl.innerHTML = gaugeHTML + compHTML;
+  }
+
+  // ── B. LIVE RISK & ALERTS ──────────────────────────────────
+  const alertsEl = document.getElementById('faang-alerts');
+  if (alertsEl) {
+    const alerts = [];
+    const now = Date.now();
+
+    bins.forEach(b => {
+      if (b.status === 'empty') return;
+      const label = `BIN-${b.binLabel || b.id}`;
+      const hoursIn = b.intakeDateTS ? Math.floor((now - b.intakeDateTS) / 3600000) : 0;
+
+      // Critical: > 120h in dryer
+      if (hoursIn > 120) {
+        alerts.push({ sev: 'red', icon: '🔴', msg: `${label} — ${hoursIn}h in dryer (>${120}h threshold)`, sub: `${b.hybrid||'?'} · ${parseInt(b.qty||0).toLocaleString('en-IN')} Kg` });
+      }
+      // Warning: slow moisture drop
+      if (b.intakeDateTS && b.entryMoisture > 0 && b.currentMoisture > 0) {
+        const daysIn = Math.max(1, Math.floor((now - b.intakeDateTS) / 86400000));
+        const rate = (b.entryMoisture - b.currentMoisture) / daysIn;
+        if (rate < 0.3 && daysIn >= 2) {
+          alerts.push({ sev: 'amber', icon: '🟡', msg: `${label} — slow drying rate (${rate.toFixed(2)}%/day)`, sub: `${b.currentMoisture}% moisture · check airflow` });
+        }
+        // Info: near target
+        if (b.currentMoisture > TARGET_MOISTURE && b.currentMoisture <= TARGET_MOISTURE + 1.5) {
+          alerts.push({ sev: 'green', icon: '🟢', msg: `${label} — approaching target (${b.currentMoisture}%)`, sub: `Ready for shelling soon` });
+        }
+        // Info: at or below target
+        if (b.currentMoisture <= TARGET_MOISTURE) {
+          alerts.push({ sev: 'green', icon: '✅', msg: `${label} — at target moisture (${b.currentMoisture}%)`, sub: `Ready to dispatch / shell` });
+        }
+      }
+    });
+
+    // Capacity warning
+    const freeCount = bins.filter(b => b.status === 'empty').length;
+    if (freeCount <= 3) {
+      alerts.push({ sev: 'amber', icon: '⚡', msg: `Only ${freeCount} bin${freeCount!==1?'s':''} available — dryer near capacity`, sub: 'Schedule dispatches to free up space' });
+    }
+
+    if (alerts.length === 0) {
+      alertsEl.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:16px;background:#ECFDF5;border-radius:var(--radius);">
+        <span style="font-size:24px;">✅</span>
+        <div><div style="font-weight:700;color:#065F46;font-size:13px;">All systems nominal</div>
+        <div style="font-size:11px;color:#047857;">No issues detected across all active bins</div></div></div>`;
+    } else {
+      const order = { red: 0, amber: 1, green: 2 };
+      const bgMap = { red:'#FEF2F2', amber:'#FFFBEB', green:'#ECFDF5' };
+      const clrMap = { red:'#B91C1C', amber:'#92400E', green:'#065F46' };
+      alertsEl.innerHTML = alerts.sort((a,b) => order[a.sev]-order[b.sev]).map(a => `
+        <div style="padding:8px 12px;background:${bgMap[a.sev]};border-radius:var(--radius);margin-bottom:6px;">
+          <div style="font-size:12px;font-weight:600;color:${clrMap[a.sev]};">${a.icon} ${a.msg}</div>
+          <div style="font-size:10px;color:${clrMap[a.sev]};opacity:.75;margin-top:1px;">${a.sub}</div>
+        </div>`).join('');
+    }
+  }
+
+  // ── C. SEASON HEATMAP ─────────────────────────────────────
+  const heatEl = document.getElementById('faang-heatmap');
+  if (heatEl) {
+    // Build 84-day window (12 weeks) ending today
+    const today = new Date(); today.setHours(23,59,59,999);
+    const WEEKS = 12, DAYS = WEEKS * 7;
+    const startDate = new Date(today); startDate.setDate(startDate.getDate() - (DAYS - 1)); startDate.setHours(0,0,0,0);
+
+    // Map dateStr -> total Kg
+    const dayMap = {};
+    intakes.forEach(i => {
+      const d = new Date(i.dateTS);
+      const key = d.toISOString().slice(0,10);
+      dayMap[key] = (dayMap[key]||0) + parseFloat(i.qty||0);
+    });
+
+    const maxKg = Math.max(...Object.values(dayMap), 1);
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // Build day cells grouped by week columns
+    const weeks = [];
+    for (let w = 0; w < WEEKS; w++) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + w*7 + d);
+        week.push(date);
+      }
+      weeks.push(week);
+    }
+
+    // Color function: 5 intensity levels
+    function heatColor(kg) {
+      if (kg === 0) return '#F3F4F6';
+      const pct = kg / maxKg;
+      if (pct < 0.2) return '#FEF3C7';
+      if (pct < 0.4) return '#FDE68A';
+      if (pct < 0.6) return '#F59E0B';
+      if (pct < 0.8) return '#D97706';
+      return '#92400E';
+    }
+
+    const cellSize = 13, gap = 2;
+
+    heatEl.innerHTML = `<div style="display:flex;gap:4px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:${gap}px;margin-top:16px;margin-right:4px;">
+        ${dayNames.map((d,i) => `<div style="height:${cellSize}px;font-size:9px;color:var(--ink-5);line-height:${cellSize}px;text-align:right;">${i%2===1?d:''}</div>`).join('')}
+      </div>
+      <div style="overflow-x:auto;">
+        <div style="display:flex;gap:${gap}px;margin-bottom:4px;">
+          ${weeks.map((week, wi) => {
+            const m = week[1].getMonth();
+            const showMonth = wi===0 || week[1].getDate() <= 7;
+            return `<div style="width:${cellSize}px;font-size:9px;color:var(--ink-5);text-align:center;overflow:visible;white-space:nowrap;">${showMonth ? monthNames[m] : ''}</div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:${gap}px;">
+          ${weeks.map(week => `<div style="display:flex;flex-direction:column;gap:${gap}px;">
+            ${week.map(date => {
+              const key = date.toISOString().slice(0,10);
+              const kg = dayMap[key] || 0;
+              const isToday = key === today.toISOString().slice(0,10);
+              const isFuture = date > today;
+              const col = isFuture ? 'transparent' : heatColor(kg);
+              const tip = isFuture ? '' : `${date.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}: ${kg>0?parseInt(kg).toLocaleString('en-IN')+' Kg':'No intake'}`;
+              return `<div title="${tip}" style="width:${cellSize}px;height:${cellSize}px;background:${col};border-radius:2px;${isToday?'outline:2px solid var(--gold);outline-offset:1px;':''}"></div>`;
+            }).join('')}
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:var(--ink-5);">
+      <span>Less</span>
+      ${['#F3F4F6','#FEF3C7','#FDE68A','#F59E0B','#D97706','#92400E'].map(c=>`<div style="width:12px;height:12px;background:${c};border-radius:2px;"></div>`).join('')}
+      <span>More</span>
+      <span style="margin-left:12px;">Max single day: <strong style="color:var(--ink);">${parseInt(maxKg).toLocaleString('en-IN')} Kg</strong></span>
+      <span>· Total active days: <strong style="color:var(--ink);">${Object.values(dayMap).filter(v=>v>0).length}</strong></span>
+    </div>`;
+  }
+
+  // ── D. BIN PERFORMANCE RANKING ────────────────────────────
+  const binRankEl = document.getElementById('faang-bin-rank');
+  if (binRankEl) {
+    if (!history.length) {
+      binRankEl.innerHTML = '<div style="color:var(--ink-5);text-align:center;padding:20px;font-size:12px;">No completed cycles to rank yet</div>';
+    } else {
+      // Group by bin_id
+      const binStats = {};
+      history.forEach(h => {
+        const id = h.bin_id;
+        if (!binStats[id]) binStats[id] = { cycles:0, totalDays:0, daysCount:0, totalDrop:0, dropCount:0, totalQty:0 };
+        binStats[id].cycles++;
+        binStats[id].totalQty += parseFloat(h.qty||0);
+        const dib = parseInt(h.days_in_bin)||0;
+        if (dib > 0) { binStats[id].totalDays += dib; binStats[id].daysCount++; }
+        const em = parseFloat(h.entry_moisture)||0, fm = parseFloat(h.final_moisture)||0;
+        if (em > 0 && fm > 0 && em > fm) { binStats[id].totalDrop += (em-fm); binStats[id].dropCount++; }
+      });
+
+      const ranked = Object.entries(binStats).map(([id, s]) => ({
+        id: parseInt(id),
+        label: `BIN-${getBinLabel(parseInt(id))}`,
+        cycles: s.cycles,
+        avgDays: s.daysCount ? (s.totalDays / s.daysCount) : null,
+        avgDrop: s.dropCount ? (s.totalDrop / s.dropCount) : null,
+        totalQty: s.totalQty,
+      })).sort((a, b) => {
+        // Sort: most cycles first, then fastest avg days
+        if (b.cycles !== a.cycles) return b.cycles - a.cycles;
+        if (a.avgDays !== null && b.avgDays !== null) return a.avgDays - b.avgDays;
+        return 0;
+      });
+
+      binRankEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:grid;grid-template-columns:40px 1fr 48px 56px 56px;gap:6px;padding:3px 10px;font-size:10px;color:var(--ink-5);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+          <span>#</span><span>Bin</span><span style="text-align:center;">Cycles</span><span style="text-align:center;">Avg Days</span><span style="text-align:right;">Avg Drop</span>
+        </div>` +
+        ranked.slice(0,10).map((b,i) => {
+          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          const perf = b.avgDays !== null && b.avgDays <= 5 ? {col:'#059669',bg:'#ECFDF5'} : b.avgDays !== null && b.avgDays <= 8 ? {col:'#D97706',bg:'#FFFBEB'} : {col:'#6B7280',bg:'var(--surface-2)'};
+          return `<div style="display:grid;grid-template-columns:40px 1fr 48px 56px 56px;gap:6px;align-items:center;padding:7px 10px;background:${perf.bg};border-radius:var(--radius);">
+            <span style="font-size:11px;color:var(--ink-5);">${medal||('#'+(i+1))}</span>
+            <span style="font-size:12px;font-weight:700;color:${perf.col};">${b.label}</span>
+            <span style="font-size:11px;text-align:center;font-weight:700;color:var(--ink);">${b.cycles}</span>
+            <span style="font-size:11px;text-align:center;color:var(--ink-4);">${b.avgDays!==null?b.avgDays.toFixed(1)+'d':'—'}</span>
+            <span style="font-size:11px;text-align:right;color:var(--blue);font-weight:600;">${b.avgDrop!==null?b.avgDrop.toFixed(1)+'%':'—'}</span>
+          </div>`;
+        }).join('') +
+        `</div>`;
+    }
+  }
+
+  // ── E. TRUCK ARRIVAL PATTERN ──────────────────────────────
+  const arrivalEl = document.getElementById('faang-arrival');
+  if (arrivalEl) {
+    if (!intakes.length) {
+      arrivalEl.innerHTML = '<div style="color:var(--ink-5);text-align:center;padding:20px;font-size:12px;">No intake data yet</div>';
+    } else {
+      // Day of week breakdown
+      const dowCounts = [0,0,0,0,0,0,0]; // Sun=0 to Sat=6
+      const dowKg     = [0,0,0,0,0,0,0];
+      const hourCounts = new Array(24).fill(0);
+      intakes.forEach(i => {
+        const d = new Date(i.dateTS);
+        dowCounts[d.getDay()]++;
+        dowKg[d.getDay()] += parseFloat(i.qty||0);
+        hourCounts[d.getHours()]++;
+      });
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const maxDow = Math.max(...dowCounts, 1);
+      const maxHour = Math.max(...hourCounts, 1);
+
+      const dowHTML = `<div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-4);margin-bottom:6px;">Loads by Day of Week</div>
+        <div style="display:flex;gap:4px;align-items:flex-end;height:48px;">
+          ${dayNames.map((d,i) => {
+            const h = dowCounts[i] > 0 ? Math.max(8, Math.round((dowCounts[i]/maxDow)*44)) : 3;
+            const isWeekend = i===0||i===6;
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <div title="${dowCounts[i]} loads · ${parseInt(dowKg[i]).toLocaleString('en-IN')} Kg" style="width:100%;height:${h}px;background:${isWeekend?'#CBD5E1':'var(--gold)'};border-radius:3px 3px 0 0;opacity:.85;"></div>
+              <span style="font-size:9px;color:var(--ink-5);">${d}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
+      // Peak arrival hours (group into 4-hour blocks for readability)
+      const blocks = ['12am','4am','8am','12pm','4pm','8pm'];
+      const blockCounts = [0,0,0,0,0,0];
+      hourCounts.forEach((c,h) => { blockCounts[Math.floor(h/4)] += c; });
+      const maxBlock = Math.max(...blockCounts, 1);
+      const peakBlockIdx = blockCounts.indexOf(Math.max(...blockCounts));
+
+      const hourHTML = `<div>
+        <div style="font-size:11px;font-weight:600;color:var(--ink-4);margin-bottom:6px;">Peak Arrival Hours · Peak: <span style="color:var(--gold);">${blocks[peakBlockIdx]}–${blocks[(peakBlockIdx+1)%6]||'12am'}</span></div>
+        <div style="display:flex;gap:4px;align-items:flex-end;height:40px;">
+          ${blocks.map((lbl,i) => {
+            const h = blockCounts[i] > 0 ? Math.max(4, Math.round((blockCounts[i]/maxBlock)*36)) : 3;
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <div title="${blockCounts[i]} loads" style="width:100%;height:${h}px;background:${i===peakBlockIdx?'var(--blue)':'#BFDBFE'};border-radius:3px 3px 0 0;"></div>
+              <span style="font-size:9px;color:var(--ink-5);">${lbl}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
+      arrivalEl.innerHTML = dowHTML + hourHTML;
+    }
+  }
 }
 
 function renderMaintenancePage() {
