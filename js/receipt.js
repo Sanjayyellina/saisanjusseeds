@@ -5,154 +5,284 @@
 // ============================================================
 
 // ================================================================
+// AMOUNT IN WORDS (Indian numbering)
+// ================================================================
+function amountInWords(n) {
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+    'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function words(num) {
+    if (num === 0) return '';
+    if (num < 20) return ones[num] + ' ';
+    if (num < 100) return tens[Math.floor(num/10)] + (num%10 ? ' ' + ones[num%10] : '') + ' ';
+    if (num < 1000) return ones[Math.floor(num/100)] + ' Hundred ' + words(num%100);
+    if (num < 100000) return words(Math.floor(num/1000)) + 'Thousand ' + words(num%1000);
+    if (num < 10000000) return words(Math.floor(num/100000)) + 'Lakh ' + words(num%100000);
+    return words(Math.floor(num/10000000)) + 'Crore ' + words(num%10000000);
+  }
+  const amt = Math.round(n);
+  if (amt === 0) return 'Zero Rupees Only';
+  return words(amt).trim() + ' Rupees Only';
+}
+
+// ================================================================
 // RECEIPT
 // ================================================================
-let _currentReceiptId=null;
-function viewReceipt(receiptId){
-  const d=state.dispatches.find(x=>x.receiptId===receiptId);
-  if(!d)return;
-  _currentReceiptId=receiptId;
-  state.activeReceiptHash=d.hash;
-  document.getElementById('receipt-modal-body').innerHTML=buildReceipt(d);
-  setTimeout(()=>{
-    const qrDiv=document.getElementById('r-qr-'+receiptId.replace(/\W/g,''));
-    if(qrDiv&&window.QRCode)new QRCode(qrDiv,{
-      text:`YELLINA|${d.receiptId}|${d.date}|${d.hash}`,
-      width:96,height:96,colorDark:'#0F1923',colorLight:'#fff'
+let _currentReceiptId = null;
+
+function viewReceipt(receiptId) {
+  const d = state.dispatches.find(x => x.receiptId === receiptId);
+  if (!d) return;
+  _currentReceiptId = receiptId;
+  state.activeReceiptHash = d.hash;
+  document.getElementById('receipt-modal-body').innerHTML = buildReceipt(d);
+  setTimeout(() => {
+    const qrDiv = document.getElementById('r-qr-' + receiptId.replace(/\W/g, ''));
+    if (qrDiv && window.QRCode) new QRCode(qrDiv, {
+      text: `YELLINA|${d.receiptId}|${d.date}|${d.hash}`,
+      width: 80, height: 80, colorDark: '#0F1923', colorLight: '#fff'
     });
-  },120);
+  }, 120);
   openModal('receipt-modal');
 }
-function buildReceipt(d){
-  const qrId='r-qr-'+d.receiptId.replace(/\W/g,'');
-  return`<div id="print-receipt">
-  <div class="receipt">
-    <div class="receipt-masthead">
-      <img src="${LOGO}" class="receipt-logo" style="background:#fff;border-radius:6px;padding:2px;" onerror="this.style.display='none'">
-      <div class="receipt-company">
-        <div class="receipt-co-name">Yellina Seeds Private Limited</div>
-        <div class="receipt-co-sub">SATHUPALLY, KHAMMAM DIST – 507303 · GSTIN: 36AABCY8231F1ZB</div>
-        <div class="receipt-co-sub">Cell: 9949484078 · yellinamurali@gmail.com</div>
-      </div>
-    </div>
-    <div class="receipt-id-bar">
-      <div>
-        <div class="receipt-id-label">Dispatch Receipt</div>
-        <div class="receipt-id-val">${d.receiptId}</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="receipt-id-label">Date</div>
-        <div style="font-weight:700;font-size:14px;color:#111;">${d.date}</div>
-      </div>
-    </div>
-    <div class="receipt-body">
-      <div class="receipt-section-title">Receiver</div>
-      <div class="receipt-row"><span class="receipt-key">Party</span><span class="receipt-val">${d.party}</span></div>
-      ${d.address?`<div class="receipt-row"><span class="receipt-key">Address</span><span class="receipt-val" style="max-width:220px;text-align:right;font-size:10px;">${d.address}</span></div>`:''}
 
-      <div class="receipt-section-title">Transport</div>
-      <div class="receipt-row"><span class="receipt-key">Vehicle No.</span><span class="receipt-val">${d.vehicle}</span></div>
-      ${d.lr?`<div class="receipt-row"><span class="receipt-key">LR Number</span><span class="receipt-val">${d.lr}</span></div>`:''}
+function buildReceipt(d) {
+  const qrId = 'r-qr-' + d.receiptId.replace(/\W/g, '');
+  const ratePerKg = d.qty > 0 ? (d.amount / d.qty).toFixed(2) : '—';
+  const words = amountInWords(d.amount);
+  const hashDisplay = d.hash.match(/.{1,16}/g).join(' ');
 
-      <div class="receipt-section-title">Seed Details</div>
-      <div class="receipt-row"><span class="receipt-key">Hybrid / Variety</span><span class="receipt-val">${d.hybrid}</span></div>
-      ${d.lot?`<div class="receipt-row"><span class="receipt-key">Lot Number</span><span class="receipt-val">${d.lot}</span></div>`:''}
-      <div class="receipt-row"><span class="receipt-key">No. of Bags</span><span class="receipt-val">${d.bags.toLocaleString('en-IN')}</span></div>
-      <div class="receipt-row"><span class="receipt-key">Quantity (Kg)</span><span class="receipt-val">${d.qty.toLocaleString('en-IN')}</span></div>
-      ${d.moisture?`<div class="receipt-row"><span class="receipt-key">Final Moisture %</span><span class="receipt-val" style="color:var(--green);font-weight:700;">${d.moisture}%</span></div>`:''}
+  return `<div id="print-receipt">
+  <div class="invoice-wrap">
 
-      <div class="receipt-total-bar">
-        <span class="receipt-total-label">Total Amount</span>
-        <span class="receipt-total-val">₹${parseInt(d.amount).toLocaleString('en-IN')}</span>
-      </div>
-
-      <div style="display:flex;gap:12px;align-items:flex-start;">
-        <div style="flex:1;">
-          <div class="receipt-security">
-            <div class="receipt-security-title">
-              <span>🔐</span> Cryptographic Signature
-            </div>
-            <div style="font-size:9px;color:#999;margin-bottom:5px;font-style:italic;">SHA-256 equivalent hash — any modification invalidates this receipt</div>
-            <div class="receipt-hash-val">${d.hash.match(/.{1,16}/g).join(' ')}</div>
-            <div style="margin-top:6px;padding-top:6px;border-top:1px solid #E5E7EB;">
-              <div style="font-size:9px;color:#bbb;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;">Signature</div>
-              <div class="receipt-hash-val" style="font-size:8px;">${d.signature}</div>
-            </div>
-          </div>
-          <div style="margin-top:10px;text-align:center;">
-            <span class="receipt-verified-badge">✓ Yellina Seeds — Digitally Verified</span>
-          </div>
-        </div>
+    <!-- HEADER -->
+    <div class="inv-header">
+      <div class="inv-company-block">
+        <img src="${LOGO}" class="inv-logo" onerror="this.style.display='none'">
         <div>
-          <div class="receipt-qr-row"><div id="${qrId}"></div></div>
-          <div style="font-size:9px;color:#aaa;text-align:center;margin-top:4px;">Scan to Verify</div>
+          <div class="inv-company-name">Yellina Seeds Private Limited</div>
+          <div class="inv-company-detail">Sathupally, Khammam District – 507303, Telangana</div>
+          <div class="inv-company-detail">GSTIN: 36AABCY8231F1ZB &nbsp;|&nbsp; Cell: +91 99494 84078</div>
+          <div class="inv-company-detail">Email: yellinamurali@gmail.com</div>
         </div>
       </div>
+      <div class="inv-title-block">
+        <div class="inv-title">DISPATCH INVOICE</div>
+        <table class="inv-meta-table">
+          <tr><td class="inv-meta-key">Invoice No.</td><td class="inv-meta-val">${d.receiptId}</td></tr>
+          <tr><td class="inv-meta-key">Date</td><td class="inv-meta-val">${d.date}</td></tr>
+          ${d.vehicle ? `<tr><td class="inv-meta-key">Vehicle</td><td class="inv-meta-val">${d.vehicle}</td></tr>` : ''}
+          ${d.lr ? `<tr><td class="inv-meta-key">LR No.</td><td class="inv-meta-val">${d.lr}</td></tr>` : ''}
+        </table>
+      </div>
     </div>
-    <div class="receipt-footer">
-      <div><strong>Stock is not for sale — For Transfer Only</strong></div>
-      <div>To verify authenticity: Go to Yellina Operations Platform → Verify Receipt → Enter ID <strong>${d.receiptId}</strong></div>
-      <div style="margin-top:4px;">Any alteration to this document will cause hash mismatch and invalidate this receipt.</div>
+
+    <div class="inv-divider"></div>
+
+    <!-- BILL TO -->
+    <div class="inv-parties">
+      <div class="inv-party-box">
+        <div class="inv-box-title">Bill To / Consignee</div>
+        <div class="inv-party-name">${d.party}</div>
+        ${d.address ? `<div class="inv-party-addr">${d.address}</div>` : ''}
+      </div>
+      <div class="inv-party-box">
+        <div class="inv-box-title">Dispatch From</div>
+        <div class="inv-party-name">Yellina Seeds Pvt. Ltd.</div>
+        <div class="inv-party-addr">Sathupally, Khammam Dist – 507303</div>
+      </div>
     </div>
+
+    <!-- ITEMS TABLE -->
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th class="col-sno">#</th>
+          <th class="col-desc">Description / Hybrid</th>
+          <th class="col-lot">Lot No.</th>
+          <th class="col-moisture">Moisture</th>
+          <th class="col-bags">Bags</th>
+          <th class="col-qty">Qty (Kg)</th>
+          <th class="col-rate">Rate/Kg (₹)</th>
+          <th class="col-amt">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="col-sno center">1</td>
+          <td class="col-desc"><strong>${d.hybrid}</strong><br><span class="item-sub">Dried Corn Seed</span></td>
+          <td class="col-lot center mono">${d.lot || '—'}</td>
+          <td class="col-moisture center">${d.moisture ? d.moisture + '%' : '—'}</td>
+          <td class="col-bags center mono">${d.bags.toLocaleString('en-IN')}</td>
+          <td class="col-qty right mono">${d.qty.toLocaleString('en-IN')}</td>
+          <td class="col-rate right mono">${ratePerKg}</td>
+          <td class="col-amt right mono fw700">${parseInt(d.amount).toLocaleString('en-IN')}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="subtotal-row">
+          <td colspan="4"></td>
+          <td class="label right" colspan="3">Sub Total</td>
+          <td class="right mono">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="4" class="words-cell">
+            <span class="words-label">Amount in Words:</span><br>
+            <span class="words-val">${words}</span>
+          </td>
+          <td class="label right" colspan="3">TOTAL</td>
+          <td class="right total-amount">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- BOTTOM: VERIFY + SIGNATURE -->
+    <div class="inv-bottom">
+      <div class="inv-verify-block">
+        <div class="inv-box-title">Digital Verification</div>
+        <div class="inv-qr-row">
+          <div id="${qrId}" class="inv-qr"></div>
+          <div class="inv-hash-block">
+            <div class="inv-hash-label">Document Hash</div>
+            <div class="inv-hash-val">${hashDisplay}</div>
+            <div class="inv-verified-badge">✓ Digitally Verified — Yellina Seeds</div>
+          </div>
+        </div>
+        <div class="inv-verify-hint">Scan QR or visit yellinaseeds.com → Verify Receipt → Enter ID <strong>${d.receiptId}</strong></div>
+      </div>
+
+      <div class="inv-sign-block">
+        <div class="inv-box-title">For Yellina Seeds Private Limited</div>
+        <div class="inv-sign-space"></div>
+        <div class="inv-sign-line"></div>
+        <div class="inv-sign-label">Authorised Signatory</div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="inv-footer">
+      <strong>Terms:</strong> Goods once dispatched will not be taken back. Subject to Khammam jurisdiction. &nbsp;|&nbsp;
+      This is a computer-generated invoice. &nbsp;|&nbsp; Any alteration invalidates this document.
+    </div>
+
   </div>
   </div>`;
 }
 
-function copyReceiptHash(){
-  if(state.activeReceiptHash){
-    navigator.clipboard.writeText(state.activeReceiptHash).catch(()=>{});
-    toast('Hash copied to clipboard','info');
+function copyReceiptHash() {
+  if (state.activeReceiptHash) {
+    navigator.clipboard.writeText(state.activeReceiptHash).catch(() => {});
+    toast('Hash copied to clipboard', 'info');
   }
 }
-function printReceipt(){
-  const el=document.getElementById('print-receipt');
-  if(!el)return;
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+
+function printReceipt() {
+  const el = document.getElementById('print-receipt');
+  if (!el) return;
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Invoice — ${_currentReceiptId || ''}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-  *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:20px;}
-  .receipt{max-width:500px;margin:0 auto;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;}
-  .receipt-masthead{background:#0F1923;padding:20px 24px;display:flex;align-items:center;gap:14px;}
-  .receipt-co-name{font-family:'Playfair Display',serif;font-size:17px;font-weight:800;color:#fff;}
-  .receipt-co-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;}
-  .receipt-id-bar{background:#FFF8EC;border-bottom:1px solid #FDEBC8;padding:11px 24px;display:flex;justify-content:space-between;align-items:center;}
-  .receipt-id-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8A9BAD;}
-  .receipt-id-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:#C8821A;}
-  .receipt-body{padding:18px 24px;}
-  .receipt-section-title{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8A9BAD;padding-bottom:5px;border-bottom:1px solid #F0F0F0;margin-bottom:7px;margin-top:13px;}
-  .receipt-row{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;font-size:12px;}
-  .receipt-key{color:#666;}.receipt-val{font-weight:600;color:#111;font-family:'DM Mono',monospace;font-size:10px;}
-  .receipt-total-bar{background:#0F1923;color:#F5A623;padding:12px 14px;border-radius:8px;display:flex;justify-content:space-between;margin:14px 0;}
-  .receipt-total-label{font-size:12px;font-weight:700;}.receipt-total-val{font-family:'DM Mono',monospace;font-size:19px;font-weight:700;}
-  .receipt-security{background:#F8F9FB;border:1px solid #E5E7EB;border-radius:8px;padding:11px 13px;margin-top:12px;}
-  .receipt-security-title{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#888;margin-bottom:6px;}
-  .receipt-hash-val{font-family:'DM Mono',monospace;font-size:8.5px;color:#888;word-break:break-all;line-height:1.7;background:#F0F0F0;padding:7px 9px;border-radius:5px;}
-  .receipt-verified-badge{display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#10B981;border:1px solid #A7F3D0;border-radius:99px;padding:3px 10px;font-size:10px;font-weight:700;}
-  .receipt-footer{text-align:center;padding:12px 24px 18px;font-size:10px;color:#aaa;line-height:1.7;border-top:1px solid #F0F0F0;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{size:A4 portrait;margin:12mm 14mm;}
+  body{font-family:'DM Sans',sans-serif;font-size:12px;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
+  /* Wrapper */
+  .invoice-wrap{max-width:760px;margin:0 auto;border:1.5px solid #d0d7de;border-radius:8px;overflow:hidden;}
+
+  /* Header */
+  .inv-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#1b3a2d;padding:18px 22px;color:#fff;}
+  .inv-company-block{display:flex;align-items:flex-start;gap:12px;}
+  .inv-logo{width:48px;height:48px;object-fit:contain;background:#fff;border-radius:6px;padding:3px;flex-shrink:0;}
+  .inv-company-name{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.2px;margin-bottom:4px;}
+  .inv-company-detail{font-size:9.5px;color:rgba(255,255,255,.65);line-height:1.7;}
+  .inv-title-block{text-align:right;flex-shrink:0;}
+  .inv-title{font-size:22px;font-weight:700;color:#f5c842;letter-spacing:1px;margin-bottom:8px;}
+  .inv-meta-table{border-collapse:collapse;margin-left:auto;}
+  .inv-meta-table td{padding:1.5px 0;font-size:10px;color:rgba(255,255,255,.85);}
+  .inv-meta-key{padding-right:10px;color:rgba(255,255,255,.5);text-align:right;}
+  .inv-meta-val{font-weight:600;font-family:'DM Mono',monospace;font-size:10px;}
+
+  .inv-divider{height:3px;background:linear-gradient(90deg,#f5c842,#1b3a2d);}
+
+  /* Parties */
+  .inv-parties{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #e5e7eb;}
+  .inv-party-box{padding:12px 20px;}
+  .inv-party-box:first-child{border-right:1px solid #e5e7eb;}
+  .inv-box-title{font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b7280;margin-bottom:5px;}
+  .inv-party-name{font-size:13px;font-weight:700;color:#111;margin-bottom:2px;}
+  .inv-party-addr{font-size:10px;color:#555;line-height:1.6;}
+
+  /* Items table */
+  .inv-table{width:100%;border-collapse:collapse;font-size:11px;}
+  .inv-table thead tr{background:#f3f4f6;border-top:1px solid #e5e7eb;border-bottom:2px solid #d1d5db;}
+  .inv-table th{padding:7px 10px;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#374151;white-space:nowrap;}
+  .inv-table td{padding:9px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top;}
+  .inv-table tbody tr:last-child td{border-bottom:2px solid #d1d5db;}
+  .item-sub{font-size:9px;color:#888;font-style:italic;}
+  .mono{font-family:'DM Mono',monospace;}
+  .fw700{font-weight:700;}
+  .center{text-align:center;}
+  .right{text-align:right;}
+  .col-sno{width:28px;}
+  .col-lot{width:70px;}
+  .col-moisture{width:62px;}
+  .col-bags{width:55px;}
+  .col-qty{width:80px;}
+  .col-rate{width:75px;}
+  .col-amt{width:90px;}
+
+  /* Totals */
+  .subtotal-row td{padding:6px 10px;background:#fafafa;}
+  .subtotal-row .label{font-weight:600;color:#555;font-size:10.5px;}
+  .total-row td{padding:8px 10px;background:#1b3a2d;}
+  .total-row .label{font-weight:700;font-size:13px;color:#f5c842;}
+  .total-amount{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:#f5c842;text-align:right;}
+  .words-cell{color:#fff;font-size:10px;}
+  .words-label{font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;opacity:.6;}
+  .words-val{font-weight:600;font-size:11px;}
+
+  /* Bottom */
+  .inv-bottom{display:grid;grid-template-columns:1fr auto;gap:0;border-top:1px solid #e5e7eb;}
+  .inv-verify-block{padding:12px 20px;border-right:1px solid #e5e7eb;}
+  .inv-qr-row{display:flex;gap:12px;align-items:flex-start;margin:7px 0;}
+  .inv-qr{width:80px;height:80px;flex-shrink:0;}
+  .inv-hash-block{flex:1;}
+  .inv-hash-label{font-size:8px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#6b7280;margin-bottom:4px;}
+  .inv-hash-val{font-family:'DM Mono',monospace;font-size:7.5px;color:#555;word-break:break-all;line-height:1.8;background:#f3f4f6;padding:5px 7px;border-radius:4px;}
+  .inv-verified-badge{display:inline-block;margin-top:5px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;border-radius:99px;padding:2px 9px;font-size:8.5px;font-weight:700;}
+  .inv-verify-hint{font-size:8.5px;color:#9ca3af;margin-top:5px;}
+  .inv-sign-block{padding:12px 24px;min-width:200px;display:flex;flex-direction:column;}
+  .inv-sign-space{flex:1;min-height:50px;}
+  .inv-sign-line{border-top:1.5px solid #1b3a2d;margin-bottom:4px;}
+  .inv-sign-label{font-size:10px;font-weight:600;color:#374151;text-align:center;}
+
+  /* Footer */
+  .inv-footer{background:#f9fafb;border-top:1px solid #e5e7eb;padding:8px 20px;font-size:8.5px;color:#9ca3af;text-align:center;line-height:1.7;}
   </style></head><body>${el.innerHTML}</body></html>`);
-  w.document.close();setTimeout(()=>w.print(),300);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
 }
 
-function verifyReceipt(){
-  const input=document.getElementById('verify-input').value.trim();
-  const res=document.getElementById('verify-result');
-  if(!input){res.innerHTML='';return;}
-  const d=state.dispatches.find(x=>x.receiptId===input||x.hash===input||x.hash.startsWith(input.toUpperCase()));
-  if(!d){
-    res.innerHTML=`<div class="verify-result verify-fail">
+function verifyReceipt() {
+  const input = document.getElementById('verify-input').value.trim();
+  const res = document.getElementById('verify-result');
+  if (!input) { res.innerHTML = ''; return; }
+  const d = state.dispatches.find(x => x.receiptId === input || x.hash === input || x.hash.startsWith(input.toUpperCase()));
+  if (!d) {
+    res.innerHTML = `<div class="verify-result verify-fail">
       <div class="verify-status" style="color:var(--red);">✕ Receipt Not Found</div>
       <div class="fs12 text-muted">No record matches this ID or hash. This document may be fraudulent, altered, or from a different system.</div>
     </div>`;
     return;
   }
-  const valid=verifyHash(d);
-  res.innerHTML=`<div class="verify-result ${valid?'verify-ok':'verify-fail'}">
-    <div class="verify-status" style="color:${valid?'var(--green)':'var(--red)'};">
-      ${valid?'✓ Authentic — Hash Verified':'✕ TAMPERED — Hash Mismatch'}
+  const valid = verifyHash(d);
+  res.innerHTML = `<div class="verify-result ${valid ? 'verify-ok' : 'verify-fail'}">
+    <div class="verify-status" style="color:${valid ? 'var(--green)' : 'var(--red)'};">
+      ${valid ? '✓ Authentic — Hash Verified' : '✕ TAMPERED — Hash Mismatch'}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:14px;">
-      ${[['Receipt ID',d.receiptId,'mono text-gold'],['Date',d.date,''],['Party',d.party,'fw700'],['Hybrid',d.hybrid,'fw700'],['Bags',d.bags,'mono'],['Qty',d.qty+' Kg','mono'],['Amount','₹'+parseInt(d.amount).toLocaleString('en-IN'),'fw700 text-green'],['Vehicle',d.vehicle,'mono']].map(([k,v,cls])=>`
+      ${[['Invoice No.',d.receiptId,'mono text-gold'],['Date',d.date,''],['Party',d.party,'fw700'],['Hybrid',d.hybrid,'fw700'],['Bags',d.bags,'mono'],['Qty',d.qty+' Kg','mono'],['Amount','₹'+parseInt(d.amount).toLocaleString('en-IN'),'fw700 text-green'],['Vehicle',d.vehicle,'mono']].map(([k,v,cls])=>`
         <div style="background:rgba(255,255,255,.5);border-radius:var(--radius);padding:8px 10px;">
           <div style="font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-5);margin-bottom:2px;">${k}</div>
           <div class="${cls}" style="font-size:12px;">${v}</div>
@@ -162,14 +292,14 @@ function verifyReceipt(){
       <div class="form-label" style="margin-bottom:5px;">Hash</div>
       <div class="mono" style="font-size:9px;color:var(--ink-4);word-break:break-all;line-height:1.7;">${d.hash}</div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${d.receiptId}')">View Full Receipt</button>
+    <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${d.receiptId}')">View Full Invoice</button>
   </div>`;
 }
 
-function globalSearch(q){
-  if(!q.trim())return;
-  const lq=q.toLowerCase();
-  const intake=state.intakes.find(i=>i.challan.includes(q)||i.vehicle.toLowerCase().includes(lq)||i.hybrid.toLowerCase().includes(lq));
-  const disp=state.dispatches.find(d=>d.receiptId.toLowerCase().includes(lq)||d.party.toLowerCase().includes(lq));
-  if(disp){viewReceipt(disp.receiptId);return;}
+function globalSearch(q) {
+  if (!q.trim()) return;
+  const lq = q.toLowerCase();
+  const disp = state.dispatches.find(d => d.receiptId.toLowerCase().includes(lq) || d.party.toLowerCase().includes(lq));
+  if (disp) { viewReceipt(disp.receiptId); return; }
+  state.intakes.find(i => i.challan.includes(q) || i.vehicle.toLowerCase().includes(lq) || i.hybrid.toLowerCase().includes(lq));
 }
