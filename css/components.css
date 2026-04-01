@@ -151,6 +151,60 @@
 /* Empty bin */
 .bin-empty-label { font-size: 12px; font-weight: 600; color: var(--ink-3); text-align: center; padding: 8px 0 4px; letter-spacing: .3px; }
 
+/* ── Premium tile: header row ── */
+.bin-tile-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+
+/* Status badge pill */
+.bin-status-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .7px;
+  text-transform: uppercase; padding: 3px 8px;
+  border-radius: 99px; border: 1px solid transparent;
+}
+.bst-drying  { background: rgba(22,163,74,.12);  color: #15803D; border-color: rgba(22,163,74,.28); }
+.bst-shelling{ background: rgba(139,92,246,.12); color: var(--purple); border-color: rgba(139,92,246,.28); }
+.bst-intake  { background: rgba(59,130,246,.12); color: var(--blue);   border-color: rgba(59,130,246,.28); }
+.bst-empty   { background: var(--surface-3);     color: var(--ink-4);  border-color: var(--surface-4); }
+
+/* Intake date subtitle under hybrid name */
+.bin-intake-date {
+  font-size: 10px; font-weight: 500; color: var(--ink-4);
+  margin: -4px 0 8px; letter-spacing: .2px;
+}
+
+/* ── Stats row (3-column) ── */
+.bin-stats-row {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 8px 0; margin-bottom: 10px;
+  border-top: 1px solid rgba(0,0,0,.06);
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+.bin-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1;
+}
+.bin-stat-key {
+  font-size: 9px; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.bin-stat-val {
+  font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 800;
+  color: var(--ink); line-height: 1.1;
+}
+.bin-stat-unit {
+  font-size: 9px; font-weight: 600; color: var(--ink-5); margin-top: 1px;
+}
+.bin-stat-div {
+  width: 1px; height: 30px; background: rgba(0,0,0,.08); border-radius: 1px;
+}
+
+/* ── Hours row (bar + airflow inline) ── */
+.bin-hours-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 5px;
+}
+
 /* ============================================================
    CARDS / PANELS
    ============================================================ */
