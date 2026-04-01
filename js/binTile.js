@@ -66,7 +66,7 @@ function renderBinTile(bin, isManager = false){
     </div>
 
     <div class="bin-hybrid-name" title="${bin.hybrid}">${bin.hybrid}</div>
-    ${intakeDateFmt ? `<div class="bin-intake-date">&#x1F4C5; Since ${intakeDateFmt}</div>` : ''}
+    ${intakeDateFmt ? `<div class="bin-intake-date">Since ${intakeDateFmt}</div>` : ''}
 
     <div class="bin-gauge-center">${gaugeSvg}</div>
 

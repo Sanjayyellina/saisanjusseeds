@@ -181,6 +181,13 @@
 .bin-intake-date {
   font-size: 10px; font-weight: 500; color: var(--ink-4);
   margin: -4px 0 8px; letter-spacing: .2px;
+  display: flex; align-items: center; gap: 4px;
+}
+.bin-intake-date::before {
+  content: '';
+  display: inline-block; width: 5px; height: 5px;
+  border-radius: 50%; background: currentColor; opacity: 0.5;
+  flex-shrink: 0;
 }
 
 /* ── Stats row (3-column) ── */
