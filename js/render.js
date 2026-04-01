@@ -350,6 +350,103 @@ function renderAnalytics(){
           <span>${lbl}</span><span class="fw700 mono">${cnt} bin${cnt!==1?'s':''}</span>
         </div>`:'').join('')}
     </div>`;
+
+  // ── Cycle Analytics ──────────────────────────────────────────
+  const history = state.binHistory || [];
+
+  // Completed cycles per bin_id from bin_history
+  const completedPerBin = {};
+  history.forEach(h => {
+    completedPerBin[h.bin_id] = (completedPerBin[h.bin_id] || 0) + 1;
+  });
+
+  // In-progress = bins currently drying or shelling
+  const inProgressBins = state.bins.filter(b => b.status === 'drying' || b.status === 'shelling');
+  const inProgressIds = new Set(inProgressBins.map(b => b.id));
+
+  // Total completed cycles across dryer
+  const totalCompleted = Object.values(completedPerBin).reduce((s, v) => s + v, 0);
+  const totalInProgress = inProgressBins.length;
+  const totalCycles = totalCompleted + totalInProgress;
+
+  // Bin with most completed cycles
+  let topBinId = null, topCycles = 0;
+  Object.entries(completedPerBin).forEach(([id, cnt]) => { if (cnt > topCycles) { topCycles = cnt; topBinId = parseInt(id); } });
+  const topLabel = topBinId ? `BIN-${getBinLabel(topBinId)}` : '—';
+
+  // Avg days per completed cycle
+  const validDays = history.filter(h => h.days_in_bin > 0).map(h => h.days_in_bin);
+  const avgDaysPerCycle = validDays.length ? (validDays.reduce((s, v) => s + v, 0) / validDays.length).toFixed(1) : '—';
+
+  // Avg cycles per bin (only bins that have been used at least once)
+  const binsWithCycles = Object.keys(completedPerBin).length;
+  const avgCycles = binsWithCycles ? (totalCompleted / binsWithCycles).toFixed(1) : '0';
+
+  // Render KPI cards
+  const cycleKpis = document.getElementById('cycle-kpis');
+  if (cycleKpis) {
+    cycleKpis.innerHTML = `
+      <div class="kpi-card kpi-blue"><div class="kpi-icon">🔄</div><div class="kpi-val">${totalCycles}</div><div class="kpi-label">Total Dryer Cycles</div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-icon">✅</div><div class="kpi-val">${totalCompleted}</div><div class="kpi-label">Completed Cycles</div></div>
+      <div class="kpi-card kpi-amber"><div class="kpi-icon">⚡</div><div class="kpi-val">${totalInProgress}</div><div class="kpi-label">In Progress</div></div>
+      <div class="kpi-card kpi-purple"><div class="kpi-icon">⏱️</div><div class="kpi-val">${avgDaysPerCycle}${avgDaysPerCycle !== '—' ? 'd' : ''}</div><div class="kpi-label">Avg Days / Cycle</div></div>
+    `;
+  }
+
+  // Render cycles-per-bin bar chart
+  const cpbEl = document.getElementById('cycle-per-bin');
+  if (cpbEl) {
+    const allBins = [...state.bins].sort((a, b) => (a.sortOrder || a.id) - (b.sortOrder || b.id));
+    const maxC = Math.max(...allBins.map(b => (completedPerBin[b.id] || 0) + (inProgressIds.has(b.id) ? 1 : 0)), 1);
+    cpbEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">` +
+      allBins.map(b => {
+        const completed = completedPerBin[b.id] || 0;
+        const inProg = inProgressIds.has(b.id) ? 1 : 0;
+        const total = completed + inProg;
+        if (total === 0) return '';
+        const pct = Math.round((total / maxC) * 100);
+        const label = `BIN-${b.binLabel || b.id}`;
+        return `<div style="display:grid;grid-template-columns:56px 1fr 32px;gap:8px;align-items:center;">
+          <span style="font-size:11px;font-weight:600;color:var(--ink-4);">${label}</span>
+          <div style="height:14px;background:var(--surface-3);border-radius:99px;overflow:hidden;position:relative;">
+            <div style="height:100%;width:${Math.round((completed/maxC)*100)}%;background:var(--green);border-radius:99px;transition:width .5s;display:inline-block;"></div>${inProg ? `<div style="height:100%;width:${Math.round((inProg/maxC)*100)}%;background:var(--amber);border-radius:99px;display:inline-block;margin-left:-1px;"></div>` : ''}
+          </div>
+          <span style="font-size:11px;font-weight:700;color:var(--ink);text-align:right;">${total}</span>
+        </div>`;
+      }).filter(Boolean).join('') +
+      `</div>
+      <div style="display:flex;gap:12px;margin-top:10px;font-size:10px;color:var(--ink-5);">
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;margin-right:4px;"></span>Completed</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--amber);border-radius:2px;margin-right:4px;"></span>In Progress</span>
+      </div>`;
+    if (!allBins.some(b => (completedPerBin[b.id] || 0) + (inProgressIds.has(b.id) ? 1 : 0) > 0)) {
+      cpbEl.innerHTML = '<div style="color:var(--ink-5);text-align:center;padding:20px;font-size:12px;">No cycles recorded yet this season</div>';
+    }
+  }
+
+  // Render cycle history log (last 10)
+  const logEl = document.getElementById('cycle-history-log');
+  if (logEl) {
+    const recent = history.slice(0, 10);
+    if (recent.length === 0) {
+      logEl.innerHTML = '<div style="color:var(--ink-5);text-align:center;padding:20px;font-size:12px;">No completed cycles yet</div>';
+    } else {
+      logEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">` +
+        recent.map(h => {
+          const label = `BIN-${getBinLabel(h.bin_id)}`;
+          const days = h.days_in_bin != null ? `${h.days_in_bin}d` : '—';
+          const moisture = (h.entry_moisture && h.final_moisture) ? `${h.entry_moisture}%→${h.final_moisture}%` : '—';
+          const date = h.emptied_at ? new Date(h.emptied_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short'}) : '—';
+          return `<div style="display:grid;grid-template-columns:52px 1fr auto auto;gap:8px;align-items:center;padding:7px 10px;background:var(--surface-2);border-radius:var(--radius);">
+            <span style="font-size:11px;font-weight:700;color:var(--ink);">${label}</span>
+            <span style="font-size:11px;color:var(--ink-4);">${h.hybrid || '—'}</span>
+            <span style="font-size:10px;color:var(--green);font-weight:600;">${moisture}</span>
+            <span style="font-size:10px;color:var(--ink-5);">${days} · ${date}</span>
+          </div>`;
+        }).join('') +
+        `</div>`;
+    }
+  }
 }
 
 function renderMaintenancePage() {
