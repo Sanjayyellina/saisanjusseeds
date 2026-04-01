@@ -41,7 +41,7 @@ function renderBinTile(bin, isManager = false){
   const dashOffset = CIRCUM * 0.25;
   const gaugeColor = m > Config.MOISTURE_HIGH ? '#3B82F6' : m > Config.MOISTURE_MID ? '#F59E0B' : '#16A34A';
 
-  const gaugeSvg = `<svg width="108" height="108" viewBox="0 0 72 72">
+  const gaugeSvg = `<svg width="88" height="88" viewBox="0 0 72 72">
     <circle cx="36" cy="36" r="${RADIUS}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="5.5"/>
     <circle cx="36" cy="36" r="${RADIUS}" fill="none" stroke="${gaugeColor}" stroke-width="6"
       stroke-dasharray="${dashFill.toFixed(1)} ${CIRCUM.toFixed(1)}"

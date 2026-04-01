@@ -64,20 +64,29 @@
    BIN TILES — Redesigned
    ============================================================ */
 .bin-tile {
-  background: var(--glass-white);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1.5px solid var(--glass-border);
+  background: rgba(255,255,255,0.52);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1.5px solid rgba(255,255,255,0.65);
   border-radius: var(--radius-xl);
-  padding: 18px;
+  padding: 13px;
   cursor: pointer;
   transition: all var(--transition);
   position: relative;
   overflow: hidden;
   min-height: 80px;
-  box-shadow: var(--glass-shadow);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.88),
+    0 4px 24px rgba(15,25,35,.08),
+    0 1px 4px rgba(15,25,35,.04);
 }
-.bin-tile:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(15,25,35,.14), 0 4px 12px rgba(15,25,35,.06); }
+.bin-tile:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 14px 40px rgba(15,25,35,.13),
+    0 4px 12px rgba(15,25,35,.06);
+}
 
 /* Gradient top accent bar */
 .bin-tile::after {
@@ -89,11 +98,11 @@
 .bin-tile.s-drying::after  { background: linear-gradient(90deg,var(--leaf),var(--leaf-light)); }
 .bin-tile.s-shelling::after{ background: linear-gradient(90deg,var(--purple),#A78BFA); }
 
-/* Subtle colour wash on active bins */
-.bin-tile.s-drying  { background: rgba(249,255,252,0.97); border-color: rgba(187,247,208,0.6); }
-.bin-tile.s-shelling{ background: rgba(245,243,255,0.97); border-color: rgba(196,181,253,0.7); }
-.bin-tile.s-intake  { background: rgba(239,246,255,0.97); border-color: rgba(147,197,253,0.7); }
-.bin-tile.s-empty   { background: rgba(255,255,255,0.95); border-color: rgba(180,195,210,0.8); border-style: dashed; }
+/* Glassy colour wash on active bins */
+.bin-tile.s-drying  { background: rgba(220,250,235,0.48); border-color: rgba(134,239,172,0.55); }
+.bin-tile.s-shelling{ background: rgba(235,228,255,0.48); border-color: rgba(196,181,253,0.55); }
+.bin-tile.s-intake  { background: rgba(219,234,254,0.48); border-color: rgba(147,197,253,0.55); }
+.bin-tile.s-empty   { background: rgba(255,255,255,0.38); border-color: rgba(180,195,210,0.5); border-style: dashed; }
 
 .bin-tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .bin-num-label { font-size: 12px; font-weight: 800; color: var(--ink-2); letter-spacing: 1px; text-transform: uppercase; }
@@ -107,13 +116,13 @@
 
 /* Active bin — vertical full-width layout */
 .bin-hybrid-name {
-  font-size: 14px; font-weight: 700; color: var(--ink);
+  font-size: 13px; font-weight: 700; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .bin-gauge-center {
   display: flex; justify-content: center; align-items: center;
-  margin: 4px 0 10px;
+  margin: 2px 0 8px;
 }
 .bin-meta-row {
   font-size: 12px; font-weight: 700; margin-bottom: 10px;
@@ -177,9 +186,9 @@
 /* ── Stats row (3-column) ── */
 .bin-stats-row {
   display: flex; align-items: center; justify-content: space-around;
-  padding: 8px 0; margin-bottom: 10px;
-  border-top: 1px solid rgba(0,0,0,.06);
-  border-bottom: 1px solid rgba(0,0,0,.06);
+  padding: 6px 0; margin-bottom: 8px;
+  border-top: 1px solid rgba(0,0,0,.07);
+  border-bottom: 1px solid rgba(0,0,0,.07);
 }
 .bin-stat {
   display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1;
@@ -189,9 +198,13 @@
   text-transform: uppercase; color: var(--ink-4);
 }
 .bin-stat-val {
-  font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 800;
-  color: var(--ink); line-height: 1.1;
+  font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 800;
+  line-height: 1.1;
 }
+/* Colour each number individually */
+.bin-stat-val.bm-kg   { color: var(--gold-dark); }
+.bin-stat-val.bm-bags { color: #0284C7; }
+.bin-stat-val.bm-day  { color: #15803D; }
 .bin-stat-unit {
   font-size: 9px; font-weight: 600; color: var(--ink-5); margin-top: 1px;
 }
