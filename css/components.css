@@ -541,15 +541,4 @@
 /* ============================================================
    PER-TAB BACKGROUNDS
    ============================================================ */
-/* Per-tab: uniform beige */
-body[data-page="dashboard"],
-body[data-page="intake"],
-body[data-page="bins"],
-body[data-page="dispatch"],
-body[data-page="receipts"],
-body[data-page="analytics"],
-body[data-page="maintenance"],
-body[data-page="labor"],
-body[data-page="manager"],
-body[data-page="entry-trucks"],
-body[data-page="backyard"] { background: rgba(255,255,255,0.72); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+/* Per-tab backgrounds handled by .main glass overlay in layout.css */
