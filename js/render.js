@@ -330,22 +330,23 @@ function renderAnalytics(){
     </div>`;
 
   // ── Bin utilization: real status breakdown ──
-  const binGroups={empty:0,intake:0,drying:0,shelling:0};
-  state.bins.forEach(b=>binGroups[b.status]=(binGroups[b.status]||0)+1);
-  const used=20-binGroups.empty;
-  const pct=Math.round((used/20)*100);
+  const binGroups={empty:0,drying:0,shelling:0};
+  state.bins.forEach(b=>{ const s=b.status==='intake'?'drying':b.status; binGroups[s]=(binGroups[s]||0)+1; });
+  const totalBinCount = state.bins.length || 1;
+  const used = totalBinCount - (binGroups.empty||0);
+  const pct  = Math.round((used / totalBinCount) * 100);
   const totalQtyInBins=state.bins.filter(b=>b.status!=='empty').reduce((s,b)=>s+parseFloat(b.qty||0),0);
   document.getElementById('bin-util-chart').innerHTML=`
-    <div style="font-family:'Playfair Display',serif;font-size:52px;font-weight:800;color:var(--ink);line-height:1;">${used}<span style="font-size:24px;color:var(--ink-5);">/20</span></div>
+    <div style="font-family:'Playfair Display',serif;font-size:52px;font-weight:800;color:var(--ink);line-height:1;">${used}<span style="font-size:24px;color:var(--ink-5);">/${totalBinCount}</span></div>
     <div class="text-muted fs12" style="margin:4px 0 8px;">Bins Active · ${parseInt(totalQtyInBins).toLocaleString('en-IN')} Kg total</div>
     <div style="height:8px;background:var(--surface-3);border-radius:99px;overflow:hidden;margin-bottom:10px;">
       <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--gold-dark));border-radius:99px;transition:width .6s;"></div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-5);margin-bottom:10px;">
-      <span>${used} Active</span><span>${pct}%</span><span>${20-binGroups.empty===0?20:binGroups.empty} Free</span>
+      <span>${used} Active</span><span>${pct}%</span><span>${binGroups.empty||0} Free</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;">
-      ${Object.entries({'🟡 Intake':binGroups.intake,'🟠 Drying':binGroups.drying,'🟣 Shelling':binGroups.shelling}).map(([lbl,cnt])=>cnt>0?`
+      ${Object.entries({'🟠 Drying':binGroups.drying||0,'🟣 Shelling':binGroups.shelling||0}).map(([lbl,cnt])=>cnt>0?`
         <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 8px;background:var(--surface-2);border-radius:6px;">
           <span>${lbl}</span><span class="fw700 mono">${cnt} bin${cnt!==1?'s':''}</span>
         </div>`:'').join('')}
@@ -501,18 +502,19 @@ function renderAdvancedAnalytics() {
   // ── 2. SEASON EFFICIENCY ──────────────────────────────────
   const effEl = document.getElementById('adv-season-eff');
   if (effEl) {
-    const yieldPct      = totalIntakeKg > 0 ? ((totalDispKg / totalIntakeKg)*100).toFixed(1) : '—';
+    const yieldNum      = totalIntakeKg > 0 ? (totalDispKg / totalIntakeKg)*100 : null;
+    const yieldPct      = yieldNum !== null ? yieldNum.toFixed(1) : '—';
     const totalBags     = dispatches.reduce((s,d)=>s+parseInt(d.bags||0),0);
     const avgKgBag      = totalBags > 0 ? (totalDispKg / totalBags).toFixed(1) : '—';
     const completedH    = history.filter(h=>h.days_in_bin>0);
     const avgDays       = completedH.length ? (completedH.reduce((s,h)=>s+h.days_in_bin,0)/completedH.length).toFixed(1) : '—';
     const moistDrops    = history.filter(h=>h.entry_moisture&&h.final_moisture);
-    const avgDrop       = moistDrops.length ? (moistDrops.reduce((s,h)=>s+(h.entry_moisture-h.final_moisture),0)/moistDrops.length).toFixed(1) : '—';
+    const avgDrop       = moistDrops.length ? (moistDrops.reduce((s,h)=>s+(parseFloat(h.entry_moisture)-parseFloat(h.final_moisture)),0)/moistDrops.length).toFixed(1) : '—';
     const binUtil       = bins.length > 0 ? Math.round((bins.filter(b=>b.status!=='empty').length/bins.length)*100) : 0;
     const totalLoads    = intakes.length;
     const avgLoadKg     = totalLoads > 0 ? (totalIntakeKg / totalLoads).toFixed(0) : '—';
     effEl.innerHTML =
-      statRow('📦 Yield Retention',     yieldPct !== '—' ? yieldPct+'%' : '—',   yieldPct >= 90 ? 'color:var(--green)' : 'color:var(--amber)') +
+      statRow('📦 Yield Retention',     yieldPct !== '—' ? yieldPct+'%' : '—',   yieldNum !== null && yieldNum >= 90 ? 'color:var(--green)' : yieldNum !== null ? 'color:var(--amber)' : '') +
       statRow('💧 Avg Moisture Reduced', avgDrop  !== '—' ? avgDrop+'%' : '—',    'color:var(--blue)') +
       statRow('⏱️ Avg Days to Dry',      avgDays  !== '—' ? avgDays+'d' : '—',    '') +
       statRow('🏭 Dryer Utilisation',   binUtil+'%',                               binUtil >= 70 ? 'color:var(--green)' : '') +
@@ -525,38 +527,40 @@ function renderAdvancedAnalytics() {
   if (velEl) {
     const TARGET = 10;
     const activeBins = bins.filter(b => b.status === 'drying' || b.status === 'shelling')
-      .filter(b => b.intakeDateTS && b.entryMoisture && b.currentMoisture);
+      .filter(b => b.intakeDateTS && b.entryMoisture > 0 && b.currentMoisture > 0);
     if (!activeBins.length) {
       velEl.innerHTML = emptyMsg('No active bins with moisture data');
     } else {
       const rows = activeBins.map(b => {
-        const daysIn    = Math.max(1, Math.floor((Date.now() - b.intakeDateTS) / 86400000));
-        const dropped   = b.entryMoisture - b.currentMoisture;
-        const ratePerDay= dropped > 0 ? (dropped / daysIn).toFixed(2) : 0;
-        const remaining = b.currentMoisture - TARGET;
-        const etaDays   = ratePerDay > 0 ? Math.ceil(remaining / ratePerDay) : null;
-        const pctDone   = Math.min(100, Math.round(((b.entryMoisture - b.currentMoisture) / (b.entryMoisture - TARGET)) * 100));
-        const speed     = ratePerDay >= 0.8 ? {label:'Fast',col:'var(--green)'} : ratePerDay >= 0.4 ? {label:'Normal',col:'var(--amber)'} : {label:'Slow',col:'var(--red)'};
-        const etaStr    = etaDays !== null && remaining > 0 ? `~${etaDays}d left` : remaining <= 0 ? 'Ready ✓' : '—';
-        const label     = `BIN-${b.binLabel || b.id}`;
+        const daysIn      = Math.max(1, Math.floor((Date.now() - b.intakeDateTS) / 86400000));
+        const dropped     = b.entryMoisture - b.currentMoisture;
+        const rateNum     = dropped > 0 ? dropped / daysIn : 0;          // number, not string
+        const rateDisplay = rateNum > 0 ? rateNum.toFixed(2) : '0.00';
+        const remaining   = b.currentMoisture - TARGET;
+        const etaDays     = rateNum > 0 && remaining > 0 ? Math.ceil(remaining / rateNum) : null;
+        const totalRange  = b.entryMoisture - TARGET;
+        const pctDone     = totalRange > 0 ? Math.min(100, Math.max(0, Math.round((dropped / totalRange) * 100))) : (b.currentMoisture <= TARGET ? 100 : 0);
+        const speed       = rateNum >= 0.8 ? {label:'Fast',bg:'#d1fae5',col:'#059669'} : rateNum >= 0.4 ? {label:'Normal',bg:'#fef3c7',col:'#d97706'} : {label:'Slow',bg:'#fee2e2',col:'#dc2626'};
+        const etaStr      = etaDays !== null ? `~${etaDays}d left` : remaining <= 0 ? 'Ready ✓' : '—';
+        const label       = `BIN-${b.binLabel || b.id}`;
         return `<div style="padding:10px 14px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <span style="font-size:12px;font-weight:700;color:var(--ink);">${label}</span>
               <span style="font-size:11px;color:var(--ink-4);">${b.hybrid||'—'}</span>
-              <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:${speed.col}22;color:${speed.col};">${speed.label}</span>
+              <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;background:${speed.bg};color:${speed.col};">${speed.label}</span>
             </div>
             <div style="display:flex;align-items:center;gap:14px;font-size:11px;">
-              <span style="color:var(--ink-5);">${ratePerDay}%/day</span>
-              <span style="font-weight:700;color:${remaining<=0?'var(--green)':'var(--ink)'};">${etaStr}</span>
+              <span style="color:var(--ink-5);">${rateDisplay}%/day</span>
+              <span style="font-weight:700;color:${remaining<=0?'#059669':'var(--ink)'};">${etaStr}</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:10px;color:var(--ink-5);width:32px;">${b.entryMoisture}%</span>
+            <span style="font-size:10px;color:var(--ink-5);width:36px;">${b.entryMoisture}%</span>
             <div style="flex:1;height:8px;background:var(--surface-3);border-radius:99px;overflow:hidden;">
-              <div style="height:100%;width:${pctDone}%;background:linear-gradient(90deg,var(--amber),var(--green));border-radius:99px;transition:width .6s;"></div>
+              <div style="height:100%;width:${pctDone}%;background:linear-gradient(90deg,#F59E0B,#10B981);border-radius:99px;transition:width .6s;"></div>
             </div>
-            <span style="font-size:10px;color:var(--ink);width:32px;text-align:right;">${b.currentMoisture}%</span>
+            <span style="font-size:10px;color:var(--ink);width:36px;text-align:right;">${b.currentMoisture}%</span>
           </div>
           <div style="font-size:10px;color:var(--ink-5);margin-top:3px;">Day ${daysIn} · ${parseInt(b.qty||0).toLocaleString('en-IN')} Kg · ${pctDone}% of drying complete · target 10%</div>
         </div>`;
@@ -577,8 +581,10 @@ function renderAdvancedAnalytics() {
         if (!hmap[key]) hmap[key] = { cycles:0, totalQty:0, totalDrop:0, totalDays:0, dropCount:0, daysCount:0 };
         hmap[key].cycles++;
         hmap[key].totalQty += parseFloat(h.qty||0);
-        if (h.entry_moisture && h.final_moisture) { hmap[key].totalDrop += (h.entry_moisture - h.final_moisture); hmap[key].dropCount++; }
-        if (h.days_in_bin > 0) { hmap[key].totalDays += h.days_in_bin; hmap[key].daysCount++; }
+        const em = parseFloat(h.entry_moisture)||0, fm = parseFloat(h.final_moisture)||0;
+        if (em > 0 && fm > 0 && em > fm) { hmap[key].totalDrop += (em - fm); hmap[key].dropCount++; }
+        const dib = parseInt(h.days_in_bin)||0;
+        if (dib > 0) { hmap[key].totalDays += dib; hmap[key].daysCount++; }
       });
       const entries = Object.entries(hmap).map(([name, d]) => ({
         name,
@@ -586,8 +592,9 @@ function renderAdvancedAnalytics() {
         totalQty: d.totalQty,
         avgDrop:  d.dropCount ? (d.totalDrop / d.dropCount).toFixed(1) : null,
         avgDays:  d.daysCount ? (d.totalDays / d.daysCount).toFixed(1) : null,
-        rate:     (d.dropCount && d.daysCount) ? (d.totalDrop / d.totalDays).toFixed(2) : 0
-      })).sort((a,b) => b.rate - a.rate);
+        rateNum:  (d.dropCount && d.daysCount) ? (d.totalDrop / d.totalDays) : 0,  // keep as number
+        rate:     (d.dropCount && d.daysCount) ? (d.totalDrop / d.totalDays).toFixed(2) : '0'
+      })).sort((a,b) => b.rateNum - a.rateNum);
 
       hybridEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
         <div style="display:grid;grid-template-columns:1fr 50px 55px 55px 50px;gap:6px;padding:4px 10px;font-size:10px;color:var(--ink-5);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
@@ -600,7 +607,7 @@ function renderAdvancedAnalytics() {
             <span style="font-size:11px;text-align:center;color:var(--ink-4);">${e.cycles}</span>
             <span style="font-size:11px;text-align:center;color:var(--blue);font-weight:600;">${e.avgDrop !== null ? e.avgDrop+'%' : '—'}</span>
             <span style="font-size:11px;text-align:center;color:var(--ink-4);">${e.avgDays !== null ? e.avgDays+'d' : '—'}</span>
-            <span style="font-size:11px;text-align:right;font-weight:700;color:${parseFloat(e.rate)>=0.8?'var(--green)':parseFloat(e.rate)>=0.4?'var(--amber)':'var(--ink-4)'};">${e.rate > 0 ? e.rate : '—'}</span>
+            <span style="font-size:11px;text-align:right;font-weight:700;color:${e.rateNum>=0.8?'var(--green)':e.rateNum>=0.4?'var(--amber)':'var(--ink-4)'};">${e.rateNum > 0 ? e.rate : '—'}</span>
           </div>`;
         }).join('') +
         `<div style="font-size:10px;color:var(--ink-5);padding:4px 10px;">%/Day = moisture reduction speed (higher = dries faster)</div>
