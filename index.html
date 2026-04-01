@@ -849,10 +849,14 @@
         <div class="form-group"><label class="form-label">Date & Time <span style="color:var(--ink-4);font-weight:400;">(optional — leave blank for now)</span></label><input class="form-input" id="d-datetime" type="datetime-local"></div>
       </div>
       <div class="form-section"><span class="form-section-icon">🌾</span> Seed Details</div>
-      <div class="form-row cols2">
+      <div class="form-row cols1">
         <div class="form-group"><label class="form-label">Hybrid / Variety *</label><input class="form-input" id="d-hybrid" placeholder="e.g. DS-255"></div>
-        <div class="form-group"><label class="form-label">Lot No</label><input class="form-input" id="d-lot" placeholder="e.g. 255202"></div>
       </div>
+      <div class="form-section" style="font-size:13px;padding:8px 0 4px;">
+        <span>Lot Numbers</span>
+        <button class="btn btn-ghost" style="float:right;padding:4px 8px;height:auto;min-height:0;" onclick="addDispatchLotRow()">+ Add Lot</button>
+      </div>
+      <div id="d-lot-rows"></div>
       <div class="form-section">
         <span class="form-section-icon">🏭</span> <span data-i18n="dispatch.modal.fromBin">From Bins</span>
         <button class="btn btn-ghost" style="float:right; padding:4px 8px; height:auto; min-height:0;" onclick="addDispatchBinRow()">+ Add Bin</button>
@@ -1210,7 +1214,7 @@
 <script src="js/selects.js?v=3"></script>
 <script src="js/binTile.js?v=3"></script>
 <script src="js/render.js?v=12"></script>
-<script src="js/actions.js?v=11"></script>
+<script src="js/actions.js?v=12"></script>
 <script src="js/receipt.js?v=3"></script>
 <script src="js/clock.js?v=2"></script>
 <script src="js/init.js?v=8"></script>

@@ -126,8 +126,26 @@ function openEditIntakeModal(intakeId) {
 function openDispatchModal() {
   document.getElementById('d-bin-rows').innerHTML = '';
   addDispatchBinRow();
-  ['d-party','d-address','d-vehicle','d-hybrid','d-lot','d-bags','d-qty','d-moisture','d-amount','d-lr','d-remarks','d-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); 
+  document.getElementById('d-lot-rows').innerHTML = '';
+  addDispatchLotRow();
+  ['d-party','d-address','d-vehicle','d-hybrid','d-bags','d-qty','d-moisture','d-amount','d-lr','d-remarks','d-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   openModal('dispatch-modal');
+}
+
+function addDispatchLotRow() {
+  const container = document.getElementById('d-lot-rows');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'form-row cols1 d-lot-row';
+  row.style.cssText = 'align-items:flex-end;margin-bottom:6px;';
+  row.innerHTML = `
+    <div class="form-group" style="position:relative;">
+      <div style="display:flex;gap:8px;">
+        <input class="form-input d-lot-input" placeholder="e.g. 255202" style="flex:1;">
+        <button class="btn btn-ghost" style="padding:0 10px;flex-shrink:0;" onclick="this.closest('.d-lot-row').remove()" title="Remove">✕</button>
+      </div>
+    </div>`;
+  container.appendChild(row);
 }
 
 function addDispatchBinRow() {
@@ -521,7 +539,7 @@ async function saveDispatch(){
     date:now.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}),
     party,address:document.getElementById('d-address').value,
     vehicle,lr:document.getElementById('d-lr').value,
-    hybrid,lot:document.getElementById('d-lot').value,
+    hybrid,lot:[...document.querySelectorAll('.d-lot-input')].map(el=>el.value.trim()).filter(Boolean).join(', '),
     bin: binAllocations.length ? binAllocations[0].binId : null,
     bins: binAllocations,
     bags,qty,
@@ -1180,22 +1198,29 @@ function onTruckSelected(truckId) {
 // ================================================================
 // BACKYARD REMOVALS
 // ================================================================
-async function openBackyardModal() {
-  // Populate intake dropdown
+function openBackyardModal() {
+  // Populate intake dropdown — all intakes
   const byIntake = document.getElementById('by-intake');
   if (byIntake) {
-    byIntake.innerHTML = '<option value="">— Select Intake —</option>' +
-      (state.intakes || []).map(i => `<option value="${i.id}">${i.challan} — ${i.hybrid} (${i.date})</option>`).join('');
+    const intakes = state.intakes || [];
+    byIntake.innerHTML = '<option value="">— Select Intake (optional) —</option>' +
+      intakes.map(i => `<option value="${i.id}">${i.challan} — ${i.hybrid} (${i.date})</option>`).join('');
   }
-  // Populate bin dropdown (only active bins)
+  // Populate bin dropdown — ALL bins so you can log from any bin regardless of status
   const byBin = document.getElementById('by-bin');
   if (byBin) {
-    byBin.innerHTML = '<option value="">— Select Bin —</option>' +
-      (state.bins || []).filter(b => b.status !== 'empty').map(b => `<option value="${b.id}">BIN-${b.binLabel || b.id} — ${b.hybrid || 'Unknown'}</option>`).join('');
+    const bins = state.bins || [];
+    byBin.innerHTML = '<option value="">— Select Bin (optional) —</option>' +
+      bins.map(b => {
+        const label = b.binLabel || b.id;
+        const statusTag = b.status !== 'empty' ? ` [${b.status}]` : ' [empty]';
+        return `<option value="${b.id}">BIN-${label}${b.hybrid ? ' — ' + b.hybrid : ''}${statusTag}</option>`;
+      }).join('');
   }
   ['by-vehicle','by-hybrid','by-removed-by','by-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   ['by-qty','by-bags'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('by-reason').value = 'damaged';
+  const reasonEl = document.getElementById('by-reason');
+  if (reasonEl) reasonEl.value = 'damaged';
   openModal('backyard-modal');
 }
 
