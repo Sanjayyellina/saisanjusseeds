@@ -90,7 +90,7 @@
 .bin-tile.s-shelling::after{ background: linear-gradient(90deg,var(--purple),#A78BFA); }
 
 /* Subtle colour wash on active bins */
-.bin-tile.s-drying  { background: rgba(240,253,244,0.97); border-color: rgba(134,239,172,0.7); }
+.bin-tile.s-drying  { background: rgba(249,255,252,0.97); border-color: rgba(187,247,208,0.6); }
 .bin-tile.s-shelling{ background: rgba(245,243,255,0.97); border-color: rgba(196,181,253,0.7); }
 .bin-tile.s-intake  { background: rgba(239,246,255,0.97); border-color: rgba(147,197,253,0.7); }
 .bin-tile.s-empty   { background: rgba(255,255,255,0.95); border-color: rgba(180,195,210,0.8); border-style: dashed; }
@@ -110,7 +110,11 @@
 .bin-gauge-wrap { flex-shrink: 0; }
 .bin-info { flex: 1; min-width: 0; }
 .bin-hybrid-name { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
-.bin-meta-row { font-size: 11px; font-weight: 600; color: var(--ink-3); margin-bottom: 8px; line-height: 1.4; }
+.bin-meta-row { font-size: 12.5px; font-weight: 700; margin-bottom: 8px; line-height: 1.5; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+.bm-kg   { color: var(--gold-dark); }
+.bm-bags { color: var(--sky-blue); }
+.bm-day  { color: var(--leaf); }
+.bm-sep  { color: var(--ink-4); font-weight: 400; }
 
 .bin-hours-wrap { margin-bottom: 6px; }
 .bin-hours-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }

@@ -58,7 +58,9 @@ function renderBinTile(bin, isManager = false){
       <div class="bin-gauge-wrap">${gaugeSvg}</div>
       <div class="bin-info">
         <div class="bin-hybrid-name" title="${bin.hybrid}">${bin.hybrid}</div>
-        <div class="bin-meta-row">${(bin.qty||0).toLocaleString('en-IN')} Kg${bin.pkts ? ' &middot; ' + bin.pkts.toLocaleString('en-IN') + ' Bags' : ''}${days ? ' &middot; Day ' + days : ''}</div>
+        <div class="bin-meta-row">
+          <span class="bm-kg">${(bin.qty||0).toLocaleString('en-IN')} Kg</span>${bin.pkts ? ' <span class="bm-sep">&middot;</span> <span class="bm-bags">' + bin.pkts.toLocaleString('en-IN') + ' Bags</span>' : ''}${days ? ' <span class="bm-sep">&middot;</span> <span class="bm-day">Day ' + days + '</span>' : ''}
+        </div>
         <div class="bin-hours-wrap">
           <div class="bin-hours-label">
             <span style="font-size:10px;font-weight:600;color:var(--ink-3);">&#x23F1; In bin</span>
