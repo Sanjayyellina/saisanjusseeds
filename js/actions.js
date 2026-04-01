@@ -1393,3 +1393,15 @@ window.openDailyReport = function() {
   if (w) { w.document.write(html); w.document.close(); }
   else { toast('Please allow pop-ups to generate the report', 'info'); }
 };
+
+// ================================================================
+// RATE CALCULATOR — dispatch modal
+// ================================================================
+window.calcDispatchRate = function() {
+  const bags   = parseInt(document.getElementById('d-bags')?.value)        || 0;
+  const rate   = parseFloat(document.getElementById('d-rate-per-bag')?.value) || 0;
+  if (bags > 0 && rate > 0) {
+    const amtEl = document.getElementById('d-amount');
+    if (amtEl) { amtEl.value = Math.round(bags * rate); }
+  }
+};

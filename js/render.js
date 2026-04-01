@@ -57,6 +57,52 @@ function renderDashboard(){
 
   document.getElementById('dash-bins').innerHTML=state.bins.map(b=>renderBinTile(b)).join('');
 
+  // ── Live Alerts ──────────────────────────────────────────────
+  const alertsEl=document.getElementById('dash-alerts');
+  if(alertsEl){
+    const alerts=[];
+    state.bins.forEach(b=>{
+      if(b.status==='empty')return;
+      const hours=b.intakeDateTS?Math.floor((Date.now()-b.intakeDateTS)/3600000):0;
+      const lbl=`BIN-${b.binLabel||b.id}`;
+      if(hours>Config.TARGET_HRS)alerts.push({lv:'red',msg:`${lbl} overdue — ${hours}h (target ${Config.TARGET_HRS}h)`,id:b.id});
+      else if((b.currentMoisture||0)>=Config.MOISTURE_HIGH)alerts.push({lv:'amber',msg:`${lbl} very high moisture: ${b.currentMoisture}%`,id:b.id});
+    });
+    const BG={red:'rgba(239,68,68,.08)',amber:'rgba(245,158,11,.08)'};
+    const BD={red:'rgba(239,68,68,.25)',amber:'rgba(245,158,11,.25)'};
+    const TC={red:'#dc2626',amber:'#b45309'};
+    const IC={red:'🔴',amber:'🟡'};
+    alertsEl.innerHTML=alerts.length
+      ?`<div style="display:flex;flex-wrap:wrap;gap:8px;">`+alerts.map(a=>`<div style="padding:7px 14px;background:${BG[a.lv]};border:1px solid ${BD[a.lv]};border-radius:var(--radius);font-size:12px;color:${TC[a.lv]};font-weight:600;cursor:pointer;" onclick="openBinModal(${a.id})">${IC[a.lv]} ${a.msg}</div>`).join('')+`</div>`
+      :`<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius);font-size:12px;color:#059669;font-weight:600;">✅ All bins within normal operating parameters</div>`;
+  }
+
+  // ── FIFO Dispatch Queue ──────────────────────────────────────
+  const fifoEl=document.getElementById('dash-fifo');
+  if(fifoEl){
+    const activeBins=state.bins.filter(b=>b.status!=='empty'&&b.intakeDateTS).sort((a,b)=>a.intakeDateTS-b.intakeDateTS);
+    if(!activeBins.length){
+      fifoEl.innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No active bins</div></div>`;
+    }else{
+      fifoEl.innerHTML=activeBins.slice(0,6).map((b,i)=>{
+        const days=Math.floor((Date.now()-b.intakeDateTS)/86400000);
+        const ready=(b.currentMoisture||99)<=Config.TARGET_MOISTURE;
+        const lbl=`BIN-${b.binLabel||b.id}`;
+        return`<div style="display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:8px 12px;background:${ready?'rgba(16,185,129,.06)':'var(--surface-2)'};border-radius:var(--radius);margin-bottom:5px;${ready?'border:1px solid rgba(16,185,129,.2);':''}cursor:pointer;" onclick="openBinModal(${b.id})">
+          <div style="width:24px;height:24px;background:${i===0?'var(--gold)':'var(--surface-3)'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${i===0?'#fff':'var(--ink-4)'};">${i+1}</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--ink);">${esc(lbl)} <span style="font-size:11px;color:var(--ink-4);font-weight:400;">· ${esc(b.hybrid||'—')}</span></div>
+            <div style="font-size:11px;color:var(--ink-5);">Day ${days} · ${parseInt(b.qty||0).toLocaleString('en-IN')} Kg</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px;font-weight:800;color:${ready?'#059669':getMoistureColor(b.currentMoisture)};">${b.currentMoisture||'—'}%</div>
+            <div style="font-size:10px;color:${ready?'#059669':'var(--ink-5)'};">${ready?'✓ Ready':'Drying'}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
   const recent=[...state.intakes].reverse().slice(0,6);
   document.getElementById('recent-tbody').innerHTML=recent.length?recent.map(i=>{
     const binIds=getBinIds(i);
@@ -1067,6 +1113,64 @@ function renderFaangAnalytics() {
       </div>`;
 
       arrivalEl.innerHTML = dowHTML + hourHTML;
+    }
+  }
+
+  // ── 7. YIELD RECONCILIATION ───────────────────────────────────
+  const yieldEl = document.getElementById('adv-yield-recon');
+  if (yieldEl) {
+    // Build per-hybrid intake totals
+    const intakeByH = {};
+    intakes.forEach(i => {
+      const k = (i.hybrid || 'Unknown').trim();
+      intakeByH[k] = (intakeByH[k] || 0) + parseFloat(i.qty || 0);
+    });
+    // Build per-hybrid dispatch totals
+    const dispByH = {};
+    dispatches.forEach(d => {
+      const k = (d.hybrid || 'Unknown').trim();
+      dispByH[k] = (dispByH[k] || 0) + parseFloat(d.qty || 0);
+    });
+    const allKeys = [...new Set([...Object.keys(intakeByH), ...Object.keys(dispByH)])].sort();
+    if (!allKeys.length) {
+      yieldEl.innerHTML = emptyMsg('No data yet for reconciliation');
+    } else {
+      // Totals row
+      const totIn  = allKeys.reduce((s,k) => s + (intakeByH[k]||0), 0);
+      const totDis = allKeys.reduce((s,k) => s + (dispByH[k]||0), 0);
+      const totPen = Math.max(0, totIn - totDis);
+      const totYld = totIn > 0 ? ((totDis / totIn) * 100).toFixed(1) : '—';
+      yieldEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--surface-2);">
+          <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--ink-5);text-transform:uppercase;font-size:10px;letter-spacing:.04em;">Hybrid</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--ink-5);text-transform:uppercase;font-size:10px;">Intake (Kg)</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--ink-5);text-transform:uppercase;font-size:10px;">Dispatched (Kg)</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--ink-5);text-transform:uppercase;font-size:10px;">Pending (Kg)</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--ink-5);text-transform:uppercase;font-size:10px;">Yield %</th>
+        </tr></thead><tbody>` +
+        allKeys.map((key, i) => {
+          const intake     = intakeByH[key] || 0;
+          const dispatched = dispByH[key]   || 0;
+          const pending    = Math.max(0, intake - dispatched);
+          const yieldNum   = intake > 0 ? (dispatched / intake) * 100 : null;
+          const yieldStr   = yieldNum !== null ? yieldNum.toFixed(1) + '%' : '—';
+          const yieldCol   = yieldNum === null ? 'var(--ink-5)' : yieldNum >= 90 ? '#059669' : yieldNum >= 75 ? '#d97706' : '#dc2626';
+          return `<tr style="border-bottom:1px solid var(--surface-3);">
+            <td style="padding:8px 12px;font-weight:700;color:var(--ink);">${esc(key)}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold-dark);">${parseInt(intake).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#059669;">${parseInt(dispatched).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:${pending>0?'#d97706':'var(--ink-5)'};">${parseInt(pending).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:800;font-size:13px;color:${yieldCol};">${yieldStr}</td>
+          </tr>`;
+        }).join('') +
+        `<tr style="background:var(--surface-2);border-top:2px solid var(--surface-4);">
+          <td style="padding:9px 12px;font-weight:800;color:var(--ink);">TOTAL</td>
+          <td style="padding:9px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:800;color:var(--gold-dark);">${parseInt(totIn).toLocaleString('en-IN')}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:800;color:#059669;">${parseInt(totDis).toLocaleString('en-IN')}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:800;color:${totPen>0?'#d97706':'var(--ink-5)'};">${parseInt(totPen).toLocaleString('en-IN')}</td>
+          <td style="padding:9px 12px;text-align:right;font-weight:800;font-size:14px;color:${totYld!=='—'&&parseFloat(totYld)>=90?'#059669':totYld!=='—'?'#d97706':'var(--ink-5)'};">${totYld}</td>
+        </tr>
+        </tbody></table></div>`;
     }
   }
 }
