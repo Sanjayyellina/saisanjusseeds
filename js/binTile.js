@@ -94,7 +94,11 @@ function renderBinTile(bin, isManager = false){
         <div class="bin-hours-fill" style="width:${hoursPct}%;background:${hoursColor};"></div>
       </div>
       <div class="bin-hours-meta">
-        <span class="bin-hours-lbl-text">&#x23F1; ${hours}h / ${Config.TARGET_HRS}h</span>
+        <span class="bin-hours-lbl-text">
+          <span class="bh-elapsed" style="color:${hoursColor}">${hours}h</span>
+          <span class="bh-sep">/</span>
+          <span class="bh-target">${Config.TARGET_HRS}h</span>
+        </span>
       </div>
     </div>
 
