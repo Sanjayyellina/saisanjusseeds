@@ -11,21 +11,23 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function getMoistureColor(m){
-  if(m>28)return 'var(--blue)';if(m>15)return 'var(--amber)';return 'var(--green)';
+  if(m>Config.MOISTURE_HIGH)return 'var(--blue)';
+  if(m>Config.MOISTURE_MID)return 'var(--amber)';
+  return 'var(--green)';
 }
 function getMoistureBarColor(m){
-  if(m>28)return'linear-gradient(90deg,#3B82F6,#60A5FA)';
-  if(m>15)return'linear-gradient(90deg,#F59E0B,#FCD34D)';
+  if(m>Config.MOISTURE_HIGH)return'linear-gradient(90deg,#3B82F6,#60A5FA)';
+  if(m>Config.MOISTURE_MID)return'linear-gradient(90deg,#F59E0B,#FCD34D)';
   return'linear-gradient(90deg,#10B981,#34D399)';
 }
 function getMoisturePct(m){return Math.min(100,Math.max(3,(m/42)*100));}
 function dateDiff(d){
   if(!d)return 0;
-  return Math.floor((Date.now()-new Date(d).getTime())/86400000);
+  return Math.floor((Date.now()-new Date(d).getTime())/Config.MS_PER_DAY);
 }
 function hoursDiff(d){
   if(!d)return 0;
-  return Math.floor((Date.now()-new Date(d).getTime())/3600000);
+  return Math.floor((Date.now()-new Date(d).getTime())/Config.MS_PER_HOUR);
 }
 function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -58,6 +60,11 @@ function filterTable(inputId,tbodyId){
 }
 // Alias so db.js and error-boundary.js can call showToast consistently
 window.showToast = function(msg, type){ toast(msg, type); };
+
+// Normalise bin IDs from either intake.bins[] or legacy intake.bin
+function getBinIds(intake){
+  return (intake.bins && intake.bins.length ? intake.bins : [intake.bin]).filter(Boolean);
+}
 
 // Return display label for a bin ID (e.g. 1→"1A", 10→"10A", 21→"1B")
 function getBinLabel(id){

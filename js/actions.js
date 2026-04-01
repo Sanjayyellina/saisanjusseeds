@@ -9,8 +9,14 @@
 // ================================================================
 
 function toggleSidebar() {
-  const sidebar = document.querySelector('.sidebar');
-  if(sidebar) sidebar.classList.toggle('open');
+  if (window.innerWidth <= 992) {
+    // Mobile: off-canvas slide-in
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.toggle('open');
+  } else {
+    // Desktop: collapse sidebar + shift main content
+    document.body.classList.toggle('sidebar-collapsed');
+  }
 }
 
 let _editingIntakeId = null;
@@ -704,7 +710,7 @@ async function saveBinModal(binId){
           // Snapshot bin cycle history when bin is cleared
           if (b.status === 'empty' && snapshotBefore.hybrid) {
               const daysInBin = snapshotBefore.intakeDateTS
-                  ? Math.floor((Date.now() - snapshotBefore.intakeDateTS) / 86400000)
+                  ? Math.floor((Date.now() - snapshotBefore.intakeDateTS) / Config.MS_PER_DAY)
                   : null;
               const historyRecord = {
                   bin_id: b.id,

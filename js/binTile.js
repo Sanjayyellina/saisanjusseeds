@@ -20,11 +20,10 @@ function renderBinTile(bin, isManager = false){
   }
 
   const m = bin.currentMoisture || 0;
-  const TARGET_HRS = 109;
   const hours = hoursDiff(bin.intakeDateTS);
   const days = dateDiff(bin.intakeDateTS);
-  const hoursPct = Math.min(100, Math.round((hours / TARGET_HRS) * 100));
-  const hoursColor = hours >= TARGET_HRS ? 'var(--red)' : hours >= TARGET_HRS * 0.8 ? 'var(--amber)' : 'var(--leaf)';
+  const hoursPct = Math.min(100, Math.round((hours / Config.TARGET_HRS) * 100));
+  const hoursColor = hours >= Config.TARGET_HRS ? 'var(--red)' : hours >= Config.TARGET_HRS * 0.8 ? 'var(--amber)' : 'var(--leaf)';
 
   // SVG circular gauge (stroke-dashoffset to start arc at top)
   const RADIUS = 26;
@@ -32,7 +31,7 @@ function renderBinTile(bin, isManager = false){
   const moisturePct = Math.min(100, Math.max(2, (m / 42) * 100));
   const dashFill = (moisturePct / 100) * CIRCUM;
   const dashOffset = CIRCUM * 0.25; // start at top (quarter turn)
-  const gaugeColor = m > 28 ? '#3B82F6' : m > 15 ? '#34D399' : '#16A34A';
+  const gaugeColor = m > Config.MOISTURE_HIGH ? '#3B82F6' : m > Config.MOISTURE_MID ? '#34D399' : '#16A34A';
 
   const gaugeSvg = `<svg width="68" height="68" viewBox="0 0 64 64">
     <circle cx="32" cy="32" r="${RADIUS}" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="5"/>

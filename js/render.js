@@ -39,7 +39,7 @@ function renderDashboard(){
 
   const recent=[...state.intakes].reverse().slice(0,6);
   document.getElementById('recent-tbody').innerHTML=recent.length?recent.map(i=>{
-    const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
+    const binIds=getBinIds(i);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
     const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
@@ -70,7 +70,7 @@ function renderIntakePage(){
   const total=state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
   document.getElementById('intake-total-weight').textContent=total.toFixed(2);
   document.getElementById('intake-full-tbody').innerHTML=state.intakes.length?state.intakes.map((i,idx)=>{
-    const binIds=(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean);
+    const binIds=getBinIds(i);
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
     const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
@@ -172,7 +172,7 @@ function renderManagerPage(){
       <td class="mono">${esc(i.vehicle)}</td>
       <td class="fw700">${esc(i.hybrid)}</td>
       <td><span class="fw700 text-gold">${esc(i.qty)} Kg</span></td>
-      <td>${(i.bins&&i.bins.length?i.bins:[i.bin]).filter(Boolean).map(b=>'<span class="chip chip-blue">BIN-'+getBinLabel(b)+'</span>').join(' ')||'—'}</td>
+      <td>${getBinIds(i).map(b=>'<span class="chip chip-blue">BIN-'+getBinLabel(b)+'</span>').join(' ')||'—'}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${esc(i.id)}')" title="Edit Intake">✏️ Edit</button></td>
     </tr>`).join('');
   } else {
@@ -227,7 +227,7 @@ function renderAnalytics(){
   const avgDryDays=(()=>{
     const active=state.bins.filter(b=>b.status!=='empty'&&b.intakeDateTS);
     if(!active.length)return 0;
-    return(active.reduce((s,b)=>s+Math.floor((Date.now()-new Date(b.intakeDateTS).getTime())/86400000),0)/active.length).toFixed(1);
+    return(active.reduce((s,b)=>s+Math.floor((Date.now()-new Date(b.intakeDateTS).getTime())/Config.MS_PER_DAY),0)/active.length).toFixed(1);
   })();
   const avgMoistureDrop=(()=>{
     const active=state.bins.filter(b=>b.status!=='empty'&&b.entryMoisture&&b.currentMoisture);
@@ -301,7 +301,7 @@ function renderAnalytics(){
   if(activeBins.length>0){
     const maxEntry=Math.max(...activeBins.map(b=>b.entryMoisture),1);
     mc.innerHTML=activeBins.slice(0,8).map(b=>{
-      const days=Math.floor((Date.now()-new Date(b.intakeDateTS).getTime())/86400000);
+      const days=Math.floor((Date.now()-new Date(b.intakeDateTS).getTime())/Config.MS_PER_DAY);
       const drop=((b.entryMoisture-b.currentMoisture)/b.entryMoisture*100).toFixed(0);
       const pct=(b.currentMoisture/maxEntry)*100;
       return`<div class="progress-item">
@@ -690,7 +690,7 @@ function renderFaangAnalytics() {
   const intakes   = state.intakes     || [];
   const dispatches= state.dispatches  || [];
   const bins      = state.bins        || [];
-  const TARGET_MOISTURE = 10;
+  const TARGET_MOISTURE = Config.TARGET_MOISTURE;
 
   // ── A. OPERATIONAL HEALTH SCORE ───────────────────────────
   const healthEl = document.getElementById('faang-health');
@@ -724,7 +724,7 @@ function renderFaangAnalytics() {
     }
 
     // Component 5: Dispatch Activity (10 pts) — has recent dispatches
-    const recentDispatch = dispatches.filter(d => (Date.now() - d.dateTS) < 7*86400000).length;
+    const recentDispatch = dispatches.filter(d => (Date.now() - d.dateTS) < 7 * Config.MS_PER_DAY).length;
     const dispScore = Math.min(10, recentDispatch * 2);
 
     const totalScore = utilScore + moistScore + cycleScore + yieldScore + dispScore;
@@ -788,7 +788,7 @@ function renderFaangAnalytics() {
     bins.forEach(b => {
       if (b.status === 'empty') return;
       const label = `BIN-${b.binLabel || b.id}`;
-      const hoursIn = b.intakeDateTS ? Math.floor((now - b.intakeDateTS) / 3600000) : 0;
+      const hoursIn = b.intakeDateTS ? Math.floor((now - b.intakeDateTS) / Config.MS_PER_HOUR) : 0;
 
       // Critical: > 120h in dryer
       if (hoursIn > 120) {

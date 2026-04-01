@@ -338,7 +338,7 @@ function globalSearch(q) {
   if (intakes.length) {
     html += '<div class="sd-group-title">Intake Records</div>';
     intakes.forEach(i => {
-      const binIds = (i.bins && i.bins.length ? i.bins : [i.bin]).filter(Boolean);
+      const binIds = getBinIds(i);
       const binStr = binIds.map(b => 'BIN-' + getBinLabel(b)).join(', ') || '—';
       html += `<div class="sd-item" onclick="showPage('intake');closeSearchDropdown()">
         <div class="sd-item-icon">🚛</div>

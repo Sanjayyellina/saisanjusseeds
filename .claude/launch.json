@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "yellina-seeds",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3100", "/Users/sanjuyellina/saisanjusseeds"],
+      "port": 3100
+    }
+  ]
+}

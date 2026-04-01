@@ -14,8 +14,8 @@
   --ink:         #0F1923;
   --ink-2:       #1E2D3D;
   --ink-3:       #37495C;
-  --ink-4:       #5A6E82;
-  --ink-5:       #8A9BAD;
+  --ink-4:       #3D5268;
+  --ink-5:       #56687A;
 
   --surface:     #FFFFFF;
   --surface-2:   #F8F9FB;
@@ -58,7 +58,7 @@
   --sky-bg:        #F0F9FF;
 
   /* Glassmorphism */
-  --glass-white:   rgba(255,255,255,0.78);
+  --glass-white:   rgba(255,255,255,0.94);
   --glass-border:  rgba(255,255,255,0.55);
   --glass-shadow:  0 8px 32px rgba(15,25,35,0.08), 0 2px 8px rgba(15,25,35,0.04);
   --glass-blur:    blur(16px) saturate(180%);
