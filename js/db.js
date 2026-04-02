@@ -72,6 +72,51 @@ async function dbFetchLabor() {
   }
 }
 
+// ── Labor Groups CRUD ─────────────────────────────────────────
+async function dbFetchLaborGroups() {
+  try {
+    const { data, error } = await dbClient.from('labor_groups').select('*').order('sort_order').order('id');
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error fetching labor groups:', err);
+    return [];
+  }
+}
+
+async function dbInsertLaborGroup(record) {
+  try {
+    const { data, error } = await dbClient.from('labor_groups').insert([record]).select().single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('dbInsertLaborGroup:', err);
+    throw err;
+  }
+}
+
+async function dbUpdateLaborGroup(id, updates) {
+  try {
+    const { data, error } = await dbClient.from('labor_groups').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('dbUpdateLaborGroup:', err);
+    throw err;
+  }
+}
+
+async function dbDeleteLaborGroup(id) {
+  try {
+    const { error } = await dbClient.from('labor_groups').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('dbDeleteLaborGroup:', err);
+    throw err;
+  }
+}
+
 async function dbFetchBinHistory() {
   try {
     const { data, error } = await dbClient.from('bin_history').select('*').order('emptied_at', { ascending: false });

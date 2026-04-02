@@ -1034,7 +1034,7 @@ async function saveLabor() {
   const date = document.getElementById('labor-date').value;
   const shift = document.getElementById('labor-shift').value.trim();
   const groupId = document.getElementById('labor-group').value;
-  const groupObj = groupId ? getLaborGroups().find(g => g.id === groupId) : null;
+  const groupObj = groupId ? getLaborGroups().find(g => g.id == groupId) : null;
   const groupName = groupObj ? groupObj.name : '';
   const workArea = document.getElementById('labor-role').value;
   const role = groupName ? `${groupName}${workArea ? ' · ' + workArea : ''}` : workArea;
@@ -1407,15 +1407,11 @@ window.calcDispatchRate = function() {
 };
 
 // ================================================================
-// LABOR GROUPS — localStorage management
+// LABOR GROUPS — Supabase DB
 // ================================================================
-window.getLaborGroups = function getLaborGroups() {
-  try { return JSON.parse(localStorage.getItem('yellina_labor_groups') || '[]'); }
-  catch(e) { return []; }
+window.getLaborGroups = function() {
+  return (window.state && state.laborGroups) ? state.laborGroups : [];
 };
-function _saveLaborGroups(groups) {
-  localStorage.setItem('yellina_labor_groups', JSON.stringify(groups));
-}
 
 window.openGroupsModal = function() {
   renderGroupsList();
@@ -1435,46 +1431,63 @@ function renderGroupsList() {
     <div style="background:var(--surface);border:1px solid var(--surface-4);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px;">&#128101; ${escapeHtml(g.name)}</div>
-          <div style="font-size:12px;color:var(--ink-4);">${g.members.length} member${g.members.length !== 1 ? 's' : ''}: <span style="color:var(--ink-3);">${g.members.map(escapeHtml).join(', ')}</span></div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px;">&#128101; ${escapeHtml(g.name)}</div>
+          <div style="font-size:12px;color:var(--ink-4);">${g.members.length} member${g.members.length !== 1 ? 's' : ''}:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;">
+            ${g.members.map(m => `<span style="background:var(--surface-3);border-radius:99px;padding:2px 10px;font-size:11px;color:var(--ink-3);">${escapeHtml(m)}</span>`).join('')}
+          </div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px;">
-          <button class="btn btn-ghost btn-sm" onclick="editGroup('${g.id}')">&#9999;&#65039; Edit</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteGroup('${g.id}')">&#128465;&#65039;</button>
+          <button class="btn btn-ghost btn-sm" onclick="editGroup(${g.id})">&#9999;&#65039; Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteGroup(${g.id})">&#128465;&#65039;</button>
         </div>
       </div>
     </div>`).join('');
 }
 
-window.saveGroup = function() {
+window.saveGroup = async function() {
   const name = document.getElementById('grp-name').value.trim();
   const rawMembers = document.getElementById('grp-members').value.trim();
   const editId = document.getElementById('grp-edit-id').value;
 
   if (!name) { toast('Group name is required', 'error'); return; }
 
-  const members = rawMembers
-    .split(/[\n,]+/)
-    .map(s => s.trim())
-    .filter(Boolean);
+  const members = rawMembers.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
 
-  const groups = getLaborGroups();
-  if (editId) {
-    const idx = groups.findIndex(g => g.id === editId);
-    if (idx >= 0) { groups[idx].name = name; groups[idx].members = members; }
-  } else {
-    groups.push({ id: 'grp_' + Date.now(), name, members });
+  const btn = document.querySelector('#labor-groups-modal .btn-solid');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  try {
+    if (editId) {
+      const updated = await dbUpdateLaborGroup(parseInt(editId), { name, members });
+      if (updated) {
+        const idx = state.laborGroups.findIndex(g => g.id == editId);
+        const mapped = { id: updated.id, name: updated.name, members: updated.members || [], sortOrder: updated.sort_order || 0 };
+        if (idx >= 0) state.laborGroups[idx] = mapped;
+        else state.laborGroups.push(mapped);
+      }
+      toast('Group updated', 'success');
+    } else {
+      const inserted = await dbInsertLaborGroup({ name, members });
+      if (inserted) {
+        state.laborGroups.push({ id: inserted.id, name: inserted.name, members: inserted.members || [], sortOrder: inserted.sort_order || 0 });
+      }
+      toast('Group added', 'success');
+    }
+    resetGroupForm();
+    renderGroupsList();
+    populateLaborGroupSelect();
+    if (window.Store) window.Store.emitChange();
+  } catch (err) {
+    console.error('saveGroup error:', err);
+    toast('Failed to save group', 'error');
+  } finally {
+    if (btn) { btn.textContent = 'Save Group'; btn.disabled = false; }
   }
-  _saveLaborGroups(groups);
-  resetGroupForm();
-  renderGroupsList();
-  populateLaborGroupSelect();
-  if (window.Store) window.Store.emitChange();
-  toast(editId ? 'Group updated' : 'Group added', 'success');
 };
 
 window.editGroup = function(id) {
-  const g = getLaborGroups().find(x => x.id === id);
+  const g = getLaborGroups().find(x => x.id == id);
   if (!g) return;
   document.getElementById('grp-edit-id').value = g.id;
   document.getElementById('grp-name').value = g.name;
@@ -1484,13 +1497,19 @@ window.editGroup = function(id) {
   document.getElementById('grp-name').focus();
 };
 
-window.deleteGroup = function(id) {
-  const groups = getLaborGroups().filter(g => g.id !== id);
-  _saveLaborGroups(groups);
-  renderGroupsList();
-  populateLaborGroupSelect();
-  if (window.Store) window.Store.emitChange();
-  toast('Group deleted', 'info');
+window.deleteGroup = async function(id) {
+  if (!confirm(`Delete this group? This won't affect existing shift logs.`)) return;
+  try {
+    await dbDeleteLaborGroup(parseInt(id));
+    state.laborGroups = state.laborGroups.filter(g => g.id != id);
+    renderGroupsList();
+    populateLaborGroupSelect();
+    if (window.Store) window.Store.emitChange();
+    toast('Group deleted', 'info');
+  } catch (err) {
+    console.error('deleteGroup error:', err);
+    toast('Failed to delete group', 'error');
+  }
 };
 
 window.resetGroupForm = function() {
@@ -1513,7 +1532,7 @@ window.populateLaborGroupSelect = function() {
 
 window.onLaborGroupChange = function() {
   const id = document.getElementById('labor-group').value;
-  const g = getLaborGroups().find(x => x.id === id);
+  const g = getLaborGroups().find(x => x.id == id);
   if (g) {
     document.getElementById('labor-headcount').value = g.members.length;
     document.getElementById('labor-people').value = g.members.join(', ');
