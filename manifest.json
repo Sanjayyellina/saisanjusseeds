@@ -4,12 +4,13 @@
   "description": "End-to-end operations management — intake, drying, dispatch.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F1923",
+  "background_color": "#ffffff",
   "theme_color": "#F5A623",
   "orientation": "any",
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "assets/icon.jpg", "sizes": "192x192", "type": "image/jpeg", "purpose": "any maskable" },
-    { "src": "assets/icon.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any maskable" }
+    { "src": "assets/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
   ]
 }
