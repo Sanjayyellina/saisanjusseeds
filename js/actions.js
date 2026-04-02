@@ -968,6 +968,84 @@ function executeExport() {
 // MAINTENANCE & LABOR ACTIONS
 // ============================================================
 
+// ── Maintenance image helpers ─────────────────────────────────
+window.previewMaintImages = function(files) {
+  const wrap = document.getElementById('maint-img-preview');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  Array.from(files).forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:relative;display:inline-block;';
+      div.innerHTML = `<img src="${e.target.result}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--surface-4);">
+        <button onclick="removeMaintPreview(${i})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:18px;text-align:center;padding:0;">✕</button>`;
+      div.dataset.idx = i;
+      wrap.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+window.removeMaintPreview = function(idx) {
+  const input = document.getElementById('maint-images');
+  const dt = new DataTransfer();
+  Array.from(input.files).forEach((f, i) => { if (i !== idx) dt.items.add(f); });
+  input.files = dt.files;
+  previewMaintImages(input.files);
+};
+
+window.handleMaintImageDrop = function(e) {
+  const input = document.getElementById('maint-images');
+  const dt = new DataTransfer();
+  // Merge existing + dropped
+  Array.from(input.files).forEach(f => dt.items.add(f));
+  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  previewMaintImages(input.files);
+};
+
+async function _uploadMaintImages(files) {
+  if (!files.length) return [];
+  const urls = [];
+  for (const file of files) {
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `maint/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await dbClient.storage.from('maint-images').upload(path, file, { upsert: false, contentType: file.type });
+    if (!error) {
+      const { data } = dbClient.storage.from('maint-images').getPublicUrl(path);
+      if (data?.publicUrl) urls.push(data.publicUrl);
+    } else {
+      console.warn('Image upload failed:', error.message);
+    }
+  }
+  return urls;
+}
+
+// Lightbox viewer for maintenance images
+window.openMaintImageViewer = function(urls, startIdx) {
+  if (!urls.length) return;
+  let cur = startIdx || 0;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;';
+  const render = () => {
+    overlay.innerHTML = `
+      <div style="position:relative;max-width:90vw;max-height:80vh;">
+        <img src="${urls[cur]}" style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.6);">
+        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="position:absolute;top:-12px;right:-12px;width:28px;height:28px;border-radius:50%;background:#fff;border:none;cursor:pointer;font-size:14px;font-weight:700;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        ${cur > 0 ? `<button onclick="window._maintViewerNav(-1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:22px;padding:8px 16px;border-radius:8px;cursor:pointer;">‹</button>` : '<span style="width:52px;"></span>'}
+        <span style="color:rgba(255,255,255,.7);font-size:13px;">${cur+1} / ${urls.length}</span>
+        ${cur < urls.length-1 ? `<button onclick="window._maintViewerNav(1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:22px;padding:8px 16px;border-radius:8px;cursor:pointer;">›</button>` : '<span style="width:52px;"></span>'}
+      </div>`;
+  };
+  window._maintViewerNav = d => { cur = Math.max(0, Math.min(urls.length-1, cur+d)); render(); };
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  render();
+  document.body.appendChild(overlay);
+};
+
 async function saveMaintenance() {
   const date = document.getElementById('maint-date').value;
   const reportedBy = document.getElementById('maint-reported').value.trim();
@@ -983,29 +1061,34 @@ async function saveMaintenance() {
     return;
   }
 
-  const log = {
-    date: date,
-    reported_by: reportedBy,
-    equipment_name: equipment,
-    issue_description: issue,
-    work_done: work,
-    checked_by: checker,
-    items_bought: items,
-    cost_amount: cost
-  };
-
   const btn = document.querySelector('#maintenance-modal .btn-solid');
   const ogText = btn.innerHTML;
   btn.innerHTML = 'Saving...';
   btn.disabled = true;
 
   try {
+    // Upload images first
+    const imgFiles = Array.from(document.getElementById('maint-images')?.files || []);
+    const imageUrls = await _uploadMaintImages(imgFiles);
+
+    const log = {
+      date: date,
+      reported_by: reportedBy,
+      equipment_name: equipment,
+      issue_description: issue,
+      work_done: work,
+      checked_by: checker,
+      items_bought: items,
+      cost_amount: cost,
+      image_urls: imageUrls
+    };
+
     const saved = await dbInsertMaintenance(log);
     if (saved) {
       state.maintenance.unshift(saved);
       if(window.Store) window.Store.emitChange();
       closeModal('maintenance-modal');
-      
+
       // Clear Inputs
       document.getElementById('maint-date').value = '';
       document.getElementById('maint-reported').value = '';
@@ -1015,8 +1098,10 @@ async function saveMaintenance() {
       document.getElementById('maint-checker').value = '';
       document.getElementById('maint-items').value = '';
       document.getElementById('maint-cost').value = '';
-      
-      toast('Maintenance logged successfully', 'success');
+      document.getElementById('maint-images').value = '';
+      document.getElementById('maint-img-preview').innerHTML = '';
+
+      toast(imageUrls.length ? `Maintenance logged with ${imageUrls.length} photo${imageUrls.length>1?'s':''}` : 'Maintenance logged successfully', 'success');
       dbLogActivity('MAINTENANCE_LOGGED', `Maintenance for ${equipment || 'Plant'}: ${work}`);
     } else {
       toast('Failed to save log', 'error');

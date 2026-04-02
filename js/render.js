@@ -1259,8 +1259,16 @@ function renderFaangAnalytics() {
 }
 
 function renderMaintenancePage() {
-  document.getElementById('maintenance-tbody').innerHTML = state.maintenance.length ? state.maintenance.map(m => `
-    <tr>
+  document.getElementById('maintenance-tbody').innerHTML = state.maintenance.length ? state.maintenance.map(m => {
+    const imgs = Array.isArray(m.image_urls) ? m.image_urls : [];
+    const thumbs = imgs.slice(0, 3).map((url, i) =>
+      `<img src="${url}" onclick="openMaintImageViewer(${JSON.stringify(imgs)},${i})"
+        style="width:36px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer;border:1.5px solid var(--surface-4);transition:transform .15s;"
+        onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''"
+        onerror="this.style.display='none'">`
+    ).join('');
+    const extra = imgs.length > 3 ? `<span style="font-size:11px;color:var(--ink-5);align-self:center;">+${imgs.length-3}</span>` : '';
+    return `<tr>
       <td class="fs12 text-muted">${new Date(m.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
       <td class="fw700">${esc(m.reported_by || '—')}</td>
       <td class="fw700">${esc(m.work_done)}</td>
@@ -1269,8 +1277,10 @@ function renderMaintenancePage() {
       <td class="mono fs12">${esc(m.checked_by || '—')}</td>
       <td class="fs12 truncate" style="max-width:140px;">${esc(m.items_bought || '—')}</td>
       <td><span class="fw700 text-gold">₹${parseInt(m.cost_amount).toLocaleString('en-IN')}</span></td>
-    </tr>`).join('')
-    : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
+      <td><div style="display:flex;gap:4px;align-items:center;">${thumbs || '<span style="color:var(--ink-5);font-size:11px;">—</span>'}${extra}</div></td>
+    </tr>`;
+  }).join('')
+    : `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
 }
 
 function renderLaborPage() {
