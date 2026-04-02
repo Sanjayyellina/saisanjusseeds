@@ -95,11 +95,11 @@
 }
 .bin-tile.s-empty::after   { background: var(--surface-4); opacity: 0.5; }
 .bin-tile.s-intake::after  { background: linear-gradient(90deg,var(--blue),#60A5FA); }
-.bin-tile.s-drying::after  { background: linear-gradient(90deg,#86efac,#4ade80); }
+.bin-tile.s-drying::after  { background: linear-gradient(90deg,#bbf7d0,#86efac); }
 .bin-tile.s-shelling::after{ background: linear-gradient(90deg,var(--purple),#A78BFA); }
 
 /* Glassy colour wash on active bins */
-.bin-tile.s-drying  { background: rgba(240,253,244,0.88); border-color: rgba(134,239,172,0.40); }
+.bin-tile.s-drying  { background: rgba(250,255,252,0.92); border-color: rgba(187,247,208,0.50); }
 .bin-tile.s-shelling{ background: rgba(235,228,255,0.48); border-color: rgba(196,181,253,0.55); }
 .bin-tile.s-intake  { background: rgba(219,234,254,0.48); border-color: rgba(147,197,253,0.55); }
 .bin-tile.s-empty   { background: rgba(255,255,255,0.38); border-color: rgba(180,195,210,0.5); border-style: dashed; }
