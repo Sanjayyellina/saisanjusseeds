@@ -4,7 +4,7 @@
    ============================================================ */
 'use strict';
 
-const CACHE_VERSION = 'v91';
+const CACHE_VERSION = 'v92';
 const CACHE_NAME = `yellina-seeds-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -31,6 +31,7 @@ const STATIC_ASSETS = [
   '/js/init.js',
   '/assets/logo.jpg',
   '/assets/wallpaper.jpg',
+  '/assets/wallpaper3.jpg',
 ];
 
 // ── Install: pre-cache all static assets ──
