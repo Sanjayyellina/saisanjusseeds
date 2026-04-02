@@ -1,6 +1,7 @@
 // ============================================================
 // RENDER PAGES
 // Yellina Seeds Private Limited — Operations Platform
+// v36
 "use strict";
 // ============================================================
 
@@ -1331,6 +1332,105 @@ function renderFaangAnalytics() {
         </tbody></table></div>`;
     }
   }
+
+  // ── COST & MARGIN ─────────────────────────────────────────────
+  renderCostAnalytics();
+}
+
+function renderCostAnalytics() {
+  const el = document.getElementById('faang-cost-margin');
+  if (!el) return;
+
+  const intakes   = window.state?.intakes   || [];
+  const dispatches = window.state?.dispatches || [];
+  const DRYING_COST = window.Config?.DRYING_COST_PER_KG || 1.5;
+
+  const intakesWithRate  = intakes.filter(i => i.procurementRate != null);
+  const dispatchWithRate = dispatches.filter(d => d.saleRate != null);
+
+  if (intakesWithRate.length === 0 && dispatchWithRate.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:32px 20px;color:var(--ink-5);">
+      <div style="font-size:36px;margin-bottom:10px;">💰</div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink-3);margin-bottom:6px;">No cost data yet</div>
+      <div style="font-size:12px;">Add procurement rates to intakes and sale rates to dispatches to see profitability analysis</div>
+    </div>`;
+    return;
+  }
+
+  // Totals
+  const totalProcCost = intakesWithRate.reduce((s, i) => s + (i.qty * i.procurementRate), 0);
+  const totalDispQty  = dispatches.reduce((s, d) => s + (d.qty || 0), 0);
+  const totalDryingCost = totalDispQty * DRYING_COST;
+  const totalRevenue  = dispatchWithRate.reduce((s, d) => s + (d.qty * d.saleRate), 0);
+  const grossMargin   = totalRevenue - totalProcCost - totalDryingCost;
+  const marginPct     = totalRevenue > 0 ? ((grossMargin / totalRevenue) * 100).toFixed(1) : null;
+
+  const fmtRs = v => v >= 0
+    ? `<span style="color:#059669;">+₹${Math.round(v).toLocaleString('en-IN')}</span>`
+    : `<span style="color:#ef4444;">-₹${Math.round(Math.abs(v)).toLocaleString('en-IN')}</span>`;
+
+  const kpis = [
+    { label: 'Procurement Cost', val: `₹${Math.round(totalProcCost).toLocaleString('en-IN')}`, sub: `${intakesWithRate.length} intake(s) with rate`, color: '#d97706' },
+    { label: `Drying Cost (est.)`, val: `₹${Math.round(totalDryingCost).toLocaleString('en-IN')}`, sub: `₹${DRYING_COST}/Kg × ${Math.round(totalDispQty).toLocaleString('en-IN')} Kg`, color: '#6366f1' },
+    { label: 'Total Revenue', val: `₹${Math.round(totalRevenue).toLocaleString('en-IN')}`, sub: `${dispatchWithRate.length} dispatch(es) with rate`, color: '#2563eb' },
+    { label: 'Gross Margin', val: Math.round(grossMargin).toLocaleString('en-IN'), sub: marginPct != null ? `${marginPct}% margin` : 'Insufficient data', color: grossMargin >= 0 ? '#059669' : '#ef4444', prefix: grossMargin >= 0 ? '+₹' : '-₹', absVal: true },
+  ];
+
+  const kpiHtml = kpis.map(k => `
+    <div style="background:var(--surface);border:1.5px solid var(--surface-4);border-radius:var(--radius-lg);padding:16px 18px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">${k.label}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:800;color:${k.color};">${k.absVal ? (grossMargin >= 0 ? '+₹' : '-₹') + Math.round(Math.abs(grossMargin)).toLocaleString('en-IN') : k.val}</div>
+      <div style="font-size:10px;color:var(--ink-5);margin-top:4px;">${k.sub}</div>
+    </div>`).join('');
+
+  // Per-hybrid breakdown
+  const hybridMap = {};
+  intakesWithRate.forEach(i => {
+    const h = i.hybrid || 'Unknown';
+    if (!hybridMap[h]) hybridMap[h] = { procCost: 0, procQty: 0, revQty: 0, revenue: 0 };
+    hybridMap[h].procCost += i.qty * i.procurementRate;
+    hybridMap[h].procQty  += i.qty;
+  });
+  dispatchWithRate.forEach(d => {
+    const h = d.hybrid || 'Unknown';
+    if (!hybridMap[h]) hybridMap[h] = { procCost: 0, procQty: 0, revQty: 0, revenue: 0 };
+    hybridMap[h].revenue += d.qty * d.saleRate;
+    hybridMap[h].revQty  += d.qty;
+  });
+
+  const tableRows = Object.entries(hybridMap).map(([hybrid, v]) => {
+    const dryCost = v.revQty * DRYING_COST;
+    const margin  = v.revenue - v.procCost - dryCost;
+    const mPct    = v.revenue > 0 ? ((margin / v.revenue) * 100).toFixed(1) + '%' : '—';
+    return `<tr>
+      <td style="padding:8px 12px;font-weight:700;">${esc(hybrid)}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;">${Math.round(v.procQty).toLocaleString('en-IN')} Kg</td>
+      <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#d97706;">₹${Math.round(v.procCost).toLocaleString('en-IN')}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#2563eb;">₹${Math.round(v.revenue).toLocaleString('en-IN')}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:800;color:${margin >= 0 ? '#059669' : '#ef4444'};">${margin >= 0 ? '+₹' : '-₹'}${Math.round(Math.abs(margin)).toLocaleString('en-IN')}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:700;color:${margin >= 0 ? '#059669' : '#ef4444'};">${mPct}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;">${kpiHtml}</div>
+    ${Object.keys(hybridMap).length > 0 ? `
+    <div style="font-size:12px;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Per-Hybrid Breakdown</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--surface-2);border-bottom:2px solid var(--surface-4);">
+            <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;">Hybrid</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;">Intake Qty</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;">Proc. Cost</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;">Revenue</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;">Margin</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;">Margin %</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>` : ''}`;
 }
 
 function renderMaintenancePage() {

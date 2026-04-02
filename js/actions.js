@@ -1,5 +1,6 @@
 // ============================================================
 // ACTIONS & EVENT HANDLERS
+// v40
 "use strict";
 // Yellina Seeds Private Limited — Operations Platform
 // ============================================================
@@ -127,6 +128,12 @@ function openEditIntakeModal(intakeId) {
     lastRow.querySelector('.i-bin-qty').value = a.qty || '';
     lastRow.querySelector('.i-bin-pkts').value = a.pkts || '';
   });
+
+  // Prefill optional cost fields
+  const _procRateEl = document.getElementById('intake-proc-rate');
+  const _moistBonusEl = document.getElementById('intake-moisture-bonus');
+  if (_procRateEl)   _procRateEl.value   = intake.procurementRate != null ? intake.procurementRate : '';
+  if (_moistBonusEl) _moistBonusEl.value = intake.moistureBonus   != null ? intake.moistureBonus   : '';
 
   document.querySelector('#intake-modal .modal-title').textContent = 'Edit Intake';
   document.querySelector('#intake-modal .btn-solid span').textContent = 'Update Intake';
@@ -388,6 +395,10 @@ async function saveIntake(){
 
   const selectedTruckId = document.getElementById('i-truck-id')?.value || null;
 
+  // Optional cost fields (columns may not exist in DB yet — handled gracefully)
+  const _procRate = parseFloat(document.getElementById('intake-proc-rate')?.value) || null;
+  const _moistBonus = parseFloat(document.getElementById('intake-moisture-bonus')?.value) || null;
+
   const intakeFields = {
       challan,
       vehicle,
@@ -405,6 +416,8 @@ async function saveIntake(){
       vehicle_weight: vehWeights.join(', '),
       gross_weight: grossWeights.join(', '),
       net_weight: 0,
+      ...(_procRate  != null ? { procurement_rate: _procRate }  : {}),
+      ...(_moistBonus != null ? { moisture_bonus: _moistBonus } : {}),
       ...(selectedTruckId ? { truck_id: selectedTruckId } : {})
   };
 
@@ -568,6 +581,7 @@ async function saveDispatch(){
   const buyerGstin = (document.getElementById('d-buyer-gstin')?.value || '').toUpperCase().trim() || null;
   const hsnCode    = document.getElementById('d-hsn-code')?.value?.trim() || '1005 10 90';
   const gstRate    = parseFloat(document.getElementById('d-gst-rate')?.value) || 0;
+  const saleRate   = parseFloat(document.getElementById('dispatch-sale-rate')?.value) || null;
 
   const btn = document.getElementById('dispatch-save-btn') || document.querySelector('#dispatch-modal .btn-gold');
   const ogText = btn.innerHTML;
@@ -613,7 +627,8 @@ async function saveDispatch(){
       signature: updatedD.signature,
       buyer_gstin: buyerGstin,
       hsn_code: hsnCode,
-      gst_rate: gstRate
+      gst_rate: gstRate,
+      ...(saleRate != null ? { sale_rate: saleRate } : {})
     };
 
     const saved = await dbUpdateDispatch(editReceiptId, dispatchRecord);
@@ -654,6 +669,7 @@ async function saveDispatch(){
     amount,remarks:document.getElementById('d-remarks').value,
     driverName, driverPhone,
     buyerGstin, hsnCode, gstRate,
+    saleRate: saleRate || null,
     hash:'',signature:''
   };
   d.hash=generateHash(d);
@@ -681,6 +697,7 @@ async function saveDispatch(){
       buyer_gstin: buyerGstin,
       hsn_code: hsnCode,
       gst_rate: gstRate,
+      ...(saleRate != null ? { sale_rate: saleRate } : {}),
       created_at: now.toISOString()
   };
 
@@ -1922,6 +1939,9 @@ window.openEditDispatchModal = function(receiptId) {
   if (buyerGstinEl) buyerGstinEl.value = d.buyerGstin || '';
   if (hsnCodeEl)    hsnCodeEl.value    = d.hsnCode    || '1005 10 90';
   if (gstRateEl)    gstRateEl.value    = String(d.gstRate != null ? d.gstRate : 0);
+  // Sale rate
+  const saleRateEl = document.getElementById('dispatch-sale-rate');
+  if (saleRateEl) saleRateEl.value = d.saleRate != null ? d.saleRate : '';
   // Lots
   const lotInputs = document.querySelectorAll('.d-lot-input');
   const lots = (d.lot || '').split(',').map(l => l.trim()).filter(Boolean);

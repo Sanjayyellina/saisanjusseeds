@@ -1,6 +1,7 @@
 // ============================================================
 // INITIALISATION & BOOT
 // Yellina Seeds Private Limited — Operations Platform
+// v23
 "use strict";
 // ============================================================
 
@@ -202,7 +203,9 @@ async function bootApp() {
         allocations: allocs.map(a => ({ binId: a.bin_id, qty: parseFloat(a.qty) || 0, pkts: parseInt(a.pkts) || 0 })),
         dateTS: new Date(i.created_at).getTime(),
         date: new Date(i.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        season_year: i.season_year || new Date(i.created_at).getFullYear()
+        season_year: i.season_year || new Date(i.created_at).getFullYear(),
+        procurementRate: i.procurement_rate != null ? parseFloat(i.procurement_rate) : null,
+        moistureBonus:   i.moisture_bonus   != null ? parseFloat(i.moisture_bonus)   : null
       };
     });
   }
@@ -230,7 +233,8 @@ async function bootApp() {
       season_year: d.season_year || new Date(d.created_at).getFullYear(),
       buyerGstin: d.buyer_gstin || null,
       hsnCode:    d.hsn_code    || '1005 10 90',
-      gstRate:    parseFloat(d.gst_rate) || 0
+      gstRate:    parseFloat(d.gst_rate) || 0,
+      saleRate:   d.sale_rate != null ? parseFloat(d.sale_rate) : null
     }));
     if (state.dispatches.length > 0) {
       const maxReceipt = Math.max(...state.dispatches.map(d => parseInt(d.receiptId.split('-')[2]) || 0));
@@ -341,6 +345,10 @@ async function bootApp() {
 
   if (window.Store) window.Store.emitChange();
 
+  // Request notification permission and check conditions on first load
+  if (typeof requestNotifPermission === 'function') requestNotifPermission();
+  if (typeof checkAndFireNotifications === 'function') checkAndFireNotifications();
+
   // Re-apply language translations now that content is rendered
   if (typeof changeLanguage === 'function') changeLanguage(currentLang);
 
@@ -410,6 +418,7 @@ function initRealtime() {
         updatedBy: b.updated_by || ''
       }));
       if (window.Store) window.Store.emitChange();
+      if (typeof checkAndFireNotifications === 'function') checkAndFireNotifications();
     } catch(e) { console.warn('Realtime bins refresh error:', e); }
   }, 1500);
 

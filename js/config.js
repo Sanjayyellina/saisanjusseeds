@@ -1,6 +1,7 @@
 // ============================================================
 // CONFIG — Application-wide constants for Yellina Seeds Platform
 // Change values here; they propagate everywhere automatically.
+// v2
 // ============================================================
 'use strict';
 
@@ -19,4 +20,7 @@ const Config = Object.freeze({
   // Time helpers (ms)
   MS_PER_DAY:  86400000,
   MS_PER_HOUR: 3600000,
+
+  // Cost & Margin
+  DRYING_COST_PER_KG: 1.5,  // Rs per Kg — estimated electricity + labor
 });

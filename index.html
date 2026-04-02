@@ -222,6 +222,9 @@
     <button onclick="_cmdPalette && _cmdPalette.open()" class="btn btn-ghost btn-sm" title="Command Palette (⌘K)" id="cmd-k-btn" style="display:flex;align-items:center;gap:5px;font-size:12px;padding:5px 10px;color:var(--ink-4);border:1px solid var(--surface-3);border-radius:8px;">
       <kbd style="font-size:10px;font-family:'DM Mono',monospace;">⌘K</kbd>
     </button>
+    <button id="notif-perm-btn" onclick="requestNotifPermission && requestNotifPermission().then(()=>updateNotifPermBtn && updateNotifPermBtn())" title="Enable push notifications" style="display:none;align-items:center;gap:5px;font-size:12px;padding:5px 10px;color:#d97706;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;cursor:pointer;">
+      Enable Alerts
+    </button>
 
     <div class="notif-wrap" id="notif-wrap">
       <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Alerts">
@@ -909,6 +912,17 @@
       </div>
       <div id="season-comp" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
     </div>
+
+    <!-- Cost & Margin -->
+    <div style="margin-top:24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:700;color:var(--ink);">💰 Cost &amp; Margin Tracker</div>
+        <div style="font-size:11px;color:var(--ink-5);background:var(--surface-2);padding:3px 10px;border-radius:99px;">procurement cost vs revenue — per hybrid breakdown</div>
+      </div>
+      <div class="chart-panel">
+        <div id="faang-cost-margin" style="margin-top:4px;"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1075,6 +1089,16 @@
           </div>
         </div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+        <div>
+          <label class="form-label">Procurement Rate <span style="font-weight:400;color:var(--ink-5);">(Rs/Kg, optional)</span></label>
+          <input type="number" id="intake-proc-rate" min="0" step="0.01" placeholder="e.g. 18.50" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Moisture Bonus <span style="font-weight:400;color:var(--ink-5);">(Rs/Kg, optional)</span></label>
+          <input type="number" id="intake-moisture-bonus" min="0" step="0.01" placeholder="e.g. 0.50" class="form-input">
+        </div>
+      </div>
       <div class="form-row cols1">
         <div class="form-group"><label class="form-label">Remarks</label><textarea class="form-textarea" id="i-remarks" placeholder="Any additional notes…"></textarea></div>
       </div>
@@ -1163,7 +1187,13 @@
         </div>
         <div class="form-group"><label class="form-label">LR Number</label><input class="form-input" id="d-lr" placeholder="e.g. 68"></div>
       </div>
-      <div class="form-row cols1"><div class="form-group"><label class="form-label">Remarks</label><textarea class="form-textarea" id="d-remarks" placeholder="Notes…"></textarea></div></div>
+      <div class="form-row cols2">
+        <div class="form-group"><label class="form-label">Remarks</label><textarea class="form-textarea" id="d-remarks" placeholder="Notes…"></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Sale Rate <span style="font-weight:400;color:var(--ink-5);">(Rs/Kg, optional)</span></label>
+          <input type="number" id="dispatch-sale-rate" min="0" step="0.01" placeholder="e.g. 22.00" class="form-input">
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('dispatch-modal')">Cancel</button>
@@ -1834,6 +1864,7 @@
 <script src="js/receipt.js?v=9"></script>
 <script src="js/clock.js?v=2"></script>
 <script src="js/cmdPalette.js?v=1"></script>
+<script src="js/notifications.js?v=1"></script>
 <script src="js/init.js?v=22"></script>
 </body>
 </html>
