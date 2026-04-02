@@ -1547,6 +1547,7 @@
           <option value="boiler_temp">🌡️ Boiler / Dryer Temp</option>
           <option value="intake_photo">🌽 Intake Photo</option>
           <option value="bin_note">🏠 Bin Note</option>
+          <option value="weigh_slip">⚖️ Weigh Slip</option>
           <option value="backyard">🏗️ Backyard / Outside Stock</option>
           <option value="general" selected>📝 General</option>
         </select>
@@ -1606,6 +1607,58 @@
         <div class="form-group">
           <label class="form-label">Qty (bags/Qt)</label>
           <input type="number" class="form-input" id="upd-qty" step="0.1" min="0" placeholder="e.g. 40">
+        </div>
+      </div>
+
+      <!-- Weigh Slip fields — shown for weigh_slip -->
+      <div id="upd-weigh-group" style="display:none;">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-4);letter-spacing:.5px;margin-bottom:8px;">⚖️ WEIGHMENT SLIP DATA <span id="upd-weigh-detected" style="font-size:11px;color:var(--green);font-weight:600;margin-left:8px;"></span></div>
+        <div class="form-row cols2">
+          <div class="form-group">
+            <label class="form-label">Material Direction</label>
+            <select class="form-input" id="upd-material-dir">
+              <option value="INWARD">📥 INWARD (Intake)</option>
+              <option value="OUTWARD">📤 OUTWARD (Dispatch)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ticket No</label>
+            <input type="text" class="form-input" id="upd-ticket-no" placeholder="386" style="font-family:'DM Mono',monospace;">
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="form-group">
+            <label class="form-label">Vehicle No</label>
+            <input type="text" class="form-input" id="upd-vehicle-no" placeholder="AP39GC5075" style="font-family:'DM Mono',monospace;text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company</label>
+            <input type="text" class="form-input" id="upd-company-name" placeholder="TEST CMP">
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="form-group">
+            <label class="form-label">Hybrid</label>
+            <input type="text" class="form-input" id="upd-weigh-hybrid" placeholder="WEST">
+          </div>
+          <div class="form-group">
+            <label class="form-label">No. of Bags</label>
+            <input type="number" class="form-input" id="upd-bags-count" placeholder="120" min="0" style="font-family:'DM Mono',monospace;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px;">
+          <div class="form-group">
+            <label class="form-label">Tare (1st Wt) kg</label>
+            <input type="number" class="form-input" id="upd-tare-wt" placeholder="3330" min="0" style="font-family:'DM Mono',monospace;font-weight:700;text-align:center;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gross (2nd Wt) kg</label>
+            <input type="number" class="form-input" id="upd-gross-wt" placeholder="5040" min="0" style="font-family:'DM Mono',monospace;font-weight:700;text-align:center;" oninput="calcNetWeight()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Net Weight kg</label>
+            <input type="number" class="form-input" id="upd-net-wt" placeholder="1710" min="0" style="font-family:'DM Mono',monospace;font-weight:700;text-align:center;background:var(--surface-2);">
+          </div>
         </div>
       </div>
 
@@ -1672,10 +1725,10 @@
 <script src="js/i18n.js?v=7"></script>
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=19"></script>
-<script src="js/render.js?v=30"></script>
-<script src="js/actions.js?v=32"></script>
+<script src="js/render.js?v=31"></script>
+<script src="js/actions.js?v=33"></script>
 <script src="js/receipt.js?v=7"></script>
 <script src="js/clock.js?v=2"></script>
-<script src="js/init.js?v=19"></script>
+<script src="js/init.js?v=20"></script>
 </body>
 </html>

@@ -255,6 +255,14 @@ async function bootApp() {
     pressureUnit:     u.pressure_unit     || 'kg/cm²',
     hybrid:           u.hybrid            || '',
     qtyBags:          u.qty_bags          != null ? parseFloat(u.qty_bags)          : null,
+    ticketNo:         u.ticket_no         || null,
+    materialDirection:u.material_direction|| null,
+    vehicleNo:        u.vehicle_no        || null,
+    companyName:      u.company_name      || null,
+    tareWeight:       u.tare_weight       != null ? parseFloat(u.tare_weight)       : null,
+    grossWeightSlip:  u.gross_weight_slip != null ? parseFloat(u.gross_weight_slip) : null,
+    netWeightSlip:    u.net_weight_slip   != null ? parseFloat(u.net_weight_slip)   : null,
+    bagsCount:        u.bags_count        != null ? parseInt(u.bags_count)          : null,
     createdAt: u.created_at,
     createdAtDisplay: new Date(u.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
   }));

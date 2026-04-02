@@ -1547,6 +1547,7 @@ function renderUpdatesPage() {
     boiler_temp:    { label: 'Boiler Temp',      color: 'chip-amber',  icon: '🌡️' },
     intake_photo:   { label: 'Intake Photo',     color: 'chip-green',  icon: '🌽' },
     bin_note:       { label: 'Bin Note',         color: 'chip-purple', icon: '🏠' },
+    weigh_slip:     { label: 'Weigh Slip',       color: 'chip-green',  icon: '⚖️' },
     backyard:       { label: 'Backyard',         color: 'chip-gray',   icon: '🏗️' },
     general:        { label: 'General',          color: 'chip-gray',   icon: '📝' }
   };
@@ -1554,7 +1555,7 @@ function renderUpdatesPage() {
   const activeFilter = window._updatesFilter || 'all';
   const filtered = activeFilter === 'all' ? updates : updates.filter(u => u.updateType === activeFilter);
 
-  const filterBtns = ['all','moisture_photo','boiler_temp','intake_photo','bin_note','backyard','general'].map(f => {
+  const filterBtns = ['all','moisture_photo','boiler_temp','weigh_slip','intake_photo','bin_note','backyard','general'].map(f => {
     const cfg = typeConfig[f] || {};
     const label = f === 'all' ? 'All' : cfg.label;
     const active = activeFilter === f;
@@ -1572,9 +1573,22 @@ function renderUpdatesPage() {
         const bin = (state.bins||[]).find(b => b.id === u.binId);
         const binLabel = bin ? `BIN-${bin.binLabel||bin.id}` : '';
 
-        // Big value badge for moisture / temp
+        // Big value badge for moisture / temp / weigh slip
         let valueBadge = '';
-        if (u.updateType === 'moisture_photo' && u.moistureValue != null) {
+        if (u.updateType === 'weigh_slip') {
+          const dir = u.materialDirection || '';
+          const dirColor = dir === 'OUTWARD' ? 'var(--amber)' : 'var(--green)';
+          const rows = [];
+          if (u.vehicleNo)   rows.push(`<span style="font-weight:700;font-family:'DM Mono',monospace;">${esc(u.vehicleNo)}</span>`);
+          if (u.ticketNo)    rows.push(`<span style="color:var(--ink-4);">Ticket #${esc(u.ticketNo)}</span>`);
+          if (u.netWeightSlip) rows.push(`<span style="font-weight:700;color:var(--green);">${u.netWeightSlip.toLocaleString('en-IN')} kg net</span>`);
+          if (u.bagsCount)   rows.push(`<span>${u.bagsCount} bags</span>`);
+          if (u.companyName) rows.push(`<span style="color:var(--ink-4);">${esc(u.companyName)}</span>`);
+          valueBadge = `<div style="margin:6px 0 4px;display:flex;flex-wrap:wrap;gap:10px;font-size:13px;align-items:center;">
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;background:${dirColor};color:#fff;">${dir||'—'}</span>
+            ${rows.join('<span style="color:var(--ink-5)">·</span>')}
+          </div>`;
+        } else if (u.updateType === 'moisture_photo' && u.moistureValue != null) {
           const color = u.moistureValue <= 12 ? 'var(--green)' : u.moistureValue <= 18 ? 'var(--amber)' : 'var(--red)';
           valueBadge = `<div style="font-size:28px;font-weight:800;font-family:'DM Mono',monospace;color:${color};line-height:1;margin:4px 0 2px;">${u.moistureValue}%</div><div style="font-size:10px;color:var(--ink-4);">moisture</div>`;
         } else if (u.updateType === 'boiler_temp') {

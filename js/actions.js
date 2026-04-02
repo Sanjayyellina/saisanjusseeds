@@ -1876,6 +1876,9 @@ window.onUpdTypeChange = function() {
   if (tempGroup)     tempGroup.style.display      = 'none';
   if (intakeGroup)   intakeGroup.style.display    = 'none';
 
+  const weighGroup = document.getElementById('upd-weigh-group');
+  if (weighGroup) weighGroup.style.display = 'none';
+
   if (type === 'moisture_photo') {
     if (binGroup)      binGroup.style.display      = 'block';
     if (moistureGroup) moistureGroup.style.display  = 'block';
@@ -1886,11 +1889,15 @@ window.onUpdTypeChange = function() {
     if (intakeGroup) intakeGroup.style.display = 'flex';
   } else if (type === 'bin_note') {
     if (binGroup) binGroup.style.display = 'block';
+  } else if (type === 'weigh_slip') {
+    if (weighGroup) weighGroup.style.display = 'block';
   }
 };
 
 window.openUpdateModal = function() {
-  ['upd-type','upd-bin','upd-notes','upd-ocr-text','upd-moisture','upd-temp','upd-temp2','upd-pressure','upd-hybrid','upd-qty'].forEach(id => {
+  ['upd-type','upd-bin','upd-notes','upd-ocr-text','upd-moisture','upd-temp','upd-temp2','upd-pressure',
+   'upd-hybrid','upd-qty','upd-ticket-no','upd-vehicle-no','upd-company-name','upd-weigh-hybrid',
+   'upd-bags-count','upd-tare-wt','upd-gross-wt','upd-net-wt'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1902,7 +1909,7 @@ window.openUpdateModal = function() {
   if (photoEl) photoEl.value = '';
   const typeEl = document.getElementById('upd-type');
   if (typeEl) typeEl.value = 'general';
-  ['upd-moisture-detected','upd-temp-detected'].forEach(id => {
+  ['upd-moisture-detected','upd-temp-detected','upd-weigh-detected'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = '';
   });
@@ -1911,24 +1918,36 @@ window.openUpdateModal = function() {
 };
 
 window.saveFieldUpdate = async function() {
-  const type       = document.getElementById('upd-type')?.value || 'general';
-  const binId      = (() => { const v = document.getElementById('upd-bin')?.value; return v ? parseInt(v) : null; })();
-  const notes      = document.getElementById('upd-notes')?.value?.trim() || '';
-  const ocrText    = document.getElementById('upd-ocr-text')?.value?.trim() || '';
-  const moistureVal= parseFloat(document.getElementById('upd-moisture')?.value) || null;
-  const tempVal    = parseFloat(document.getElementById('upd-temp')?.value) || null;   // B1
-  const temp2Val   = parseFloat(document.getElementById('upd-temp2')?.value) || null;  // B2
-  const pressureVal= parseFloat(document.getElementById('upd-pressure')?.value) || null;
-  const pressureUnit= document.getElementById('upd-pressure-unit')?.value || 'kg/cm²';
-  const hybrid     = document.getElementById('upd-hybrid')?.value?.trim() || null;
-  const qty        = parseFloat(document.getElementById('upd-qty')?.value) || null;
-  const file       = document.getElementById('upd-photo')?.files?.[0] || null;
-  const btn        = document.getElementById('upd-save-btn');
+  const type         = document.getElementById('upd-type')?.value || 'general';
+  const binId        = (() => { const v = document.getElementById('upd-bin')?.value; return v ? parseInt(v) : null; })();
+  const notes        = document.getElementById('upd-notes')?.value?.trim() || '';
+  const ocrText      = document.getElementById('upd-ocr-text')?.value?.trim() || '';
+  const moistureVal  = parseFloat(document.getElementById('upd-moisture')?.value) || null;
+  const tempVal      = parseFloat(document.getElementById('upd-temp')?.value) || null;
+  const temp2Val     = parseFloat(document.getElementById('upd-temp2')?.value) || null;
+  const pressureVal  = parseFloat(document.getElementById('upd-pressure')?.value) || null;
+  const pressureUnit = document.getElementById('upd-pressure-unit')?.value || 'kg/cm²';
+  const hybrid       = document.getElementById('upd-hybrid')?.value?.trim() || null;
+  const qty          = parseFloat(document.getElementById('upd-qty')?.value) || null;
+  const file         = document.getElementById('upd-photo')?.files?.[0] || null;
+  const btn          = document.getElementById('upd-save-btn');
+
+  // Weigh slip fields
+  const materialDir  = document.getElementById('upd-material-dir')?.value || 'INWARD';
+  const ticketNo     = document.getElementById('upd-ticket-no')?.value?.trim() || null;
+  const vehicleNo    = document.getElementById('upd-vehicle-no')?.value?.trim().toUpperCase() || null;
+  const companyName  = document.getElementById('upd-company-name')?.value?.trim() || null;
+  const weighHybrid  = document.getElementById('upd-weigh-hybrid')?.value?.trim() || null;
+  const bagsCount    = parseInt(document.getElementById('upd-bags-count')?.value) || null;
+  const tareWt       = parseFloat(document.getElementById('upd-tare-wt')?.value) || null;
+  const grossWt      = parseFloat(document.getElementById('upd-gross-wt')?.value) || null;
+  const netWt        = parseFloat(document.getElementById('upd-net-wt')?.value) || (grossWt && tareWt ? grossWt - tareWt : null);
 
   // Validation
   if (type === 'moisture_photo' && !moistureVal) { toast('Enter the moisture % reading.', 'warn'); return; }
   if (type === 'boiler_temp' && !tempVal && !temp2Val && !pressureVal) { toast('Enter at least one boiler reading.', 'warn'); return; }
-  if (!notes && !file && !moistureVal && !tempVal && !temp2Val && !pressureVal) { toast('Add a photo, reading, or note before saving.', 'warn'); return; }
+  if (type === 'weigh_slip' && !vehicleNo && !ticketNo) { toast('Enter at least the Vehicle No or Ticket No.', 'warn'); return; }
+  if (!notes && !file && !moistureVal && !tempVal && !temp2Val && !pressureVal && type !== 'weigh_slip') { toast('Add a photo, reading, or note before saving.', 'warn'); return; }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
@@ -1957,8 +1976,16 @@ window.saveFieldUpdate = async function() {
       boiler_temp_2:     temp2Val,
       pressure_value:    pressureVal,
       pressure_unit:     pressureVal ? pressureUnit : null,
-      hybrid:            hybrid,
-      qty_bags:          qty
+      hybrid:            hybrid || weighHybrid,
+      qty_bags:          qty || bagsCount,
+      ticket_no:         ticketNo,
+      material_direction:type === 'weigh_slip' ? materialDir : null,
+      vehicle_no:        vehicleNo,
+      company_name:      companyName,
+      tare_weight:       tareWt,
+      gross_weight_slip: grossWt,
+      net_weight_slip:   netWt,
+      bags_count:        bagsCount
     };
     const saved = await dbInsertFieldUpdate(record);
     if (!saved) throw new Error('Insert failed');
@@ -2006,12 +2033,58 @@ window.saveFieldUpdate = async function() {
       pressureValue:    saved.pressure_value    != null ? parseFloat(saved.pressure_value)    : null,
       pressureUnit:     saved.pressure_unit     || 'kg/cm²',
       hybrid: saved.hybrid || '', qtyBags: saved.qty_bags != null ? parseFloat(saved.qty_bags) : null,
+      ticketNo: saved.ticket_no || null, materialDirection: saved.material_direction || null,
+      vehicleNo: saved.vehicle_no || null, companyName: saved.company_name || null,
+      tareWeight: saved.tare_weight != null ? parseFloat(saved.tare_weight) : null,
+      grossWeightSlip: saved.gross_weight_slip != null ? parseFloat(saved.gross_weight_slip) : null,
+      netWeightSlip: saved.net_weight_slip != null ? parseFloat(saved.net_weight_slip) : null,
+      bagsCount: saved.bags_count != null ? parseInt(saved.bags_count) : null,
       createdAt: saved.created_at,
       createdAtDisplay: new Date(saved.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
     });
 
     closeModal('update-modal');
-    if (type !== 'moisture_photo' && type !== 'boiler_temp') toast('Update saved!', 'success');
+    if (type === 'weigh_slip') {
+      if (materialDir === 'INWARD' && vehicleNo) {
+        // Find existing entry_truck or create new one
+        const existing = (state.entryTrucks || []).find(t => t.vehicleNo === vehicleNo);
+        const truckData = {
+          tare_weight:  tareWt,
+          gross_weight: grossWt,
+          net_weight:   netWt,
+          company:      companyName || undefined,
+          status:       'weighed',
+          updated_at:   new Date().toISOString()
+        };
+        if (existing) {
+          await dbClient.from('entry_trucks').update(truckData).eq('id', existing.id);
+          Object.assign(existing, { tareWeight: tareWt||0, grossWeight: grossWt||0, netWeight: netWt||0, company: companyName||existing.company, status:'weighed' });
+          toast(`Entry truck ${vehicleNo} weights updated`, 'success');
+        } else {
+          const { data: newTruck } = await dbClient.from('entry_trucks').insert([{
+            vehicle_no: vehicleNo, tare_weight: tareWt, gross_weight: grossWt, net_weight: netWt,
+            company: companyName, status: 'weighed', arrival_time: new Date().toISOString()
+          }]).select().single();
+          if (newTruck) {
+            (state.entryTrucks = state.entryTrucks||[]).unshift({ id:newTruck.id, vehicleNo, tareWeight:tareWt||0, grossWeight:grossWt||0, netWeight:netWt||0, company:companyName||'', status:'weighed', arrivalTime:newTruck.arrival_time, arrivalDisplay:new Date(newTruck.arrival_time).toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), driverName:'', driverPhone:'', notes:'', lotNumbers:[], intakeId:null });
+          }
+          toast(`Entry truck ${vehicleNo} created from weigh slip`, 'success');
+        }
+      } else if (materialDir === 'OUTWARD' && vehicleNo) {
+        // Find matching dispatch by vehicle and update weights
+        const disp = (state.dispatches || []).find(d => (d.vehicle||'').toUpperCase() === vehicleNo);
+        if (disp) {
+          await dbClient.from('dispatches').update({ bags: bagsCount || disp.bags, qty: netWt || disp.qty }).eq('receipt_id', disp.receiptId);
+          if (bagsCount) disp.bags = bagsCount;
+          if (netWt)     disp.qty  = netWt;
+          toast(`Dispatch ${disp.receiptId} updated from weigh slip`, 'success');
+        } else {
+          toast(`Weigh slip saved — no matching dispatch found for ${vehicleNo}`, 'info');
+        }
+      }
+    }
+
+    if (type !== 'moisture_photo' && type !== 'boiler_temp' && type !== 'weigh_slip') toast('Update saved!', 'success');
     if (typeof renderUpdatesPage === 'function') renderUpdatesPage();
     if (typeof renderDashboard   === 'function' && (type === 'moisture_photo' || type === 'boiler_temp')) renderDashboard();
     if (typeof renderBinsPage    === 'function' && type === 'moisture_photo') renderBinsPage();
@@ -2051,6 +2124,56 @@ window.runOcrOnPhoto = async function(input) {
     if (ocrEl) ocrEl.value = text;
     if (statusEl) statusEl.textContent = text ? '✓ Text extracted' : 'No text found';
 
+    // ── Smart parse: weighment slip ──────────────────────────────
+    if (text.match(/weighment\s*slip|weigh\s*slip|1st\s*weight|2nd\s*weight|net\.?\s*weight/i)) {
+      const typeEl = document.getElementById('upd-type');
+      if (typeEl) { typeEl.value = 'weigh_slip'; onUpdTypeChange(); }
+
+      const g = id => document.getElementById(id);
+      const setVal = (id, v) => { if (g(id) && v != null) g(id).value = v; };
+
+      // Material direction
+      const matM = text.match(/material\s*[:\s]+(INWARD|OUTWARD)/i);
+      if (matM) setVal('upd-material-dir', matM[1].toUpperCase());
+
+      // Ticket No
+      const tickM = text.match(/ticket\s*no\.?\s*[:\s]+(\d+)/i);
+      if (tickM) setVal('upd-ticket-no', tickM[1]);
+
+      // Vehicle No
+      const vehM = text.match(/vehicle\s*no\.?\s*[:\s]+([A-Z0-9]{6,12})/i);
+      if (vehM) setVal('upd-vehicle-no', vehM[1].toUpperCase());
+
+      // Company
+      const cmpM = text.match(/company\s*[:\s]+(.{2,30}?)[\r\n]/i);
+      if (cmpM) setVal('upd-company-name', cmpM[1].trim());
+
+      // Hybrid
+      const hybM = text.match(/hybrid\s*[:\s]+(.{2,20}?)[\r\n]/i);
+      if (hybM) setVal('upd-weigh-hybrid', hybM[1].trim());
+
+      // Weights
+      const w1M = text.match(/1st\s*weight\s*[:\s]+(\d+)/i);
+      const w2M = text.match(/2nd\s*weight\s*[:\s]+(\d+)/i);
+      const nwM = text.match(/net\.?\s*weight\s*[:\s]+(\d+)/i);
+      if (w1M) setVal('upd-tare-wt',  w1M[1]);
+      if (w2M) setVal('upd-gross-wt', w2M[1]);
+      if (nwM) setVal('upd-net-wt',   nwM[1]);
+      else if (w1M && w2M) setVal('upd-net-wt', parseInt(w2M[1]) - parseInt(w1M[1]));
+
+      // Bags
+      const bagM = text.match(/no\.?\s*of\s*bags\s*[:\s]+(\d+)/i);
+      if (bagM) setVal('upd-bags-count', bagM[1]);
+
+      const detected = document.getElementById('upd-weigh-detected');
+      const parts = [];
+      if (tickM) parts.push(`Ticket ${tickM[1]}`);
+      if (vehM) parts.push(vehM[1]);
+      if (matM) parts.push(matM[1]);
+      if (nwM || (w1M && w2M)) parts.push(`Net ${nwM ? nwM[1] : parseInt(w2M[1])-parseInt(w1M[1])} kg`);
+      if (detected) detected.textContent = parts.length ? `✓ ${parts.join(' · ')}` : '';
+    }
+
     // ── Smart parse: moisture % ────────────────────────────────
     const moistureMatch = text.match(/(\d{1,2}[.,]\d)\s*%/);
     if (moistureMatch) {
@@ -2082,6 +2205,14 @@ window.runOcrOnPhoto = async function(input) {
     console.error('OCR error:', e);
     if (statusEl) statusEl.textContent = 'Could not read text — enter values manually';
   }
+};
+
+// Auto-calculate net weight when gross changes
+window.calcNetWeight = function() {
+  const tare  = parseFloat(document.getElementById('upd-tare-wt')?.value) || 0;
+  const gross = parseFloat(document.getElementById('upd-gross-wt')?.value) || 0;
+  const netEl = document.getElementById('upd-net-wt');
+  if (netEl && tare > 0 && gross > 0) netEl.value = gross - tare;
 };
 
 window.onLaborGroupChange = function() {
