@@ -110,8 +110,8 @@ function renderDashboard(){
   const todayDispatches=state.dispatches.filter(d=>d.date===todayStr);
   const todayRev=todayDispatches.reduce((s,d)=>s+parseInt(d.amount||0),0);
 
-  // Ready to dispatch = bins at or below target moisture
-  const readyBins=active.filter(b=>(b.currentMoisture||99)<=Config.TARGET_MOISTURE);
+  // Ready to dispatch = shelling status OR at/below target moisture
+  const readyBins=active.filter(b=>b.status==='shelling'||(b.currentMoisture||99)<=Config.TARGET_MOISTURE);
 
   document.getElementById('kpi-intake').textContent=totalQty.toFixed(1);
   const kpiIntakeD=document.getElementById('kpi-intake-d');
@@ -169,7 +169,7 @@ function renderDashboard(){
     }else{
       fifoEl.innerHTML=activeBins.slice(0,6).map((b,i)=>{
         const days=Math.floor((Date.now()-b.intakeDateTS)/86400000);
-        const ready=(b.currentMoisture||99)<=Config.TARGET_MOISTURE;
+        const ready=b.status==='shelling'||(b.currentMoisture||99)<=Config.TARGET_MOISTURE;
         const lbl=`BIN-${b.binLabel||b.id}`;
         return`<div style="display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:8px 12px;background:${ready?'rgba(16,185,129,.06)':'var(--surface-2)'};border-radius:var(--radius);margin-bottom:5px;${ready?'border:1px solid rgba(16,185,129,.2);':''}cursor:pointer;" onclick="openBinModal(${b.id})">
           <div style="width:24px;height:24px;background:${i===0?'var(--gold)':'var(--surface-3)'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${i===0?'#fff':'var(--ink-4)'};">${i+1}</div>
