@@ -554,6 +554,7 @@
             <th data-i18n="maint.items">Items Bought</th>
             <th data-i18n="maint.cost">Cost (₹)</th>
             <th>Photos</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="maintenance-tbody">
@@ -941,6 +942,7 @@
               <th>Reason</th>
               <th>Removed By</th>
               <th>Notes</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="backyard-tbody"></tbody>
@@ -1054,10 +1056,11 @@
 <div class="overlay" id="dispatch-modal">
   <div class="modal" style="width:640px;">
     <div class="modal-header">
-      <div class="modal-title" data-i18n="dispatch.modal.title">New Dispatch</div>
+      <div class="modal-title" id="dispatch-modal-title">New Dispatch</div>
       <button class="modal-close" onclick="closeModal('dispatch-modal')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="dispatch-edit-id">
       <div class="form-section"><span class="form-section-icon">👤</span> <span data-i18n="dispatch.modal.receiver">Receiver</span></div>
       <div class="form-row cols1"><div class="form-group"><label class="form-label">Party / Firm Name *</label><input class="form-input" id="d-party" placeholder="e.g. Sai Sanjus Seeds"></div></div>
       <div class="form-row cols2">
@@ -1108,7 +1111,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('dispatch-modal')">Cancel</button>
-      <button class="btn btn-gold" onclick="saveDispatch()">
+      <button class="btn btn-gold" id="dispatch-save-btn" onclick="saveDispatch()">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span data-i18n="dispatch.modal.save">Generate Receipt</span>
       </button>
@@ -1249,10 +1252,11 @@
 <div class="overlay" id="maintenance-modal">
   <div class="modal" style="width:600px;">
     <div class="modal-header">
-      <div class="modal-title" data-i18n="maint.newLog">New Maintenance Log</div>
+      <div class="modal-title" id="maint-modal-title">New Maintenance Log</div>
       <button class="modal-close" onclick="closeModal('maintenance-modal')">✕</button>
     </div>
     <div class="modal-body" style="padding:20px;">
+      <input type="hidden" id="maint-edit-id">
       <div class="form-row cols2">
         <div class="form-group">
           <label class="form-label" data-i18n="maint.date">Date</label>
@@ -1323,7 +1327,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('maintenance-modal')" data-i18n="actions.cancel">Cancel</button>
-      <button class="btn btn-solid" onclick="saveMaintenance()" data-i18n="actions.save">Save Log</button>
+      <button class="btn btn-solid" id="maint-save-btn" onclick="saveMaintenance()">Save Log</button>
     </div>
   </div>
 </div>
@@ -1504,10 +1508,11 @@
 <div class="overlay" id="backyard-modal">
   <div class="modal" style="width:560px;">
     <div class="modal-header">
-      <div class="modal-title">Log Stock Removal</div>
+      <div class="modal-title" id="backyard-modal-title">Log Stock Removal</div>
       <button class="modal-close" onclick="closeModal('backyard-modal')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="backyard-edit-id">
       <div class="form-section"><span class="form-section-icon">📦</span> Stock Details</div>
       <div class="form-row cols2">
         <div class="form-group"><label class="form-label">Intake / DR No (optional)</label>
@@ -1548,7 +1553,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('backyard-modal')">Cancel</button>
-      <button class="btn btn-danger" onclick="saveBackyardRemoval()" style="background:var(--red);color:#fff;border-color:var(--red);">
+      <button class="btn btn-danger" id="backyard-save-btn" onclick="saveBackyardRemoval()" style="background:var(--red);color:#fff;border-color:var(--red);">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
         Log Removal
       </button>
@@ -1742,7 +1747,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="js/error-boundary.js"></script>
 <script src="js/offline-queue.js?v=2"></script>
-<script src="js/db.js?v=14"></script>
+<script src="js/db.js?v=15"></script>
 <!-- Modular JavaScript -->
 <script src="js/config.js?v=1"></script>
 <script src="js/state.js?v=3"></script>
@@ -1751,8 +1756,8 @@
 <script src="js/i18n.js?v=7"></script>
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=19"></script>
-<script src="js/render.js?v=33"></script>
-<script src="js/actions.js?v=37"></script>
+<script src="js/render.js?v=34"></script>
+<script src="js/actions.js?v=38"></script>
 <script src="js/receipt.js?v=8"></script>
 <script src="js/clock.js?v=2"></script>
 <script src="js/init.js?v=20"></script>

@@ -528,6 +528,9 @@ async function saveIntake(){
  * @returns {Promise<void>} Resolves when the dispatch record is successfully generated and stored.
  */
 async function saveDispatch(){
+  const editReceiptId = document.getElementById('dispatch-edit-id')?.value || '';
+  const isEdit = !!editReceiptId;
+
   const party=document.getElementById('d-party').value.trim();
   const vehicle=document.getElementById('d-vehicle').value.trim().toUpperCase();
   const hybrid=document.getElementById('d-hybrid').value.trim();
@@ -557,11 +560,76 @@ async function saveDispatch(){
   // binAllocations is optional — dispatch can have no bins selected
 
   const dtInput=document.getElementById('d-datetime')?.value;
+  const driverName = document.getElementById('d-driver-name')?.value.trim() || '';
+  const driverPhone = document.getElementById('d-driver-phone')?.value.trim() || '';
+
+  const btn = document.getElementById('dispatch-save-btn') || document.querySelector('#dispatch-modal .btn-gold');
+  const ogText = btn.innerHTML;
+  btn.innerHTML = isEdit ? 'Saving...' : 'Generating...';
+  btn.disabled = true;
+
+  if (isEdit) {
+    // Edit mode — update existing dispatch, keep existing receiptId, date, hash
+    const existing = (state.dispatches || []).find(x => x.receiptId === editReceiptId);
+    const updatedD = {
+      ...(existing || {}),
+      party, address: document.getElementById('d-address').value,
+      vehicle, lr: document.getElementById('d-lr').value,
+      hybrid, lot: [...document.querySelectorAll('.d-lot-input')].map(el=>el.value.trim()).filter(Boolean).join(', '),
+      bin: binAllocations.length ? binAllocations[0].binId : null,
+      bins: binAllocations,
+      bags, qty,
+      moisture: parseFloat(document.getElementById('d-moisture').value) || 0,
+      amount, remarks: document.getElementById('d-remarks').value,
+      driverName, driverPhone
+    };
+    updatedD.hash = generateHash(updatedD);
+    updatedD.signature = generateSignature(updatedD);
+
+    const dispatchRecord = {
+      party: updatedD.party,
+      address: updatedD.address,
+      vehicle: updatedD.vehicle,
+      lr: updatedD.lr,
+      hybrid: updatedD.hybrid,
+      lot: updatedD.lot,
+      bin_id: updatedD.bin,
+      bins: binAllocations,
+      bags: updatedD.bags,
+      qty: updatedD.qty,
+      moisture: updatedD.moisture,
+      amount: updatedD.amount,
+      remarks: updatedD.remarks,
+      driver_name: driverName || null,
+      driver_phone: driverPhone || null,
+      hash: updatedD.hash,
+      signature: updatedD.signature
+    };
+
+    const saved = await dbUpdateDispatch(editReceiptId, dispatchRecord);
+    if (saved) {
+      const idx = (state.dispatches || []).findIndex(x => x.receiptId === editReceiptId);
+      if (idx !== -1) state.dispatches[idx] = updatedD;
+      // Reset edit state
+      const editIdEl = document.getElementById('dispatch-edit-id'); if (editIdEl) editIdEl.value = '';
+      const titleEl = document.getElementById('dispatch-modal-title'); if (titleEl) titleEl.textContent = 'New Dispatch';
+      const saveSpan = btn.querySelector('span'); if (saveSpan) saveSpan.textContent = 'Generate Receipt';
+      closeModal('dispatch-modal');
+      toast(`Dispatch ${editReceiptId} updated`, 'success');
+      dbLogActivity('DISPATCH_UPDATED', `Receipt ${editReceiptId} updated for ${party} (${qty} Kg / ₹${amount})`, 'dispatch', editReceiptId);
+      if (window.Store) window.Store.emitChange();
+    } else {
+      toast('Failed to update dispatch', 'error');
+    }
+    btn.innerHTML = ogText;
+    btn.disabled = false;
+    return;
+  }
+
+  // Create mode — generate new receipt
   const now=dtInput ? new Date(dtInput) : new Date();
   const receiptId=`YDS-${new Date().getFullYear()}-${String(state.receiptCounter++).padStart(6,'0')}`;
   // For backward-compat store first bin id (or null) in d.bin; full list in d.bins
-  const driverName = document.getElementById('d-driver-name')?.value.trim() || '';
-  const driverPhone = document.getElementById('d-driver-phone')?.value.trim() || '';
 
   const d={
     receiptId,dateTS:now.getTime(),
@@ -602,13 +670,8 @@ async function saveDispatch(){
       created_at: now.toISOString()
   };
 
-  const btn = document.querySelector('#dispatch-modal .btn-gold');
-  const ogText = btn.innerHTML;
-  btn.innerHTML = 'Generating...';
-  btn.disabled = true;
-
   const success = await dbInsertDispatch(dispatchRecord);
-  
+
   if (success) {
       state.dispatches.unshift(d);
       const binLabels = binAllocations.length ? binAllocations.map(a=>`BIN-${getBinLabel(a.binId)}`).join(', ') : 'N/A';
@@ -1153,6 +1216,10 @@ window.openMaintImageViewer = function(urls, startIdx) {
 };
 
 async function saveMaintenance() {
+  const editIdRaw = document.getElementById('maint-edit-id')?.value;
+  const editId = editIdRaw ? parseInt(editIdRaw) : null;
+  const isEdit = !!editId;
+
   const date = document.getElementById('maint-date').value;
   const reportedBy = document.getElementById('maint-reported').value.trim();
   const equipment = document.getElementById('maint-equipment').value.trim();
@@ -1169,7 +1236,7 @@ async function saveMaintenance() {
     return;
   }
 
-  const btn = document.querySelector('#maintenance-modal .btn-solid');
+  const btn = document.getElementById('maint-save-btn') || document.querySelector('#maintenance-modal .btn-solid');
   const ogText = btn.innerHTML;
   btn.innerHTML = 'Saving...';
   btn.disabled = true;
@@ -1178,6 +1245,10 @@ async function saveMaintenance() {
     // Upload images first
     const imgFiles = Array.from(document.getElementById('maint-images')?.files || []);
     const imageUrls = await _uploadMaintImages(imgFiles);
+
+    // If editing, merge new uploads with existing saved images
+    const existingUrls = isEdit ? (((state.maintenance || []).find(x => x.id === editId) || {}).image_urls || []) : [];
+    const allImageUrls = [...existingUrls, ...imageUrls];
 
     const log = {
       date: date,
@@ -1188,35 +1259,69 @@ async function saveMaintenance() {
       checked_by: checker,
       items_bought: items,
       cost_amount: cost,
-      image_urls: imageUrls,
+      image_urls: isEdit ? allImageUrls : imageUrls,
       status: status,
       priority: priority
     };
 
-    const saved = await dbInsertMaintenance(log);
-    if (saved) {
-      state.maintenance.unshift(saved);
-      if(window.Store) window.Store.emitChange();
-      closeModal('maintenance-modal');
+    if (isEdit) {
+      const saved = await dbUpdateMaintenance(editId, log);
+      if (saved) {
+        const idx = (state.maintenance || []).findIndex(x => x.id === editId);
+        if (idx !== -1) state.maintenance[idx] = saved;
+        if (window.Store) window.Store.emitChange();
+        closeModal('maintenance-modal');
 
-      // Clear Inputs
-      document.getElementById('maint-date').value = '';
-      document.getElementById('maint-reported').value = '';
-      document.getElementById('maint-equipment').value = '';
-      document.getElementById('maint-issue').value = '';
-      document.getElementById('maint-work').value = '';
-      document.getElementById('maint-checker').value = '';
-      document.getElementById('maint-items').value = '';
-      document.getElementById('maint-cost').value = '';
-      document.getElementById('maint-images').value = '';
-      document.getElementById('maint-img-preview').innerHTML = '';
-      if (document.getElementById('maint-status'))   document.getElementById('maint-status').value = 'open';
-      if (document.getElementById('maint-priority')) document.getElementById('maint-priority').value = 'medium';
+        // Reset modal to create mode
+        const editIdEl = document.getElementById('maint-edit-id'); if (editIdEl) editIdEl.value = '';
+        const titleEl = document.getElementById('maint-modal-title'); if (titleEl) titleEl.textContent = 'New Maintenance Log';
+        const saveBtnEl = document.getElementById('maint-save-btn'); if (saveBtnEl) saveBtnEl.textContent = 'Save Log';
 
-      toast(imageUrls.length ? `Maintenance logged with ${imageUrls.length} photo${imageUrls.length>1?'s':''}` : 'Maintenance logged successfully', 'success');
-      dbLogActivity('MAINTENANCE_LOGGED', `Maintenance for ${equipment || 'Plant'}: ${work}`, 'maintenance', null, { equipment, priority, status });
+        // Clear Inputs
+        document.getElementById('maint-date').value = '';
+        document.getElementById('maint-reported').value = '';
+        document.getElementById('maint-equipment').value = '';
+        document.getElementById('maint-issue').value = '';
+        document.getElementById('maint-work').value = '';
+        document.getElementById('maint-checker').value = '';
+        document.getElementById('maint-items').value = '';
+        document.getElementById('maint-cost').value = '';
+        document.getElementById('maint-images').value = '';
+        document.getElementById('maint-img-preview').innerHTML = '';
+        if (document.getElementById('maint-status'))   document.getElementById('maint-status').value = 'open';
+        if (document.getElementById('maint-priority')) document.getElementById('maint-priority').value = 'medium';
+
+        toast('Maintenance log updated', 'success');
+        dbLogActivity('MAINTENANCE_UPDATED', `Maintenance updated for ${equipment || 'Plant'}: ${work}`, 'maintenance', null, { equipment, priority, status });
+      } else {
+        toast('Failed to update log', 'error');
+      }
     } else {
-      toast('Failed to save log', 'error');
+      const saved = await dbInsertMaintenance(log);
+      if (saved) {
+        state.maintenance.unshift(saved);
+        if(window.Store) window.Store.emitChange();
+        closeModal('maintenance-modal');
+
+        // Clear Inputs
+        document.getElementById('maint-date').value = '';
+        document.getElementById('maint-reported').value = '';
+        document.getElementById('maint-equipment').value = '';
+        document.getElementById('maint-issue').value = '';
+        document.getElementById('maint-work').value = '';
+        document.getElementById('maint-checker').value = '';
+        document.getElementById('maint-items').value = '';
+        document.getElementById('maint-cost').value = '';
+        document.getElementById('maint-images').value = '';
+        document.getElementById('maint-img-preview').innerHTML = '';
+        if (document.getElementById('maint-status'))   document.getElementById('maint-status').value = 'open';
+        if (document.getElementById('maint-priority')) document.getElementById('maint-priority').value = 'medium';
+
+        toast(imageUrls.length ? `Maintenance logged with ${imageUrls.length} photo${imageUrls.length>1?'s':''}` : 'Maintenance logged successfully', 'success');
+        dbLogActivity('MAINTENANCE_LOGGED', `Maintenance for ${equipment || 'Plant'}: ${work}`, 'maintenance', null, { equipment, priority, status });
+      } else {
+        toast('Failed to save log', 'error');
+      }
     }
   } catch (err) {
     console.error("Save maintenance error:", err);
@@ -1723,9 +1828,94 @@ function openBackyardModal() {
   openModal('backyard-modal');
 }
 
+window.openEditMaintenanceModal = function(id) {
+  const m = (state.maintenance || []).find(x => x.id === id);
+  if (!m) { toast('Record not found', 'error'); return; }
+  document.getElementById('maint-edit-id').value = id;
+  document.getElementById('maint-modal-title').textContent = 'Edit Maintenance Log';
+  document.getElementById('maint-save-btn').textContent = 'Save Changes';
+  document.getElementById('maint-date').value = m.date ? m.date.slice(0,10) : '';
+  document.getElementById('maint-reported').value = m.reported_by || '';
+  document.getElementById('maint-equipment').value = m.equipment_name || '';
+  document.getElementById('maint-issue').value = m.issue_description || '';
+  document.getElementById('maint-work').value = m.work_done || '';
+  document.getElementById('maint-checker').value = m.checked_by || '';
+  document.getElementById('maint-items').value = m.items_bought || '';
+  document.getElementById('maint-cost').value = m.cost_amount || '';
+  if (document.getElementById('maint-status'))  document.getElementById('maint-status').value  = m.status  || 'open';
+  if (document.getElementById('maint-priority')) document.getElementById('maint-priority').value = m.priority || 'medium';
+  // Show existing images
+  const preview = document.getElementById('maint-img-preview');
+  if (preview) {
+    preview.innerHTML = '';
+    const imgs = Array.isArray(m.image_urls) ? m.image_urls : [];
+    imgs.forEach((url, i) => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:relative;display:inline-block;';
+      div.innerHTML = `<img src="${escapeHtml(url)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--surface-4);" title="Existing photo">
+        <span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;">saved</span>`;
+      preview.appendChild(div);
+    });
+  }
+  const fi = document.getElementById('maint-images'); if (fi) fi.value = '';
+  openModal('maintenance-modal');
+};
+
+window.openEditBackyardModal = function(id) {
+  const r = (state.backyardRemovals || []).find(x => x.id === id);
+  if (!r) { toast('Record not found', 'error'); return; }
+  // Populate dropdowns first
+  openBackyardModal();
+  // Then override with edit values
+  document.getElementById('backyard-edit-id').value = id;
+  document.getElementById('backyard-modal-title').textContent = 'Edit Stock Removal';
+  document.getElementById('backyard-save-btn').textContent = 'Save Changes';
+  if (r.intakeId) document.getElementById('by-intake').value = r.intakeId;
+  if (r.binId)    document.getElementById('by-bin').value    = r.binId;
+  document.getElementById('by-vehicle').value    = r.vehicleNo  || '';
+  document.getElementById('by-hybrid').value     = r.hybrid     || '';
+  document.getElementById('by-qty').value        = r.qtyRemoved || '';
+  document.getElementById('by-bags').value       = r.bagsRemoved || '';
+  document.getElementById('by-reason').value     = r.reason     || 'damaged';
+  document.getElementById('by-removed-by').value = r.removedBy  || '';
+  document.getElementById('by-notes').value      = r.notes      || '';
+};
+
+window.openEditDispatchModal = function(receiptId) {
+  const d = (state.dispatches || []).find(x => x.receiptId === receiptId);
+  if (!d) { toast('Dispatch not found', 'error'); return; }
+  document.getElementById('dispatch-edit-id').value = receiptId;
+  document.getElementById('dispatch-modal-title').textContent = 'Edit Dispatch — ' + receiptId;
+  const saveSpan = document.getElementById('dispatch-save-btn') && document.getElementById('dispatch-save-btn').querySelector('span');
+  if (saveSpan) saveSpan.textContent = 'Save Changes';
+  document.getElementById('d-party').value   = d.party   || '';
+  document.getElementById('d-address').value = d.address || '';
+  document.getElementById('d-vehicle').value = d.vehicle || '';
+  document.getElementById('d-lr').value      = d.lr      || '';
+  document.getElementById('d-hybrid').value  = d.hybrid  || '';
+  document.getElementById('d-bags').value    = d.bags    || '';
+  document.getElementById('d-qty').value     = d.qty     || '';
+  document.getElementById('d-amount').value  = d.amount  || '';
+  document.getElementById('d-moisture').value= d.moisture|| '';
+  document.getElementById('d-remarks').value = d.remarks || '';
+  const driverName  = document.getElementById('d-driver-name');
+  const driverPhone = document.getElementById('d-driver-phone');
+  if (driverName)  driverName.value  = d.driverName  || '';
+  if (driverPhone) driverPhone.value = d.driverPhone || '';
+  // Lots
+  const lotInputs = document.querySelectorAll('.d-lot-input');
+  const lots = (d.lot || '').split(',').map(l => l.trim()).filter(Boolean);
+  if (lotInputs.length > 0 && lots.length > 0) lotInputs[0].value = lots[0];
+  openModal('dispatch-modal');
+};
+
 async function saveBackyardRemoval() {
   const qty = parseFloat(document.getElementById('by-qty').value);
   if (!qty || qty <= 0) { toast('Quantity removed is required', 'error'); return; }
+
+  const editIdRaw = document.getElementById('backyard-edit-id')?.value;
+  const editId = editIdRaw ? parseInt(editIdRaw) : null;
+  const isEdit = !!editId;
 
   const record = {
     intake_id: document.getElementById('by-intake').value || null,
@@ -1739,14 +1929,38 @@ async function saveBackyardRemoval() {
     notes: document.getElementById('by-notes').value.trim() || null
   };
 
-  const ok = await dbInsertBackyardRemoval(record);
-  if (ok) {
-    toast('Stock removal logged', 'success');
-    closeModal('backyard-modal');
-    await bootApp();
-    showPage('backyard');
+  if (isEdit) {
+    const saved = await dbUpdateBackyardRemoval(editId, record);
+    if (saved) {
+      const idx = (state.backyardRemovals || []).findIndex(x => x.id === editId);
+      if (idx !== -1) {
+        // Merge updated DB row with existing display fields
+        state.backyardRemovals[idx] = { ...state.backyardRemovals[idx], ...saved,
+          intakeId: saved.intake_id, binId: saved.bin_id, vehicleNo: saved.vehicle_no,
+          qtyRemoved: saved.qty_removed, bagsRemoved: saved.bags_removed,
+          removedBy: saved.removed_by, hybrid: saved.hybrid, reason: saved.reason, notes: saved.notes
+        };
+      }
+      // Reset modal state
+      const editIdEl = document.getElementById('backyard-edit-id'); if (editIdEl) editIdEl.value = '';
+      const titleEl = document.getElementById('backyard-modal-title'); if (titleEl) titleEl.textContent = 'Log Stock Removal';
+      const saveBtnEl = document.getElementById('backyard-save-btn'); if (saveBtnEl) saveBtnEl.textContent = 'Log Removal';
+      toast('Stock removal updated', 'success');
+      closeModal('backyard-modal');
+      if (window.Store) window.Store.emitChange();
+    } else {
+      toast('Failed to update removal', 'error');
+    }
   } else {
-    toast('Failed to log removal', 'error');
+    const ok = await dbInsertBackyardRemoval(record);
+    if (ok) {
+      toast('Stock removal logged', 'success');
+      closeModal('backyard-modal');
+      await bootApp();
+      showPage('backyard');
+    } else {
+      toast('Failed to log removal', 'error');
+    }
   }
 }
 

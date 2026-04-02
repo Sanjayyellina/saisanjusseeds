@@ -366,6 +366,7 @@ function renderDispatchPage(){
       <td><span class="chip chip-green">✓ ${t('actions.view') || 'Signed'}</span></td>
       <td style="white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${esc(d.receiptId)}')" style="margin-right:4px;">${t('actions.view')}</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditDispatchModal('${esc(d.receiptId)}')" style="margin-right:4px;" title="Edit dispatch">✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="printDriverSlip('${esc(d.receiptId)}')" style="color:var(--green);border-color:var(--green);" title="Print Driver Slip">🚚 Slip</button>
       </td>
     </tr>`).join('')
@@ -1367,9 +1368,10 @@ function renderMaintenancePage() {
       <td class="fs12 truncate" style="max-width:140px;">${esc(m.items_bought || '—')}</td>
       <td><span class="fw700 text-gold">₹${parseInt(m.cost_amount).toLocaleString('en-IN')}</span></td>
       <td><div style="display:flex;gap:4px;align-items:center;">${thumbs || '<span style="color:var(--ink-5);font-size:11px;">—</span>'}${extra}</div></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEditMaintenanceModal(${m.id})">✏️ Edit</button></td>
     </tr>`;
   }).join('')
-    : `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
+    : `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
 }
 
 function renderLaborPage() {
@@ -1521,7 +1523,7 @@ function renderBackyardPage() {
   if (!tbody) return;
 
   if (!removals.length) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="text-align:center;padding:40px;color:var(--ink-5);">No stock removals recorded yet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-state" style="text-align:center;padding:40px;color:var(--ink-5);">No stock removals recorded yet</td></tr>`;
     return;
   }
 
@@ -1542,6 +1544,7 @@ function renderBackyardPage() {
       <td><span class="chip ${reasonColors[r.reason] || 'chip-gray'}">${reasonLabels[r.reason] || r.reason}</span></td>
       <td>${r.removedBy || '—'}</td>
       <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-4);">${r.notes || '—'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEditBackyardModal(${r.id})">✏️ Edit</button></td>
     </tr>`;
   }).join('');
 }

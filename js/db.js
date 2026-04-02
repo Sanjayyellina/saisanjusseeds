@@ -468,6 +468,30 @@ async function dbUpdateMaintenanceStatus(id, status) {
   } catch(e) { console.error('dbUpdateMaintenanceStatus:', e); return false; }
 }
 
+async function dbUpdateMaintenance(id, updates) {
+  try {
+    const { data, error } = await dbClient.from('maintenance_logs').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbUpdateMaintenance:', e); return null; }
+}
+
+async function dbUpdateDispatch(receiptId, updates) {
+  try {
+    const { data, error } = await dbClient.from('dispatches').update(updates).eq('receipt_id', receiptId).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbUpdateDispatch:', e); return null; }
+}
+
+async function dbUpdateBackyardRemoval(id, updates) {
+  try {
+    const { data, error } = await dbClient.from('backyard_removals').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbUpdateBackyardRemoval:', e); return null; }
+}
+
 // ── Manager PIN ───────────────────────────────────────────────
 async function dbFetchPinHash() {
   try {
