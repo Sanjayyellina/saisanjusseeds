@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "yellina-seeds",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3100", "/Users/sanjuyellina/saisanjusseeds"],
-      "port": 3100
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": ["-m", "http.server", "3000"],
+      "port": 3000
     }
   ]
 }

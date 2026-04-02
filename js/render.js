@@ -620,6 +620,73 @@ function renderAnalytics(){
   }
 
   renderAdvancedAnalytics();
+
+  // ── Stock Reconciliation ─────────────────────────────────────
+  const stockEl = document.getElementById('stock-recon');
+  if (stockEl) {
+    const totalIn   = state.intakes.reduce((s,i)=>s+parseFloat(i.qty||0),0);
+    const totalOut  = state.dispatches.reduce((s,d)=>s+parseFloat(d.qty||0),0);
+    const totalLost = (state.backyardRemovals||[]).reduce((s,r)=>s+parseFloat(r.qtyRemoved||0),0);
+    const inBins    = state.bins.filter(b=>b.status!=='empty').reduce((s,b)=>s+parseFloat(b.qty||0),0);
+    const balance   = totalIn - totalOut - totalLost;
+    const variance  = inBins - balance;
+    const cards = [
+      ['📥 Total Received', totalIn,  '#3b82f6', 'Kg intake this season'],
+      ['📤 Dispatched',     totalOut, '#10b981', 'Kg sent out'],
+      ['🗑️ Removed',        totalLost,'#f59e0b', 'Kg backyard removals'],
+      ['🏭 In Drying',      inBins,   '#8b5cf6', 'Kg currently in bins'],
+      ['⚖️ Balance',        balance,  balance>=0?'#10b981':'#ef4444', 'Received − dispatched − removed'],
+      ['📊 Variance',       Math.abs(variance), Math.abs(variance)<500?'#10b981':'#ef4444', variance>=0?'In bins vs balance (surplus)':'In bins vs balance (deficit)'],
+    ];
+    stockEl.innerHTML = cards.map(([label,val,color,sub])=>`
+      <div style="background:var(--surface);border:1.5px solid var(--surface-4);border-radius:var(--radius-lg);padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">${label}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:800;color:${color};">${parseInt(val).toLocaleString('en-IN')}<span style="font-size:12px;font-weight:600;"> Kg</span></div>
+        <div style="font-size:10px;color:var(--ink-5);margin-top:4px;">${sub}</div>
+      </div>`).join('');
+  }
+
+  // ── Season Comparison ───────────────────────────────────────
+  const scEl = document.getElementById('season-comp');
+  const scLabel = document.getElementById('season-comp-label');
+  if (scEl) {
+    const thisYear = new Date().getFullYear();
+    const prevYear = thisYear - 1;
+    if(scLabel) scLabel.textContent = `${prevYear} vs ${thisYear}`;
+    const thisIntake  = state.intakes.filter(i=>(i.season_year||thisYear)===thisYear).reduce((s,i)=>s+parseFloat(i.qty||0),0);
+    const prevIntake  = state.intakes.filter(i=>i.season_year===prevYear).reduce((s,i)=>s+parseFloat(i.qty||0),0);
+    const thisDispQty = state.dispatches.filter(d=>(d.season_year||thisYear)===thisYear).reduce((s,d)=>s+parseFloat(d.qty||0),0);
+    const prevDispQty = state.dispatches.filter(d=>d.season_year===prevYear).reduce((s,d)=>s+parseFloat(d.qty||0),0);
+    const thisRev     = state.dispatches.filter(d=>(d.season_year||thisYear)===thisYear).reduce((s,d)=>s+parseFloat(d.amount||0),0);
+    const prevRev     = state.dispatches.filter(d=>d.season_year===prevYear).reduce((s,d)=>s+parseFloat(d.amount||0),0);
+    const thisDisps   = state.dispatches.filter(d=>(d.season_year||thisYear)===thisYear).length;
+    const prevDisps   = state.dispatches.filter(d=>d.season_year===prevYear).length;
+    const delta = (a,b,suffix='Kg') => {
+      if(!b) return '';
+      const diff=a-b; const pct=((diff/b)*100).toFixed(0);
+      return `<span style="font-size:10px;color:${diff>=0?'#10b981':'#ef4444'};font-weight:700;">${diff>=0?'▲':'▼'}${Math.abs(pct)}%</span>`;
+    };
+    const metrics = [
+      ['Intake (Kg)', parseInt(thisIntake).toLocaleString('en-IN'), parseInt(prevIntake).toLocaleString('en-IN'), delta(thisIntake,prevIntake)],
+      ['Dispatched (Kg)', parseInt(thisDispQty).toLocaleString('en-IN'), parseInt(prevDispQty).toLocaleString('en-IN'), delta(thisDispQty,prevDispQty)],
+      ['Revenue (₹)', '₹'+parseInt(thisRev).toLocaleString('en-IN'), '₹'+parseInt(prevRev).toLocaleString('en-IN'), delta(thisRev,prevRev,'₹')],
+      ['Dispatches', thisDisps, prevDisps, delta(thisDisps,prevDisps,'')],
+    ];
+    scEl.innerHTML = metrics.map(([label,thisVal,prevVal,chg])=>`
+      <div style="background:var(--surface);border:1.5px solid var(--surface-4);border-radius:var(--radius-lg);padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">${label} ${chg}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div style="background:var(--gold-pale);border-radius:var(--radius);padding:8px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;color:var(--gold-dark);text-transform:uppercase;letter-spacing:.06em;">${thisYear}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:800;color:var(--ink);">${thisVal}</div>
+          </div>
+          <div style="background:var(--surface-2);border-radius:var(--radius);padding:8px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.06em;">${prevYear}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:800;color:var(--ink-4);">${prevVal}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
 }
 
 // ============================================================
@@ -1280,7 +1347,14 @@ function renderMaintenancePage() {
     const extra = imgs.length > 3 ? `<span style="font-size:11px;color:var(--ink-5);align-self:center;">+${imgs.length-3}</span>` : '';
     return `<tr>
       <td class="fs12 text-muted">${new Date(m.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
-      <td>${statusBadge(m.status || 'open')}</td>
+      <td>
+        <select style="font-size:10px;padding:3px 6px;border-radius:var(--radius-sm);border:1px solid var(--surface-4);background:var(--surface);cursor:pointer;font-weight:600;color:${m.status==='closed'?'#15803d':m.status==='in_progress'?'#1d4ed8':'#b45309'};"
+          onchange="updateMaintStatus(${m.id},this.value)">
+          <option value="open" ${(m.status||'open')==='open'?'selected':''}>🔴 Open</option>
+          <option value="in_progress" ${m.status==='in_progress'?'selected':''}>🟡 In Progress</option>
+          <option value="closed" ${m.status==='closed'?'selected':''}>🟢 Closed</option>
+        </select>
+      </td>
       <td>${priorityBadge(m.priority || 'medium')}</td>
       <td class="fw700">${esc(m.reported_by || '—')}</td>
       <td class="fw700">${esc(m.work_done)}</td>
@@ -1296,6 +1370,31 @@ function renderMaintenancePage() {
 }
 
 function renderLaborPage() {
+  // ── Payroll Summary ──────────────────────────────────────────
+  const payEl = document.getElementById('payroll-summary');
+  if (payEl) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthLogs = state.labor.filter(l => new Date(l.date) >= monthStart);
+    const totalWages = thisMonthLogs.reduce((s,l) => s + (parseFloat(l.total_wages) || (parseInt(l.headcount||0) * parseFloat(l.wage_per_day||0))), 0);
+    const totalHeadcount = thisMonthLogs.reduce((s,l) => s + parseInt(l.headcount||0), 0);
+    const totalDays = thisMonthLogs.length;
+    const avgWagePerDay = totalDays > 0 ? (totalWages / totalDays).toFixed(0) : 0;
+    const monthName = now.toLocaleString('en-IN', { month: 'long' });
+    const cards = [
+      ['💰 Wages This Month', '₹'+parseInt(totalWages).toLocaleString('en-IN'), monthName+' total', '#10b981'],
+      ['👷 Total Headcount', totalHeadcount.toLocaleString('en-IN'), 'Person-days logged', '#3b82f6'],
+      ['📅 Shift Days', totalDays, 'Days with labor', '#8b5cf6'],
+      ['💵 Avg Wages/Day', '₹'+parseInt(avgWagePerDay).toLocaleString('en-IN'), 'Per shift entry', '#f59e0b'],
+    ];
+    payEl.innerHTML = cards.map(([label,val,sub,color])=>`
+      <div style="background:var(--surface);border:1.5px solid var(--surface-4);border-radius:var(--radius-lg);padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">${label}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:800;color:${color};">${val}</div>
+        <div style="font-size:10px;color:var(--ink-5);margin-top:4px;">${sub}</div>
+      </div>`).join('');
+  }
+
   // Groups bar
   const groupsBar = document.getElementById('labor-groups-bar');
   if (groupsBar) {

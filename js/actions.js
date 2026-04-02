@@ -638,6 +638,34 @@ function openBinModal(binId){
   document.getElementById('bin-modal-title').textContent=`BIN-${bin.binLabel||bin.id} — ${bin.status==='empty'?'Empty':'Update'}`;
   const m=bin.currentMoisture||0;
   const days=dateDiff(bin.intakeDateTS);
+  const target=bin.targetMoisture||10;
+  const cap=bin.capacityKg||0;
+
+  // Moisture trend chart from recent readings
+  const readings=(state.moistureReadings||[]).filter(r=>r.bin_id===binId).slice(0,10).reverse();
+  let chartHtml='';
+  if(readings.length>=2){
+    const vals=readings.map(r=>parseFloat(r.moisture));
+    const minV=Math.min(...vals,target)-1, maxV=Math.max(...vals,bin.entryMoisture||0)+1;
+    const range=maxV-minV||1;
+    const W=260,H=70,pad=6;
+    const pts=vals.map((v,i)=>{
+      const x=pad+(i/(vals.length-1))*(W-pad*2);
+      const y=H-pad-((v-minV)/range)*(H-pad*2);
+      return `${x},${y}`;
+    }).join(' ');
+    const targetY=H-pad-((target-minV)/range)*(H-pad*2);
+    chartHtml=`<div style="margin-top:12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-5);margin-bottom:4px;">Moisture Trend</div>
+      <svg width="${W}" height="${H}" style="background:var(--surface-2);border-radius:var(--radius);display:block;">
+        <line x1="${pad}" y1="${targetY}" x2="${W-pad}" y2="${targetY}" stroke="#22c55e" stroke-width="1" stroke-dasharray="3,3" opacity=".6"/>
+        <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>
+        ${vals.map((v,i)=>{const x=pad+(i/(vals.length-1))*(W-pad*2);const y=H-pad-((v-minV)/range)*(H-pad*2);return `<circle cx="${x}" cy="${y}" r="3" fill="var(--gold)"/><title>${v}%</title>`;}).join('')}
+        <text x="${W-pad}" y="${targetY-3}" text-anchor="end" font-size="9" fill="#22c55e">Target ${target}%</text>
+      </svg>
+    </div>`;
+  }
+
   document.getElementById('bin-modal-body').innerHTML=`
     <div class="grid2 mb16" id="bm-details-container" style="${bin.status==='empty'?'display:none;':''}">
       <div class="form-group"><label class="form-label">Hybrid</label><input class="form-input fw700" id="bm-hybrid" value="${bin.hybrid||''}"></div>
@@ -658,12 +686,23 @@ function openBinModal(binId){
           style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;">
       </div>
       <div class="form-group">
+        <label class="form-label">Target Moisture %</label>
+        <input class="form-input" type="number" step="0.1" id="bm-target-m" value="${target}"
+          style="font-family:'DM Mono',monospace;font-size:16px;font-weight:600;text-align:center;color:var(--green);">
+      </div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
         <label class="form-label">Status</label>
         <select class="form-select" id="bm-s" onchange="document.getElementById('bm-details-container').style.display=this.value==='empty'?'none':'grid';document.getElementById('bm-details-divider').style.display=this.value==='empty'?'none':'block';">
           <option value="drying" ${bin.status!=='shelling'&&bin.status!=='empty'?'selected':''}>Drying</option>
           <option value="shelling" ${bin.status==='shelling'?'selected':''}>Shelling</option>
           <option value="empty" ${bin.status==='empty'?'selected':''}>Empty (Clear Bin)</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Capacity (Kg)</label>
+        <input class="form-input" type="number" step="100" id="bm-capacity" value="${cap||''}" placeholder="e.g. 50000">
       </div>
     </div>
     <div class="form-group mt16">
@@ -679,6 +718,7 @@ function openBinModal(binId){
         </button>
       </div>
     </div>
+    ${chartHtml}
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
       <button class="btn btn-ghost" onclick="closeModal('bin-modal')">Cancel</button>
       <button class="btn btn-solid" onclick="saveBinModal(${binId})">Save Update</button>
@@ -690,11 +730,15 @@ async function saveBinModal(binId){
   const b=state.bins.find(x => x.id === binId);
   if (!b) { toast(`BIN-${getBinLabel(binId)} not found`, 'error'); return; }
   const oldStatus = b.status;
+  const oldMoisture = b.currentMoisture;
   const snapshotBefore = { ...b }; // capture state before changes for history
 
-  b.currentMoisture=parseFloat(document.getElementById('bm-m').value)||b.currentMoisture;
+  const newMoisture = parseFloat(document.getElementById('bm-m').value)||b.currentMoisture;
+  b.currentMoisture = newMoisture;
   b.status=document.getElementById('bm-s').value;
   b.airflow=window._bAir||b.airflow;
+  b.targetMoisture = parseFloat(document.getElementById('bm-target-m')?.value) || b.targetMoisture || 10;
+  b.capacityKg = parseFloat(document.getElementById('bm-capacity')?.value) || b.capacityKg || 0;
 
   if(b.status !== 'empty') {
     b.hybrid = document.getElementById('bm-hybrid') ? document.getElementById('bm-hybrid').value : b.hybrid;
@@ -726,11 +770,20 @@ async function saveBinModal(binId){
       entry_moisture: b.entryMoisture,
       current_moisture: b.currentMoisture,
       intake_date_ts: b.intakeDateTS || null,
-      airflow: b.airflow
+      airflow: b.airflow,
+      target_moisture: b.targetMoisture,
+      capacity_kg: b.capacityKg
   };
   
   const success = await dbUpdateBin(b.id, updates);
   if (success) {
+      // Log moisture reading if it changed (and bin is not empty)
+      if (b.status !== 'empty' && newMoisture !== oldMoisture && b.hybrid) {
+          const reading = { bin_id: b.id, moisture: newMoisture, recorded_by: null };
+          dbInsertMoistureReading(reading).then(ok => {
+              if (ok) state.moistureReadings.unshift({ ...reading, recorded_at: new Date().toISOString() });
+          });
+      }
       if (oldStatus !== b.status) {
           dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.binLabel||b.id} changed to ${b.status}`, 'bin', String(b.id));
           // Snapshot bin cycle history when bin is cleared
@@ -818,16 +871,14 @@ function showManagerAccess(btnElement) {
   setTimeout(()=>document.getElementById('manager-pin-input').focus(), 100);
 }
 
-// SHA-256 hash of the manager PIN — change this hash to change the PIN.
-// To generate a new hash: crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourPIN'))
-//   then convert to hex. Current PIN: ask your manager.
-const MANAGER_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-
 async function verifyPinAndAccess() {
   const pin = document.getElementById('manager-pin-input').value;
+  if (!pin) return;
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
   const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  if (hex === MANAGER_PIN_HASH) {
+  // Fetch hash from Supabase (falls back to local default if fetch fails)
+  const storedHash = await dbFetchPinHash() || '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+  if (hex === storedHash) {
     window.isManagerMode = true;
     toast('Manager Access Granted', 'success');
     closeModal('pin-modal');
@@ -836,6 +887,41 @@ async function verifyPinAndAccess() {
     toast('Invalid PIN. Access Denied.', 'error');
   }
 }
+
+window.changeManagerPin = async function() {
+  const oldPin = document.getElementById('pin-old')?.value;
+  const newPin = document.getElementById('pin-new')?.value;
+  const confirmPin = document.getElementById('pin-confirm')?.value;
+  if (!oldPin || !newPin || !confirmPin) { toast('Fill all PIN fields', 'error'); return; }
+  if (newPin !== confirmPin) { toast('New PINs do not match', 'error'); return; }
+  if (newPin.length < 4) { toast('PIN must be at least 4 digits', 'error'); return; }
+  const oldBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(oldPin));
+  const oldHex = Array.from(new Uint8Array(oldBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  const storedHash = await dbFetchPinHash() || '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+  if (oldHex !== storedHash) { toast('Current PIN is incorrect', 'error'); return; }
+  const newBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPin));
+  const newHex = Array.from(new Uint8Array(newBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  const ok = await dbSetPinHash(newHex);
+  if (ok) {
+    toast('Manager PIN updated successfully', 'success');
+    closeModal('change-pin-modal');
+    dbLogActivity('MANAGER_PIN_CHANGED', 'Manager PIN was changed');
+  } else {
+    toast('Failed to update PIN', 'error');
+  }
+};
+
+window.updateMaintStatus = async function(id, newStatus) {
+  const log = state.maintenance.find(m => m.id === id);
+  if (!log) return;
+  const ok = await dbUpdateMaintenanceStatus(id, newStatus);
+  if (ok) {
+    log.status = newStatus;
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to update status', 'error');
+  }
+};
 
 // ================================================================
 // EXPORTS

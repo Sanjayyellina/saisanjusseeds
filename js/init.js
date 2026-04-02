@@ -125,9 +125,9 @@ async function bootApp() {
   });
 
   // Fetch all data in parallel for faster boot
-  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups;
+  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings;
   try {
-    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups] = await Promise.all([
+    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings] = await Promise.all([
       dbFetchBins(),
       dbFetchIntakes(),
       dbFetchDispatches(),
@@ -136,7 +136,8 @@ async function bootApp() {
       dbFetchBinHistory(),
       dbFetchEntryTrucks(),
       dbFetchBackyardRemovals(),
-      dbFetchLaborGroups()
+      dbFetchLaborGroups(),
+      dbFetchMoistureReadings()
     ]);
   } catch (err) {
     console.error('bootApp: fetch error', err);
@@ -165,7 +166,11 @@ async function bootApp() {
       currentMoisture: parseFloat(b.current_moisture) || 0,
       airflow: b.airflow || 'up',
       intakeDateTS: b.intake_date_ts ? parseInt(b.intake_date_ts) : null,
-      intakeDate: b.intake_date_ts ? new Date(parseInt(b.intake_date_ts)).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+      intakeDate: b.intake_date_ts ? new Date(parseInt(b.intake_date_ts)).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
+      targetMoisture: parseFloat(b.target_moisture) || 10,
+      capacityKg: parseFloat(b.capacity_kg) || 0,
+      notes: b.notes || '',
+      updatedBy: b.updated_by || ''
     }));
   }
 
@@ -194,7 +199,8 @@ async function bootApp() {
         bins: binIds,
         allocations: allocs.map(a => ({ binId: a.bin_id, qty: parseFloat(a.qty) || 0, pkts: parseInt(a.pkts) || 0 })),
         dateTS: new Date(i.created_at).getTime(),
-        date: new Date(i.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        date: new Date(i.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        season_year: i.season_year || new Date(i.created_at).getFullYear()
       };
     });
   }
@@ -218,7 +224,8 @@ async function bootApp() {
       hash: d.hash || '',
       signature: d.signature || '',
       dateTS: new Date(d.created_at).getTime(),
-      date: new Date(d.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      date: new Date(d.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      season_year: d.season_year || new Date(d.created_at).getFullYear()
     }));
     if (state.dispatches.length > 0) {
       const maxReceipt = Math.max(...state.dispatches.map(d => parseInt(d.receiptId.split('-')[2]) || 0));
@@ -229,6 +236,7 @@ async function bootApp() {
   if (maint) state.maintenance = maint;
   if (labor) state.labor = labor;
   if (binHistory) state.binHistory = binHistory;
+  state.moistureReadings = moistureReadings || [];
   state.laborGroups = (laborGroups || []).map(g => ({
     id: g.id,
     name: g.name,

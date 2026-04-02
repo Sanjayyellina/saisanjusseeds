@@ -431,6 +431,48 @@ async function dbLogin(email, password) {
   }
 }
 
+// ── Moisture Readings ─────────────────────────────────────────
+async function dbFetchMoistureReadings() {
+  try {
+    const { data, error } = await dbClient.from('moisture_readings').select('*').order('recorded_at', { ascending: false }).limit(300);
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('dbFetchMoistureReadings:', e); return []; }
+}
+
+async function dbInsertMoistureReading(record) {
+  try {
+    const { error } = await dbClient.from('moisture_readings').insert([record]);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbInsertMoistureReading:', e); return false; }
+}
+
+// ── Maintenance ───────────────────────────────────────────────
+async function dbUpdateMaintenanceStatus(id, status) {
+  try {
+    const { error } = await dbClient.from('maintenance_logs').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbUpdateMaintenanceStatus:', e); return false; }
+}
+
+// ── Manager PIN ───────────────────────────────────────────────
+async function dbFetchPinHash() {
+  try {
+    const { data } = await dbClient.from('plant_settings').select('value').eq('key','manager_pin_hash').single();
+    return data?.value || null;
+  } catch(e) { return null; }
+}
+
+async function dbSetPinHash(hash) {
+  try {
+    const { error } = await dbClient.from('plant_settings')
+      .upsert({ key:'manager_pin_hash', value: hash, updated_at: new Date().toISOString() }, { onConflict:'key' });
+    return !error;
+  } catch(e) { return false; }
+}
+
 // ── Plant Settings (boiler temp etc.) ────────────────────────
 async function dbFetchBoilerTemp() {
   try {
