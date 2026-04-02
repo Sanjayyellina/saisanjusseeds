@@ -46,11 +46,19 @@ function _showBootError() {
     </div>`;
 }
 
-// ── Always sign out on page load so login is required every visit ──
+// ── Check for existing session on page load; skip login if already signed in ──
 async function initApp() {
-  await dbClient.auth.signOut();
   const loginScreen = document.getElementById('login-screen');
   const appShell = document.getElementById('app-shell');
+  try {
+    const { data: { session } } = await dbClient.auth.getSession();
+    if (session) {
+      // Already logged in — go straight to the app
+      if (loginScreen) loginScreen.style.display = 'none';
+      bootApp();
+      return;
+    }
+  } catch(e) { /* fall through to login */ }
   if (loginScreen) loginScreen.style.display = 'flex';
   if (appShell) appShell.style.display = 'none';
 }
