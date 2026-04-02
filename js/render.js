@@ -1274,16 +1274,32 @@ function renderMaintenancePage() {
 }
 
 function renderLaborPage() {
+  // Groups bar
+  const groupsBar = document.getElementById('labor-groups-bar');
+  if (groupsBar) {
+    const groups = window.getLaborGroups ? window.getLaborGroups() : [];
+    if (groups.length) {
+      groupsBar.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <span style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.06em;">Groups:</span>
+        ${groups.map(g => `<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--surface-2);border:1px solid var(--surface-4);border-radius:99px;font-size:12px;cursor:pointer;" onclick="editGroup('${g.id}');openGroupsModal()"><span style="font-weight:700;color:var(--ink);">&#128101; ${esc(g.name)}</span><span style="color:var(--ink-5);">${g.members.length}</span></div>`).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="openGroupsModal()">+ Add Group</button>
+      </div>`;
+    } else {
+      groupsBar.innerHTML = '';
+    }
+  }
+
+  // Table
   document.getElementById('labor-tbody').innerHTML = state.labor.length ? state.labor.map(l => `
     <tr>
       <td class="fs12 text-muted">${new Date(l.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
-      <td class="mono fs12 text-gold">${esc(l.shift)}</td>
-      <td class="fw700">${esc(l.role)}</td>
-      <td><span class="mono fw700 text-gold">${esc(l.headcount)}</span></td>
+      <td class="fw700">${esc(l.role || '—')}</td>
+      <td class="mono fs12 text-gold">${esc(l.shift || '—')}</td>
+      <td><span class="chip chip-blue mono fw700">${esc(l.headcount)}</span></td>
       <td class="fs12 truncate" style="max-width:200px;" title="${esc(l.people_names || '')}">${esc(l.people_names || '—')}</td>
       <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(l.notes || '—')}</td>
     </tr>`).join('')
-    : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👷</div><div class="empty-title">No Labor Logs found</div></div></td></tr>`;
+    : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">&#128119;</div><div class="empty-title">No shift logs yet</div><div class="empty-sub">Set up your groups first, then log shifts</div></div></td></tr>`;
 }
 
 function renderEntryTrucksPage() {

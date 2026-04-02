@@ -1033,10 +1033,11 @@ async function saveMaintenance() {
 async function saveLabor() {
   const date = document.getElementById('labor-date').value;
   const shift = document.getElementById('labor-shift').value.trim();
-  let role = document.getElementById('labor-role').value;
-  if(role === 'Other') {
-    role = document.getElementById('labor-role-other').value.trim();
-  }
+  const groupId = document.getElementById('labor-group').value;
+  const groupObj = groupId ? getLaborGroups().find(g => g.id === groupId) : null;
+  const groupName = groupObj ? groupObj.name : '';
+  const workArea = document.getElementById('labor-role').value;
+  const role = groupName ? `${groupName}${workArea ? ' · ' + workArea : ''}` : workArea;
   const headcount = parseInt(document.getElementById('labor-headcount').value) || 0;
   const people = document.getElementById('labor-people').value.trim();
   const remarks = document.getElementById('labor-remarks').value.trim();
@@ -1066,17 +1067,16 @@ async function saveLabor() {
       state.labor.unshift(saved);
       if(window.Store) window.Store.emitChange();
       closeModal('labor-modal');
-      
+
       // Clear Inputs
       document.getElementById('labor-date').value = '';
       document.getElementById('labor-shift').value = '';
-      document.getElementById('labor-role').value = 'Sheller Area';
-      document.getElementById('labor-role-other').value = '';
-      document.getElementById('labor-role-other-wrap').style.display = 'none';
+      document.getElementById('labor-group').value = '';
+      document.getElementById('labor-role').value = 'Shelling';
       document.getElementById('labor-headcount').value = '';
       document.getElementById('labor-people').value = '';
       document.getElementById('labor-remarks').value = '';
-      
+
       toast('Labor shift logged', 'success');
       dbLogActivity('LABOR_LOGGED', `${headcount} people added for ${shift} shift (${role})`);
     } else {
@@ -1403,5 +1403,119 @@ window.calcDispatchRate = function() {
   if (bags > 0 && rate > 0) {
     const amtEl = document.getElementById('d-amount');
     if (amtEl) { amtEl.value = Math.round(bags * rate); }
+  }
+};
+
+// ================================================================
+// LABOR GROUPS — localStorage management
+// ================================================================
+window.getLaborGroups = function getLaborGroups() {
+  try { return JSON.parse(localStorage.getItem('yellina_labor_groups') || '[]'); }
+  catch(e) { return []; }
+};
+function _saveLaborGroups(groups) {
+  localStorage.setItem('yellina_labor_groups', JSON.stringify(groups));
+}
+
+window.openGroupsModal = function() {
+  renderGroupsList();
+  populateLaborGroupSelect();
+  openModal('labor-groups-modal');
+};
+
+function renderGroupsList() {
+  const groups = getLaborGroups();
+  const el = document.getElementById('groups-list');
+  if (!el) return;
+  if (!groups.length) {
+    el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--ink-5);font-size:13px;">No groups yet — add your first group above.</div>`;
+    return;
+  }
+  el.innerHTML = groups.map(g => `
+    <div style="background:var(--surface);border:1px solid var(--surface-4);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px;">&#128101; ${escapeHtml(g.name)}</div>
+          <div style="font-size:12px;color:var(--ink-4);">${g.members.length} member${g.members.length !== 1 ? 's' : ''}: <span style="color:var(--ink-3);">${g.members.map(escapeHtml).join(', ')}</span></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="editGroup('${g.id}')">&#9999;&#65039; Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteGroup('${g.id}')">&#128465;&#65039;</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+window.saveGroup = function() {
+  const name = document.getElementById('grp-name').value.trim();
+  const rawMembers = document.getElementById('grp-members').value.trim();
+  const editId = document.getElementById('grp-edit-id').value;
+
+  if (!name) { toast('Group name is required', 'error'); return; }
+
+  const members = rawMembers
+    .split(/[\n,]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const groups = getLaborGroups();
+  if (editId) {
+    const idx = groups.findIndex(g => g.id === editId);
+    if (idx >= 0) { groups[idx].name = name; groups[idx].members = members; }
+  } else {
+    groups.push({ id: 'grp_' + Date.now(), name, members });
+  }
+  _saveLaborGroups(groups);
+  resetGroupForm();
+  renderGroupsList();
+  populateLaborGroupSelect();
+  if (window.Store) window.Store.emitChange();
+  toast(editId ? 'Group updated' : 'Group added', 'success');
+};
+
+window.editGroup = function(id) {
+  const g = getLaborGroups().find(x => x.id === id);
+  if (!g) return;
+  document.getElementById('grp-edit-id').value = g.id;
+  document.getElementById('grp-name').value = g.name;
+  document.getElementById('grp-members').value = g.members.join('\n');
+  document.getElementById('grp-form-title').textContent = '\u270F\uFE0F Edit Group';
+  document.getElementById('grp-cancel-btn').style.display = 'inline-flex';
+  document.getElementById('grp-name').focus();
+};
+
+window.deleteGroup = function(id) {
+  const groups = getLaborGroups().filter(g => g.id !== id);
+  _saveLaborGroups(groups);
+  renderGroupsList();
+  populateLaborGroupSelect();
+  if (window.Store) window.Store.emitChange();
+  toast('Group deleted', 'info');
+};
+
+window.resetGroupForm = function() {
+  document.getElementById('grp-edit-id').value = '';
+  document.getElementById('grp-name').value = '';
+  document.getElementById('grp-members').value = '';
+  document.getElementById('grp-form-title').textContent = '\u2795 Add New Group';
+  document.getElementById('grp-cancel-btn').style.display = 'none';
+};
+
+window.populateLaborGroupSelect = function() {
+  const sel = document.getElementById('labor-group');
+  if (!sel) return;
+  const groups = getLaborGroups();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select Group —</option>' +
+    groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.members.length})</option>`).join('');
+  if (cur) sel.value = cur;
+};
+
+window.onLaborGroupChange = function() {
+  const id = document.getElementById('labor-group').value;
+  const g = getLaborGroups().find(x => x.id === id);
+  if (g) {
+    document.getElementById('labor-headcount').value = g.members.length;
+    document.getElementById('labor-people').value = g.members.join(', ');
   }
 };
