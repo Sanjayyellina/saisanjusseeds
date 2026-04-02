@@ -151,13 +151,13 @@ function renderDashboard(){
       if(hours>Config.TARGET_HRS)alerts.push({lv:'red',msg:`${lbl} overdue — ${hours}h (target ${Config.TARGET_HRS}h)`,id:b.id});
       else if((b.currentMoisture||0)>=Config.MOISTURE_HIGH)alerts.push({lv:'amber',msg:`${lbl} very high moisture: ${b.currentMoisture}%`,id:b.id});
     });
-    const BG={red:'rgba(239,68,68,.08)',amber:'rgba(245,158,11,.08)'};
-    const BD={red:'rgba(239,68,68,.25)',amber:'rgba(245,158,11,.25)'};
-    const TC={red:'#dc2626',amber:'#b45309'};
+    const BG={red:'#fef2f2',amber:'#fffbeb'};
+    const BD={red:'#fca5a5',amber:'#fcd34d'};
+    const TC={red:'#dc2626',amber:'#92400e'};
     const IC={red:'🔴',amber:'🟡'};
     alertsEl.innerHTML=alerts.length
       ?`<div style="display:flex;flex-wrap:wrap;gap:8px;">`+alerts.map(a=>`<div style="padding:7px 14px;background:${BG[a.lv]};border:1px solid ${BD[a.lv]};border-radius:var(--radius);font-size:12px;color:${TC[a.lv]};font-weight:600;cursor:pointer;" onclick="openBinModal(${a.id})">${IC[a.lv]} ${a.msg}</div>`).join('')+`</div>`
-      :`<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius);font-size:12px;color:#059669;font-weight:600;">✅ All bins within normal operating parameters</div>`;
+      :`<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);font-size:12px;color:#15803d;font-weight:600;">✅ All bins within normal operating parameters</div>`;
   }
 
   // ── FIFO Dispatch Queue ──────────────────────────────────────
