@@ -4,7 +4,7 @@
    ============================================================ */
 'use strict';
 
-const CACHE_VERSION = 'v73';
+const CACHE_VERSION = 'v74';
 const CACHE_NAME = `yellina-seeds-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [

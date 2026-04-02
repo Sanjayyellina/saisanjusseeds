@@ -1437,8 +1437,8 @@ window.openDailyReport = function() {
   const maintTable = todayMaint.length ? `<table style="width:100%;border-collapse:collapse;">
     <thead>${th(['Equipment','Issue','Work Done','Checked By','Cost (₹)'])}</thead>
     <tbody>${todayMaint.map(m => row([
-      m.equipment||'—', m.issue||'—', m.work_completed||'—', m.checked_by||'—',
-      m.cost ? '₹'+parseInt(m.cost).toLocaleString('en-IN') : '—'
+      m.equipment_name||'—', m.issue_description||'—', m.work_done||'—', m.checked_by||'—',
+      m.cost_amount ? '₹'+parseInt(m.cost_amount).toLocaleString('en-IN') : '—'
     ])).join('')}</tbody>
   </table>` : '<p style="color:#999;font-size:12px;font-style:italic;">No maintenance logged today.</p>';
 
