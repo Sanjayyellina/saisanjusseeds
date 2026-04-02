@@ -578,6 +578,10 @@ function changeLanguage(langCode) {
   if (!translations[langCode]) return;
   currentLang = langCode;
   localStorage.setItem('yellina_lang', langCode);
+
+  // Sync the language selector dropdown to show the current language
+  const langSel = document.getElementById('lang-select');
+  if (langSel && langSel.value !== langCode) langSel.value = langCode;
   
   // Update static elements that have data-i18n
   document.querySelectorAll('[data-i18n]').forEach(el => {

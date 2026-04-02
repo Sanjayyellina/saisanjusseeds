@@ -179,7 +179,7 @@ function renderDashboard(){
           </div>
           <div style="text-align:right;">
             <div style="font-size:13px;font-weight:800;color:${ready?'#059669':getMoistureColor(b.currentMoisture)};">${b.currentMoisture||'—'}%</div>
-            <div style="font-size:10px;color:${ready?'#059669':'var(--ink-5)'};">${ready?'✓ Ready':'Drying'}</div>
+            <div style="font-size:10px;color:${ready?'#059669':'var(--ink-5)'};">${ready?'✓ '+t('bins.status.ready'):t('bins.status.drying')}</div>
           </div>
         </div>`;
       }).join('');
@@ -192,7 +192,7 @@ function renderDashboard(){
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
     const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
-    const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
+    const statusLabel=t('bins.status.'+effectiveStatus)||effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     return`<tr>
       <td class="text-muted fs12">${i.date}</td>
       <td><span class="mono fw700 text-gold">${i.challan}</span></td>
@@ -228,7 +228,7 @@ function renderIntakePage(){
     const binStatus=binIds.length?((state.bins.find(b=>b.id===binIds[0])||{}).status||'drying'):'drying';
     const effectiveStatus=binStatus==='intake'?'drying':binStatus;
     const statusChipClass={drying:'chip-green',shelling:'chip-purple',empty:'chip-grey'}[effectiveStatus]||'chip-green';
-    const statusLabel=effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
+    const statusLabel=t('bins.status.'+effectiveStatus)||effectiveStatus.charAt(0).toUpperCase()+effectiveStatus.slice(1);
     const hlStyle=window._highlightIntakeId===i.id?'background:rgba(245,166,35,.18);transition:background 2s;':'';
     return`<tr style="${hlStyle}" id="irow-${i.id}">
       <td class="mono text-muted fs12">${_idx+1}</td>

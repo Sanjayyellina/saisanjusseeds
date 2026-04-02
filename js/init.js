@@ -248,6 +248,9 @@ async function bootApp() {
 
   if (window.Store) window.Store.emitChange();
 
+  // Re-apply language translations now that content is rendered
+  if (typeof changeLanguage === 'function') changeLanguage(currentLang);
+
   // Show pending badge if there are queued writes from a previous offline session
   if (window.OfflineQueue) {
     OfflineQueue.updateBadge();
