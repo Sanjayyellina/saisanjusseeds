@@ -16,7 +16,7 @@ function renderBinTile(bin, isManager = false){
         <span class="bin-status-badge bst-empty">Empty</span>
       </div>
       <div class="bin-empty-body">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.13)" stroke-width="1.4">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.13)" stroke-width="1.4">
           <rect x="3" y="3" width="18" height="18" rx="3"/>
           <path d="M12 8v8M8 12h8"/>
         </svg>
@@ -41,7 +41,7 @@ function renderBinTile(bin, isManager = false){
   const dashOffset = CIRCUM * 0.25;
   const gaugeColor = m > Config.MOISTURE_HIGH ? '#3B82F6' : m > Config.MOISTURE_MID ? '#F59E0B' : '#16A34A';
 
-  const gaugeSvg = `<svg width="88" height="88" viewBox="0 0 72 72">
+  const gaugeSvg = `<svg width="70" height="70" viewBox="0 0 72 72">
     <circle cx="36" cy="36" r="${RADIUS}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="5.5"/>
     <circle cx="36" cy="36" r="${RADIUS}" fill="none" stroke="${gaugeColor}" stroke-width="6"
       stroke-dasharray="${dashFill.toFixed(1)} ${CIRCUM.toFixed(1)}"
