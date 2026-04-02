@@ -247,6 +247,10 @@ async function bootApp() {
     ocrText: u.ocr_text || '',
     photoUrl: u.photo_url || null,
     submittedBy: u.submitted_by || '',
+    moistureValue: u.moisture_value != null ? parseFloat(u.moisture_value) : null,
+    temperatureValue: u.temperature_value != null ? parseFloat(u.temperature_value) : null,
+    hybrid: u.hybrid || '',
+    qtyBags: u.qty_bags != null ? parseFloat(u.qty_bags) : null,
     createdAt: u.created_at,
     createdAtDisplay: new Date(u.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
   }));

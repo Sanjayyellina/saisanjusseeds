@@ -1836,9 +1836,36 @@ window.populateLaborGroupSelect = function() {
 };
 
 // ── Field Updates ─────────────────────────────────────────────
+
+// Show/hide fields depending on selected update type
+window.onUpdTypeChange = function() {
+  const type = document.getElementById('upd-type')?.value || 'general';
+  const binGroup      = document.getElementById('upd-bin-group');
+  const moistureGroup = document.getElementById('upd-moisture-group');
+  const tempGroup     = document.getElementById('upd-temp-group');
+  const intakeGroup   = document.getElementById('upd-intake-group');
+
+  // defaults
+  if (binGroup)      binGroup.style.display      = 'none';
+  if (moistureGroup) moistureGroup.style.display  = 'none';
+  if (tempGroup)     tempGroup.style.display      = 'none';
+  if (intakeGroup)   intakeGroup.style.display    = 'none';
+
+  if (type === 'moisture_photo') {
+    if (binGroup)      binGroup.style.display      = 'block';
+    if (moistureGroup) moistureGroup.style.display  = 'block';
+  } else if (type === 'boiler_temp') {
+    if (tempGroup) tempGroup.style.display = 'block';
+  } else if (type === 'intake_photo') {
+    if (binGroup)    binGroup.style.display    = 'block';
+    if (intakeGroup) intakeGroup.style.display = 'flex';
+  } else if (type === 'bin_note') {
+    if (binGroup) binGroup.style.display = 'block';
+  }
+};
+
 window.openUpdateModal = function() {
-  // Reset form fields
-  ['upd-type','upd-bin','upd-notes','upd-ocr-text'].forEach(id => {
+  ['upd-type','upd-bin','upd-notes','upd-ocr-text','upd-moisture','upd-temp','upd-hybrid','upd-qty'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1850,76 +1877,112 @@ window.openUpdateModal = function() {
   if (photoEl) photoEl.value = '';
   const typeEl = document.getElementById('upd-type');
   if (typeEl) typeEl.value = 'general';
+  ['upd-moisture-detected','upd-temp-detected'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+  onUpdTypeChange();
   openModal('update-modal');
 };
+
 window.saveFieldUpdate = async function() {
-  const typeEl   = document.getElementById('upd-type');
-  const binEl    = document.getElementById('upd-bin');
-  const notesEl  = document.getElementById('upd-notes');
-  const photoEl  = document.getElementById('upd-photo');
-  const ocrEl    = document.getElementById('upd-ocr-text');
-  const btn      = document.getElementById('upd-save-btn');
+  const type       = document.getElementById('upd-type')?.value || 'general';
+  const binId      = (() => { const v = document.getElementById('upd-bin')?.value; return v ? parseInt(v) : null; })();
+  const notes      = document.getElementById('upd-notes')?.value?.trim() || '';
+  const ocrText    = document.getElementById('upd-ocr-text')?.value?.trim() || '';
+  const moistureVal= parseFloat(document.getElementById('upd-moisture')?.value) || null;
+  const tempVal    = parseFloat(document.getElementById('upd-temp')?.value) || null;
+  const hybrid     = document.getElementById('upd-hybrid')?.value?.trim() || null;
+  const qty        = parseFloat(document.getElementById('upd-qty')?.value) || null;
+  const file       = document.getElementById('upd-photo')?.files?.[0] || null;
+  const btn        = document.getElementById('upd-save-btn');
 
-  const updateType = typeEl?.value || 'general';
-  const notes      = notesEl?.value?.trim() || '';
-  const ocrText    = ocrEl?.value?.trim() || '';
-  const binId      = binEl?.value ? parseInt(binEl.value) : null;
-  const file       = photoEl?.files?.[0] || null;
-
-  if (!notes && !file) { toast('Add a note or photo before saving.', 'warn'); return; }
+  // Validation
+  if (type === 'moisture_photo' && !moistureVal) { toast('Enter the moisture % reading.', 'warn'); return; }
+  if (type === 'boiler_temp'    && !tempVal)     { toast('Enter the temperature reading.', 'warn'); return; }
+  if (!notes && !file && !moistureVal && !tempVal) { toast('Add a photo, reading, or note before saving.', 'warn'); return; }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
+    // 1. Upload photo
     let photoUrl = null;
     if (file) {
       toast('Uploading photo…', 'info');
       photoUrl = await dbUploadFieldUpdateImage(file);
-      if (!photoUrl) { toast('Photo upload failed — saving without image.', 'warn'); }
     }
 
+    // 2. Get submitter
     let submittedBy = '';
     try { const { data: { user } } = await dbClient.auth.getUser(); submittedBy = user?.email || ''; } catch(e) {}
 
+    // 3. Insert field_update record
     const record = {
-      update_type: updateType,
-      notes: notes || null,
-      ocr_text: ocrText || null,
-      photo_url: photoUrl,
-      bin_id: binId,
-      submitted_by: submittedBy
+      update_type:       type,
+      notes:             notes || null,
+      ocr_text:          ocrText || null,
+      photo_url:         photoUrl,
+      bin_id:            binId,
+      submitted_by:      submittedBy,
+      moisture_value:    moistureVal,
+      temperature_value: tempVal,
+      hybrid:            hybrid,
+      qty_bags:          qty
     };
-
     const saved = await dbInsertFieldUpdate(record);
     if (!saved) throw new Error('Insert failed');
 
-    // Add to local state
+    // 4. Cross-table side-effects
+    if (type === 'moisture_photo' && binId && moistureVal) {
+      // Update bin moisture live
+      const { error: binErr } = await dbClient.from('bins')
+        .update({ current_moisture: moistureVal, updated_by: submittedBy, updated_at: new Date().toISOString() })
+        .eq('id', binId);
+      if (!binErr) {
+        const b = state.bins?.find(b => b.id === binId);
+        if (b) { b.currentMoisture = moistureVal; b.updatedBy = submittedBy; }
+      }
+      // Log moisture reading
+      await dbInsertMoistureReading({ bin_id: binId, moisture: moistureVal, recorded_by: submittedBy });
+      state.moistureReadings = state.moistureReadings || [];
+      state.moistureReadings.unshift({ bin_id: binId, moisture: moistureVal, recorded_at: new Date().toISOString() });
+      toast(`Bin moisture updated to ${moistureVal}%`, 'success');
+    }
+
+    if (type === 'boiler_temp' && tempVal) {
+      await dbSetBoilerTemp(tempVal);
+      state.boilerTemp = String(tempVal);
+      const el = document.getElementById('boiler-temp-display');
+      if (el) el.textContent = tempVal;
+      toast(`Boiler temp updated to ${tempVal}°C`, 'success');
+    }
+
+    // 5. Update local state
     state.fieldUpdates = state.fieldUpdates || [];
     state.fieldUpdates.unshift({
-      id: saved.id,
-      updateType: saved.update_type,
-      binId: saved.bin_id || null,
-      intakeId: saved.intake_id || null,
-      notes: saved.notes || '',
-      ocrText: saved.ocr_text || '',
-      photoUrl: saved.photo_url || null,
-      submittedBy: saved.submitted_by || '',
+      id: saved.id, updateType: saved.update_type, binId: saved.bin_id || null,
+      notes: saved.notes || '', ocrText: saved.ocr_text || '', photoUrl: saved.photo_url || null,
+      submittedBy: saved.submitted_by || '', moistureValue: saved.moisture_value || null,
+      temperatureValue: saved.temperature_value || null, hybrid: saved.hybrid || '',
+      qtyBags: saved.qty_bags || null,
       createdAt: saved.created_at,
       createdAtDisplay: new Date(saved.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
     });
 
     closeModal('update-modal');
-    toast('Update saved!', 'success');
+    if (type !== 'moisture_photo' && type !== 'boiler_temp') toast('Update saved!', 'success');
     if (typeof renderUpdatesPage === 'function') renderUpdatesPage();
-    _directLogActivity('field_update_added', `New ${updateType} update by ${submittedBy}`, 'field_update', saved.id);
+    if (typeof renderDashboard   === 'function' && (type === 'moisture_photo' || type === 'boiler_temp')) renderDashboard();
+    if (typeof renderBinsPage    === 'function' && type === 'moisture_photo') renderBinsPage();
+    _directLogActivity('field_update_added', `${type} by ${submittedBy}${moistureVal ? ' — ' + moistureVal + '%' : ''}${tempVal ? ' — ' + tempVal + '°C' : ''}`, 'field_update', saved.id);
   } catch(e) {
     console.error('saveFieldUpdate:', e);
     toast('Failed to save update.', 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Save Update'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Save & Update'; }
   }
 };
 
-// Tesseract OCR — run when a photo is selected
+// Tesseract OCR — run when a photo is selected, then smart-parse values
 window.runOcrOnPhoto = async function(input) {
   const file = input?.files?.[0];
   if (!file) return;
@@ -1928,18 +1991,8 @@ window.runOcrOnPhoto = async function(input) {
   const preview  = document.getElementById('upd-photo-preview');
   const statusEl = document.getElementById('upd-ocr-status');
 
-  // Show image preview
-  if (preview) {
-    const url = URL.createObjectURL(file);
-    preview.src = url;
-    preview.style.display = 'block';
-  }
-
-  // Check Tesseract is available
-  if (typeof Tesseract === 'undefined') {
-    if (ocrWrap) ocrWrap.style.display = 'none';
-    return;
-  }
+  if (preview) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+  if (typeof Tesseract === 'undefined') { if (ocrWrap) ocrWrap.style.display = 'none'; return; }
 
   if (ocrWrap) ocrWrap.style.display = 'block';
   if (statusEl) statusEl.textContent = 'Reading text from photo…';
@@ -1948,17 +2001,43 @@ window.runOcrOnPhoto = async function(input) {
   try {
     const result = await Tesseract.recognize(file, 'eng', {
       logger: m => {
-        if (statusEl && m.status === 'recognizing text') {
+        if (statusEl && m.status === 'recognizing text')
           statusEl.textContent = `Reading… ${Math.round((m.progress||0)*100)}%`;
-        }
       }
     });
     const text = result?.data?.text?.trim() || '';
     if (ocrEl) ocrEl.value = text;
-    if (statusEl) statusEl.textContent = text ? 'Text extracted — edit if needed' : 'No text found in image';
+    if (statusEl) statusEl.textContent = text ? '✓ Text extracted' : 'No text found';
+
+    // ── Smart parse: moisture % ────────────────────────────────
+    const moistureMatch = text.match(/(\d{1,2}[.,]\d)\s*%/);
+    if (moistureMatch) {
+      const val = parseFloat(moistureMatch[1].replace(',', '.'));
+      const mEl = document.getElementById('upd-moisture');
+      const mDet = document.getElementById('upd-moisture-detected');
+      if (mEl) mEl.value = val;
+      if (mDet) mDet.textContent = `✓ Auto-detected: ${val}%`;
+      // Also switch type to moisture_photo if not set
+      const typeEl = document.getElementById('upd-type');
+      if (typeEl && typeEl.value === 'general') { typeEl.value = 'moisture_photo'; onUpdTypeChange(); if (mEl) mEl.value = val; }
+    }
+
+    // ── Smart parse: temperature ───────────────────────────────
+    const tempMatch = text.match(/TEMP[:\s]*(\d{2,3}[.,]\d)/i) || text.match(/(\d{2,3}[.,]\d)\s*°?C/i);
+    if (tempMatch) {
+      const val = parseFloat(tempMatch[1].replace(',', '.'));
+      if (val > 20 && val < 200) { // sanity check — actual temp range
+        const tEl = document.getElementById('upd-temp');
+        const tDet = document.getElementById('upd-temp-detected');
+        if (tEl) tEl.value = val;
+        if (tDet) tDet.textContent = `✓ Auto-detected: ${val}°C`;
+        const typeEl = document.getElementById('upd-type');
+        if (typeEl && typeEl.value === 'general') { typeEl.value = 'boiler_temp'; onUpdTypeChange(); if (tEl) tEl.value = val; }
+      }
+    }
   } catch(e) {
     console.error('OCR error:', e);
-    if (statusEl) statusEl.textContent = 'Could not read text from image';
+    if (statusEl) statusEl.textContent = 'Could not read text — enter values manually';
   }
 };
 

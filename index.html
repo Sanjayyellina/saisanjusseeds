@@ -1507,55 +1507,91 @@
 
 <!-- ==================== NEW UPDATE MODAL ==================== -->
 <div class="overlay" id="update-modal">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:540px;">
     <div class="modal-header">
       <div class="modal-title">New Field Update</div>
       <button class="modal-close" onclick="closeModal('update-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-row cols2">
+
+      <!-- Type selector -->
+      <div class="form-group">
+        <label class="form-label">Update Type</label>
+        <select class="form-input" id="upd-type" onchange="onUpdTypeChange()">
+          <option value="moisture_photo">💧 Moisture Reading</option>
+          <option value="boiler_temp">🌡️ Boiler / Dryer Temp</option>
+          <option value="intake_photo">🌽 Intake Photo</option>
+          <option value="bin_note">🏠 Bin Note</option>
+          <option value="backyard">🏗️ Backyard / Outside Stock</option>
+          <option value="general" selected>📝 General</option>
+        </select>
+      </div>
+
+      <!-- Bin selector — shown for moisture/intake/bin_note -->
+      <div class="form-group" id="upd-bin-group">
+        <label class="form-label">Bin</label>
+        <select class="form-input" id="upd-bin">
+          <option value="">— Select bin —</option>
+        </select>
+      </div>
+
+      <!-- Moisture value — shown for moisture_photo -->
+      <div class="form-group" id="upd-moisture-group" style="display:none;">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+          Moisture % <span id="upd-moisture-detected" style="font-size:11px;color:var(--green);font-weight:600;"></span>
+        </label>
+        <input type="number" class="form-input" id="upd-moisture" step="0.1" min="0" max="99" placeholder="e.g. 38.0" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;">
+      </div>
+
+      <!-- Boiler temp — shown for boiler_temp -->
+      <div class="form-group" id="upd-temp-group" style="display:none;">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+          Temperature °C <span id="upd-temp-detected" style="font-size:11px;color:var(--green);font-weight:600;"></span>
+        </label>
+        <input type="number" class="form-input" id="upd-temp" step="0.1" min="0" max="200" placeholder="e.g. 55.0" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;">
+      </div>
+
+      <!-- Hybrid + Qty — shown for intake_photo -->
+      <div class="form-row cols2" id="upd-intake-group" style="display:none;">
         <div class="form-group">
-          <label class="form-label">Update Type</label>
-          <select class="form-input" id="upd-type">
-            <option value="moisture_photo">💧 Moisture Reading</option>
-            <option value="intake_photo">🌽 Intake Photo</option>
-            <option value="bin_note">🏠 Bin Note</option>
-            <option value="general" selected>📝 General</option>
-          </select>
+          <label class="form-label">Hybrid</label>
+          <input type="text" class="form-input" id="upd-hybrid" placeholder="e.g. Crystal-662">
         </div>
         <div class="form-group">
-          <label class="form-label">Bin (optional)</label>
-          <select class="form-input" id="upd-bin">
-            <option value="">— None —</option>
-          </select>
+          <label class="form-label">Qty (bags/Qt)</label>
+          <input type="number" class="form-input" id="upd-qty" step="0.1" min="0" placeholder="e.g. 40">
         </div>
       </div>
 
+      <!-- Photo upload -->
       <div class="form-group">
-        <label class="form-label">Notes</label>
-        <textarea class="form-input" id="upd-notes" rows="2" style="resize:vertical;" placeholder="What did you observe?"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Photo (optional)</label>
+        <label class="form-label">Photo</label>
         <input type="file" id="upd-photo" accept="image/*" capture="environment"
           onchange="runOcrOnPhoto(this)"
           style="display:block;width:100%;font-size:13px;padding:8px;border:1.5px dashed var(--border);border-radius:var(--radius);background:var(--surface-2);cursor:pointer;">
-        <img id="upd-photo-preview" src="" alt="Preview" style="display:none;margin-top:8px;max-height:160px;width:100%;object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);">
+        <img id="upd-photo-preview" src="" alt="Preview" style="display:none;margin-top:8px;max-height:150px;width:100%;object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);">
       </div>
 
+      <!-- OCR extracted text -->
       <div id="upd-ocr-wrap" style="display:none;">
         <div class="form-label" style="display:flex;align-items:center;gap:6px;">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/></svg>
-          Extracted Text
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/></svg>
+          Raw OCR Text
           <span id="upd-ocr-status" style="font-size:11px;color:var(--ink-4);font-weight:400;margin-left:4px;"></span>
         </div>
-        <textarea class="form-input" id="upd-ocr-text" rows="3" style="font-family:'DM Mono',monospace;font-size:12px;resize:vertical;" placeholder="OCR text will appear here — edit if needed"></textarea>
+        <textarea class="form-input" id="upd-ocr-text" rows="2" style="font-family:'DM Mono',monospace;font-size:11px;resize:vertical;color:var(--ink-4);" placeholder="Scanned text appears here"></textarea>
       </div>
+
+      <!-- Notes -->
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <textarea class="form-input" id="upd-notes" rows="2" style="resize:vertical;" placeholder="Any additional observations…"></textarea>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('update-modal')">Cancel</button>
-      <button class="btn btn-gold" id="upd-save-btn" onclick="saveFieldUpdate()">Save Update</button>
+      <button class="btn btn-gold" id="upd-save-btn" onclick="saveFieldUpdate()">Save &amp; Update</button>
     </div>
   </div>
 </div>
@@ -1590,10 +1626,10 @@
 <script src="js/i18n.js?v=7"></script>
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=19"></script>
-<script src="js/render.js?v=28"></script>
-<script src="js/actions.js?v=30"></script>
+<script src="js/render.js?v=29"></script>
+<script src="js/actions.js?v=31"></script>
 <script src="js/receipt.js?v=7"></script>
 <script src="js/clock.js?v=2"></script>
-<script src="js/init.js?v=17"></script>
+<script src="js/init.js?v=18"></script>
 </body>
 </html>

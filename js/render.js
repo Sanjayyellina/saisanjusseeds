@@ -1543,19 +1543,20 @@ function renderBackyardPage() {
 function renderUpdatesPage() {
   const updates = state.fieldUpdates || [];
   const typeConfig = {
-    moisture_photo: { label: 'Moisture Reading', color: 'chip-blue', icon: '💧' },
-    intake_photo:   { label: 'Intake Photo',     color: 'chip-green', icon: '🌽' },
+    moisture_photo: { label: 'Moisture Reading', color: 'chip-blue',   icon: '💧' },
+    boiler_temp:    { label: 'Boiler Temp',      color: 'chip-amber',  icon: '🌡️' },
+    intake_photo:   { label: 'Intake Photo',     color: 'chip-green',  icon: '🌽' },
     bin_note:       { label: 'Bin Note',         color: 'chip-purple', icon: '🏠' },
-    general:        { label: 'General',          color: 'chip-gray', icon: '📝' }
+    backyard:       { label: 'Backyard',         color: 'chip-gray',   icon: '🏗️' },
+    general:        { label: 'General',          color: 'chip-gray',   icon: '📝' }
   };
 
-  // Filter state
   const activeFilter = window._updatesFilter || 'all';
   const filtered = activeFilter === 'all' ? updates : updates.filter(u => u.updateType === activeFilter);
 
-  const filterBtns = ['all','moisture_photo','intake_photo','bin_note','general'].map(f => {
-    const cfg = typeConfig[f] || { label:'All', icon:'📋' };
-    const label = f === 'all' ? 'All Updates' : cfg.label;
+  const filterBtns = ['all','moisture_photo','boiler_temp','intake_photo','bin_note','backyard','general'].map(f => {
+    const cfg = typeConfig[f] || {};
+    const label = f === 'all' ? 'All' : cfg.label;
     const active = activeFilter === f;
     return `<button onclick="window._updatesFilter='${f}';renderUpdatesPage();" class="btn btn-ghost btn-sm" style="${active?'background:var(--gold);color:#fff;border-color:var(--gold);':''}">${label}</button>`;
   }).join('');
@@ -1568,18 +1569,35 @@ function renderUpdatesPage() {
       </div>`
     : filtered.map(u => {
         const cfg = typeConfig[u.updateType] || typeConfig.general;
-        const binLabel = u.binId ? `BIN-${(state.bins||[]).find(b=>b.id===u.binId)?.binLabel || u.binId}` : '';
+        const bin = (state.bins||[]).find(b => b.id === u.binId);
+        const binLabel = bin ? `BIN-${bin.binLabel||bin.id}` : '';
+
+        // Big value badge for moisture / temp
+        let valueBadge = '';
+        if (u.updateType === 'moisture_photo' && u.moistureValue != null) {
+          const color = u.moistureValue <= 12 ? 'var(--green)' : u.moistureValue <= 18 ? 'var(--amber)' : 'var(--red)';
+          valueBadge = `<div style="font-size:28px;font-weight:800;font-family:'DM Mono',monospace;color:${color};line-height:1;margin:4px 0 2px;">${u.moistureValue}%</div><div style="font-size:10px;color:var(--ink-4);">moisture</div>`;
+        } else if (u.updateType === 'boiler_temp' && u.temperatureValue != null) {
+          valueBadge = `<div style="font-size:28px;font-weight:800;font-family:'DM Mono',monospace;color:var(--amber);line-height:1;margin:4px 0 2px;">${u.temperatureValue}°C</div><div style="font-size:10px;color:var(--ink-4);">boiler temp</div>`;
+        }
+
+        // Sub-details line
+        const detailParts = [];
+        if (binLabel) detailParts.push(`<span class="chip chip-gray" style="font-size:10px;">${binLabel}</span>`);
+        if (u.hybrid) detailParts.push(`<span class="chip chip-green" style="font-size:10px;">${esc(u.hybrid)}</span>`);
+        if (u.qtyBags) detailParts.push(`<span style="font-size:11px;color:var(--ink-3);">Qt.${u.qtyBags}</span>`);
+
         return `<div class="card" style="padding:0;overflow:hidden;display:flex;gap:0;align-items:stretch;margin-bottom:10px;">
-          ${u.photoUrl ? `<div style="flex:0 0 100px;background:#f4f4f4;"><img src="${esc(u.photoUrl)}" style="width:100px;height:100%;object-fit:cover;display:block;" loading="lazy" onclick="window.open('${esc(u.photoUrl)}','_blank')" title="View full image"></div>` : ''}
-          <div style="flex:1;padding:14px 16px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          ${u.photoUrl ? `<div style="flex:0 0 110px;background:var(--surface-2);cursor:pointer;" onclick="window.open('${esc(u.photoUrl)}','_blank')"><img src="${esc(u.photoUrl)}" style="width:110px;height:100%;min-height:80px;object-fit:cover;display:block;" loading="lazy"></div>` : ''}
+          <div style="flex:1;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="chip ${cfg.color}">${cfg.icon} ${cfg.label}</span>
-              ${binLabel ? `<span class="chip chip-gray" style="font-size:10px;">${binLabel}</span>` : ''}
+              ${detailParts.join('')}
               <span style="margin-left:auto;font-size:11px;color:var(--ink-4);">${esc(u.createdAtDisplay)}</span>
             </div>
-            ${u.ocrText ? `<div style="font-size:12px;background:var(--surface-2);border-radius:6px;padding:6px 10px;margin-bottom:6px;font-family:'DM Mono',monospace;color:var(--ink-3);white-space:pre-wrap;max-height:60px;overflow:hidden;">${esc(u.ocrText)}</div>` : ''}
-            ${u.notes ? `<div style="font-size:13px;color:var(--ink-2);">${esc(u.notes)}</div>` : ''}
-            <div style="font-size:11px;color:var(--ink-5);margin-top:6px;">By ${esc(u.submittedBy || 'Unknown')}</div>
+            ${valueBadge ? `<div style="margin:8px 0 4px;">${valueBadge}</div>` : ''}
+            ${u.notes ? `<div style="font-size:13px;color:var(--ink-2);margin-top:6px;">${esc(u.notes)}</div>` : ''}
+            <div style="font-size:11px;color:var(--ink-5);margin-top:6px;">By ${esc(u.submittedBy || 'Field Staff')}</div>
           </div>
         </div>`;
       }).join('');
@@ -1588,10 +1606,8 @@ function renderUpdatesPage() {
   const filterContainer = document.getElementById('updates-filters');
   if (filterContainer) filterContainer.innerHTML = filterBtns;
   if (container) container.innerHTML = feedHtml;
-
-  // Update count badge
   const badge = document.getElementById('updates-count');
-  if (badge) badge.textContent = filtered.length;
+  if (badge) badge.textContent = filtered.length ? `(${filtered.length})` : '';
 }
 
 // Predictable state management subscription
