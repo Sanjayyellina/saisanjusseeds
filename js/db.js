@@ -291,6 +291,17 @@ async function _directInsertLabor(record) {
   }
 }
 
+async function dbUpdateLabor(id, updates) {
+  try {
+    const { data, error } = await dbClient.from('labor_logs').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('dbUpdateLabor:', err);
+    return null;
+  }
+}
+
 async function _directInsertBinHistory(record) {
   try {
     const { error } = await dbClient.from('bin_history').insert([record]);

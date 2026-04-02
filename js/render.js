@@ -1420,18 +1420,22 @@ function renderLaborPage() {
       : (l.wage_per_day > 0
         ? `<span class="fw700 text-gold">₹${(l.headcount * l.wage_per_day).toLocaleString('en-IN')}</span>`
         : '<span class="text-muted">—</span>');
+    const imgs = Array.isArray(l.image_urls) && l.image_urls.length
+      ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${l.image_urls.map((u,i) => `<img src="${esc(u)}" onclick="openLaborImageViewer(${l.id},${i})" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid var(--surface-4);cursor:pointer;" title="View photo">`).join('')}</div>`
+      : '';
     return `
     <tr>
       <td class="fs12 text-muted">${new Date(l.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
       <td class="fw700">${esc(l.role || '—')}</td>
       <td class="mono fs12 text-gold">${esc(l.shift || '—')}</td>
       <td><span class="chip chip-blue mono fw700">${esc(l.headcount)}</span></td>
-      <td class="fs12 truncate" style="max-width:200px;" title="${esc(l.people_names || '')}">${esc(l.people_names || '—')}</td>
+      <td class="fs12 truncate" style="max-width:200px;" title="${esc(l.people_names || '')}">${esc(l.people_names || '—')}${imgs}</td>
       <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(l.notes || '—')}</td>
       <td>${wages}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEditLaborModal(${l.id})">✏️ Edit</button></td>
     </tr>`;
   }).join('')
-    : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">&#128119;</div><div class="empty-title">No shift logs yet</div><div class="empty-sub">Set up your groups first, then log shifts</div></div></td></tr>`;
+    : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128119;</div><div class="empty-title">No shift logs yet</div><div class="empty-sub">Set up your groups first, then log shifts</div></div></td></tr>`;
 }
 
 function renderEntryTrucksPage() {

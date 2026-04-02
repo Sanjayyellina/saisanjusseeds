@@ -1227,7 +1227,141 @@ async function saveMaintenance() {
   }
 }
 
+// ── Labor image upload helpers ────────────────────────────────
+window.previewLaborImages = function(files) {
+  const wrap = document.getElementById('labor-img-preview');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  Array.from(files).forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:relative;display:inline-block;';
+      div.innerHTML = `<img src="${e.target.result}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--surface-4);">
+        <button onclick="removeLaborPreview(${i})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:18px;text-align:center;padding:0;">✕</button>`;
+      div.dataset.idx = i;
+      wrap.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+window.removeLaborPreview = function(idx) {
+  const input = document.getElementById('labor-images');
+  const dt = new DataTransfer();
+  Array.from(input.files).forEach((f, i) => { if (i !== idx) dt.items.add(f); });
+  input.files = dt.files;
+  previewLaborImages(input.files);
+};
+
+window.handleLaborImageDrop = function(e) {
+  const input = document.getElementById('labor-images');
+  const dt = new DataTransfer();
+  Array.from(input.files).forEach(f => dt.items.add(f));
+  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  previewLaborImages(input.files);
+};
+
+async function _uploadLaborImages(files) {
+  if (!files.length) return [];
+  const urls = [];
+  for (const file of files) {
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `labor/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await dbClient.storage.from('maint-images').upload(path, file, { upsert: false, contentType: file.type });
+    if (!error) {
+      const { data } = dbClient.storage.from('maint-images').getPublicUrl(path);
+      if (data?.publicUrl) urls.push(data.publicUrl);
+    } else {
+      console.warn('Labor image upload failed:', error.message);
+    }
+  }
+  return urls;
+}
+
+// Lightbox viewer for labor images
+window.openLaborImageViewer = function(laborId, startIdx) {
+  const log = (state.labor || []).find(l => l.id === laborId);
+  const urls = (log && Array.isArray(log.image_urls)) ? log.image_urls : [];
+  if (!urls.length) return;
+  let cur = startIdx || 0;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;';
+  const render = () => {
+    overlay.innerHTML = `
+      <div style="position:relative;max-width:90vw;max-height:80vh;">
+        <img src="${urls[cur]}" style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.6);">
+        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="position:absolute;top:-12px;right:-12px;width:28px;height:28px;border-radius:50%;background:#fff;border:none;cursor:pointer;font-size:14px;font-weight:700;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        ${cur > 0 ? `<button onclick="window._laborViewerNav(-1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:22px;padding:8px 16px;border-radius:8px;cursor:pointer;">‹</button>` : '<span style="width:52px;"></span>'}
+        <span style="color:rgba(255,255,255,.7);font-size:13px;">${cur+1} / ${urls.length}</span>
+        ${cur < urls.length-1 ? `<button onclick="window._laborViewerNav(1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:22px;padding:8px 16px;border-radius:8px;cursor:pointer;">›</button>` : '<span style="width:52px;"></span>'}
+      </div>`;
+  };
+  window._laborViewerNav = d => { cur = Math.max(0, Math.min(urls.length-1, cur+d)); render(); };
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  render();
+  document.body.appendChild(overlay);
+};
+
+window.openEditLaborModal = function(laborId) {
+  const log = (state.labor || []).find(l => l.id === laborId);
+  if (!log) { toast('Log not found', 'error'); return; }
+
+  populateLaborGroupSelect();
+
+  document.getElementById('labor-edit-id').value = laborId;
+  document.getElementById('labor-modal-title').textContent = 'Edit Shift Log';
+  document.getElementById('labor-save-btn').textContent = 'Save Changes';
+
+  document.getElementById('labor-date').value = log.date ? log.date.slice(0, 10) : '';
+  document.getElementById('labor-shift').value = log.shift || '';
+  document.getElementById('labor-headcount').value = log.headcount || '';
+  document.getElementById('labor-people').value = log.people_names || '';
+  document.getElementById('labor-remarks').value = log.notes || '';
+  if (document.getElementById('labor-wage')) document.getElementById('labor-wage').value = log.wage_per_day || '';
+
+  // Restore group select — match by labor_group_id
+  const grpSel = document.getElementById('labor-group');
+  if (grpSel && log.labor_group_id) grpSel.value = log.labor_group_id;
+
+  // Restore work area from role string (after the " · " separator)
+  const workAreaSel = document.getElementById('labor-role');
+  if (workAreaSel) {
+    const parts = (log.role || '').split(' · ');
+    const area = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    const opt = [...workAreaSel.options].find(o => o.value === area);
+    if (opt) workAreaSel.value = area;
+  }
+
+  // Show existing images
+  const preview = document.getElementById('labor-img-preview');
+  if (preview) {
+    preview.innerHTML = '';
+    if (Array.isArray(log.image_urls) && log.image_urls.length) {
+      log.image_urls.forEach((url, i) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'position:relative;display:inline-block;';
+        div.innerHTML = `<img src="${esc(url)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--surface-4);" title="Existing photo">
+          <span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;">saved</span>`;
+        preview.appendChild(div);
+      });
+    }
+  }
+
+  // Clear new file picker
+  const fileInput = document.getElementById('labor-images');
+  if (fileInput) fileInput.value = '';
+
+  openModal('labor-modal');
+};
+
 async function saveLabor() {
+  const editId = document.getElementById('labor-edit-id')?.value;
+  const isEdit = !!editId;
+
   const date = document.getElementById('labor-date').value;
   const shift = document.getElementById('labor-shift').value.trim();
   const groupId = document.getElementById('labor-group').value;
@@ -1245,44 +1379,78 @@ async function saveLabor() {
     return;
   }
 
-  const log = {
-    date: date,
-    shift: shift,
-    role: role,
-    headcount: headcount,
-    people_names: people,
-    notes: remarks,
-    wage_per_day: wagePerDay,
-    labor_group_id: groupId ? parseInt(groupId) : null
-  };
-
-  const btn = document.querySelector('#labor-modal .btn-solid');
+  const btn = document.getElementById('labor-save-btn') || document.querySelector('#labor-modal .btn-solid');
   const ogText = btn.innerHTML;
   btn.innerHTML = 'Saving...';
   btn.disabled = true;
 
   try {
-    const saved = await dbInsertLabor(log);
-    if (saved) {
-      state.labor.unshift(saved);
-      if(window.Store) window.Store.emitChange();
-      closeModal('labor-modal');
-
-      // Clear Inputs
-      document.getElementById('labor-date').value = '';
-      document.getElementById('labor-shift').value = '';
-      document.getElementById('labor-group').value = '';
-      document.getElementById('labor-role').value = 'Shelling';
-      document.getElementById('labor-headcount').value = '';
-      document.getElementById('labor-people').value = '';
-      document.getElementById('labor-remarks').value = '';
-      if (document.getElementById('labor-wage')) document.getElementById('labor-wage').value = '';
-
-      toast('Labor shift logged', 'success');
-      dbLogActivity('LABOR_LOGGED', `${headcount} people added for ${shift} shift (${role})`, 'labor');
-    } else {
-      toast('Failed to save log', 'error');
+    // Upload any new images
+    const imgFiles = Array.from(document.getElementById('labor-images')?.files || []);
+    let newImageUrls = [];
+    if (imgFiles.length) {
+      toast('Uploading photos…', 'info');
+      newImageUrls = await _uploadLaborImages(imgFiles);
     }
+
+    const log = {
+      date,
+      shift,
+      role,
+      headcount,
+      people_names: people,
+      notes: remarks,
+      wage_per_day: wagePerDay,
+      labor_group_id: groupId ? parseInt(groupId) : null
+    };
+
+    if (isEdit) {
+      // Merge new images with existing ones
+      const existing = (state.labor || []).find(l => l.id == editId);
+      const existingUrls = (existing && Array.isArray(existing.image_urls)) ? existing.image_urls : [];
+      log.image_urls = [...existingUrls, ...newImageUrls];
+
+      const updated = await dbUpdateLabor(parseInt(editId), log);
+      if (updated) {
+        const idx = state.labor.findIndex(l => l.id == editId);
+        if (idx >= 0) state.labor[idx] = updated;
+        if (window.Store) window.Store.emitChange();
+        closeModal('labor-modal');
+        toast('Shift log updated', 'success');
+        dbLogActivity('LABOR_UPDATED', `Shift log ${editId} updated (${role})`, 'labor');
+      } else {
+        toast('Failed to update log', 'error');
+      }
+    } else {
+      if (newImageUrls.length) log.image_urls = newImageUrls;
+      const saved = await dbInsertLabor(log);
+      if (saved) {
+        state.labor.unshift(saved);
+        if (window.Store) window.Store.emitChange();
+        closeModal('labor-modal');
+        toast(newImageUrls.length ? `Shift logged with ${newImageUrls.length} photo${newImageUrls.length>1?'s':''}` : 'Labor shift logged', 'success');
+        dbLogActivity('LABOR_LOGGED', `${headcount} people added for ${shift} shift (${role})`, 'labor');
+      } else {
+        toast('Failed to save log', 'error');
+      }
+    }
+
+    // Reset modal state
+    document.getElementById('labor-edit-id').value = '';
+    document.getElementById('labor-modal-title').textContent = 'New Shift Log';
+    document.getElementById('labor-save-btn').textContent = 'Save Log';
+    document.getElementById('labor-date').value = '';
+    document.getElementById('labor-shift').value = '';
+    document.getElementById('labor-group').value = '';
+    document.getElementById('labor-role').value = 'Shelling';
+    document.getElementById('labor-headcount').value = '';
+    document.getElementById('labor-people').value = '';
+    document.getElementById('labor-remarks').value = '';
+    if (document.getElementById('labor-wage')) document.getElementById('labor-wage').value = '';
+    if (document.getElementById('labor-images')) document.getElementById('labor-images').value = '';
+    const preview = document.getElementById('labor-img-preview');
+    if (preview) preview.innerHTML = '';
+
   } catch (err) {
     console.error("Save labor error:", err);
     toast('Server error', 'error');
