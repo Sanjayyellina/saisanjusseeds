@@ -25,6 +25,7 @@ const initialState = {
   binHistory: [],
   entryTrucks: [],
   backyardRemovals: [],
+  activityLogs: [],
   receiptCounter:1001,
   activeReceiptHash:null,
   currentPage: 'dashboard'

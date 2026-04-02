@@ -128,6 +128,17 @@ async function dbFetchBinHistory() {
   }
 }
 
+async function dbFetchActivityLogs() {
+  try {
+    const { data, error } = await dbClient.from('activity_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('dbFetchActivityLogs:', e); return []; }
+}
+
 async function dbFetchEntryTrucks() {
   try {
     const { data, error } = await dbClient.from('entry_trucks').select('*').order('arrival_time', { ascending: false });

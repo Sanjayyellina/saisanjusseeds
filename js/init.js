@@ -125,9 +125,9 @@ async function bootApp() {
   });
 
   // Fetch all data in parallel for faster boot
-  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates;
+  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates, activityLogs;
   try {
-    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates] = await Promise.all([
+    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates, activityLogs] = await Promise.all([
       dbFetchBins(),
       dbFetchIntakes(),
       dbFetchDispatches(),
@@ -138,7 +138,8 @@ async function bootApp() {
       dbFetchBackyardRemovals(),
       dbFetchLaborGroups(),
       dbFetchMoistureReadings(),
-      dbFetchFieldUpdates()
+      dbFetchFieldUpdates(),
+      dbFetchActivityLogs()
     ]);
   } catch (err) {
     console.error('bootApp: fetch error', err);
@@ -240,6 +241,7 @@ async function bootApp() {
   if (maint) state.maintenance = maint;
   if (labor) state.labor = labor;
   if (binHistory) state.binHistory = binHistory;
+  state.activityLogs = activityLogs || [];
   state.moistureReadings = moistureReadings || [];
   state.fieldUpdates = (fieldUpdates || []).map(u => ({
     id: u.id,

@@ -93,7 +93,8 @@ function renderPage(name){
   const map={dashboard:renderDashboard,intake:renderIntakePage,bins:renderBinsPage,
     moisture:null,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
     analytics:renderAnalytics, manager: renderManagerPage, maintenance: renderMaintenancePage, labor: renderLaborPage,
-    'entry-trucks': renderEntryTrucksPage, backyard: renderBackyardPage, updates: renderUpdatesPage};
+    'entry-trucks': renderEntryTrucksPage, backyard: renderBackyardPage, updates: renderUpdatesPage,
+    audit: renderAuditPage};
   if(map[name])map[name]();
 }
 
@@ -137,6 +138,9 @@ function renderDashboard(){
 
   // ── Notification Bell ────────────────────────────────────────
   _updateNotifBell();
+
+  // ── Weather Widget ───────────────────────────────────────────
+  renderWeatherWidget();
 
   document.getElementById('dash-bins').innerHTML=state.bins.map(b=>renderBinTile(b)).join('');
 
@@ -1637,6 +1641,170 @@ function renderUpdatesPage() {
   if (container) container.innerHTML = feedHtml;
   const badge = document.getElementById('updates-count');
   if (badge) badge.textContent = filtered.length ? `(${filtered.length})` : '';
+}
+
+// ── Weather Widget ────────────────────────────────────────────
+function renderWeatherWidget() {
+  const el = document.getElementById('weather-widget-card');
+  if (!el) return;
+
+  // Use cache if < 30 min old
+  const cache = window._weatherCache;
+  if (cache && (Date.now() - cache.ts) < 30 * 60 * 1000) {
+    _applyWeatherData(el, cache.data);
+    return;
+  }
+
+  // Show loading state
+  el.innerHTML = `<div class="kpi-icon">🌤️</div><div class="kpi-val" style="font-size:22px;">…</div><div class="kpi-label">Sathupally Weather</div><div class="kpi-delta">Loading…</div>`;
+
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=17.1&longitude=80.9&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FKolkata')
+    .then(r => r.json())
+    .then(json => {
+      const c = json.current || {};
+      window._weatherCache = { ts: Date.now(), data: c };
+      _applyWeatherData(el, c);
+    })
+    .catch(() => {
+      el.innerHTML = `<div class="kpi-icon">🌤️</div><div class="kpi-val" style="font-size:18px;">—</div><div class="kpi-label">Sathupally Weather</div><div class="kpi-delta" style="color:var(--ink-5);">Unavailable</div>`;
+    });
+}
+
+function _weatherCodeEmoji(code) {
+  if (code === 0) return '☀️';
+  if (code <= 3) return '⛅';
+  if (code <= 48) return '🌫️';
+  if (code <= 67) return '🌧️';
+  if (code <= 77) return '❄️';
+  if (code <= 82) return '🌦️';
+  return '⛈️';
+}
+
+function _applyWeatherData(el, c) {
+  const temp = c.temperature_2m != null ? c.temperature_2m : '—';
+  const hum = c.relative_humidity_2m != null ? c.relative_humidity_2m : null;
+  const wind = c.wind_speed_10m != null ? c.wind_speed_10m : '—';
+  const emoji = _weatherCodeEmoji(c.weather_code || 0);
+
+  let humColor = 'var(--ink-4)';
+  let condition = 'Good';
+  let condColor = 'var(--green)';
+  if (hum !== null) {
+    if (hum > 75) { humColor = 'var(--red)'; condition = 'Poor'; condColor = 'var(--red)'; }
+    else if (hum > 65) { humColor = 'var(--amber)'; condition = 'Fair'; condColor = 'var(--amber)'; }
+    else if (hum < 55) { humColor = 'var(--green)'; condition = 'Excellent'; condColor = 'var(--green)'; }
+  }
+
+  const humWarning = hum !== null && hum > 75 ? `<div class="kpi-delta delta-down" style="font-size:10px;">⚠️ High humidity — slow drying</div>` :
+    hum !== null && hum < 55 ? `<div class="kpi-delta delta-up" style="font-size:10px;">✅ Low humidity — great drying</div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <span style="font-size:11px;font-weight:700;color:var(--ink-4);">🌤️ Sathupally</span>
+      <span style="font-size:9px;padding:1px 6px;background:var(--green);color:#fff;border-radius:99px;font-weight:700;">Live</span>
+    </div>
+    <div class="kpi-val" style="font-size:28px;line-height:1;">${emoji} ${temp}°C</div>
+    <div class="kpi-label">Current Weather</div>
+    <div style="display:flex;gap:10px;margin-top:6px;font-size:11px;color:var(--ink-4);">
+      <span style="color:${humColor};font-weight:600;">💧 ${hum !== null ? hum + '%' : '—'}</span>
+      <span>💨 ${wind} km/h</span>
+    </div>
+    <div style="margin-top:4px;font-size:11px;font-weight:700;color:${condColor};">Drying: ${condition}</div>
+    ${humWarning}`;
+}
+
+// ── Audit Trail Page ──────────────────────────────────────────
+function renderAuditPage() {
+  const logs = state.activityLogs || [];
+  const container = document.getElementById('audit-timeline');
+  if (!container) return;
+
+  // Filter controls
+  const activeFilter = window._auditFilter || 'all';
+  const actionTypes = [...new Set(logs.map(l => l.action_type).filter(Boolean))];
+
+  const filtered = activeFilter === 'all' ? logs : logs.filter(l => l.action_type === activeFilter);
+
+  const actionColors = {
+    'INTAKE_CREATED': '#10B981',
+    'INTAKE_UPDATED': '#3B82F6',
+    'BIN_UPDATED': '#F59E0B',
+    'BIN_EMPTIED': '#8B5CF6',
+    'DISPATCH_CREATED': '#10B981',
+    'DISPATCH_UPDATED': '#3B82F6',
+    'MAINT_LOGGED': '#EF4444',
+    'LABOR_LOGGED': '#06B6D4',
+    'TRUCK_REGISTERED': '#F59E0B',
+    'FIELD_UPDATE': '#8B5CF6',
+    'BACKYARD_REMOVAL': '#EF4444',
+  };
+  const actionIcons = {
+    'INTAKE_CREATED': '🌾', 'INTAKE_UPDATED': '✏️',
+    'BIN_UPDATED': '🏠', 'BIN_EMPTIED': '✅',
+    'DISPATCH_CREATED': '📄', 'DISPATCH_UPDATED': '✏️',
+    'MAINT_LOGGED': '🔧', 'LABOR_LOGGED': '👷',
+    'TRUCK_REGISTERED': '🚛', 'FIELD_UPDATE': '📱',
+    'BACKYARD_REMOVAL': '🏗️',
+  };
+
+  // Build filter pill buttons
+  const filterEl = document.getElementById('audit-filters');
+  if (filterEl) {
+    const allTypes = ['all', ...actionTypes];
+    filterEl.innerHTML = allTypes.map(t => {
+      const active = activeFilter === t;
+      return `<button class="btn btn-ghost btn-sm" onclick="window._auditFilter='${t}';renderAuditPage();" style="${active?'background:var(--gold);color:#fff;border-color:var(--gold);':''}">${t === 'all' ? 'All Activity' : t.replace(/_/g,' ')}</button>`;
+    }).join('');
+  }
+
+  if (!filtered.length) {
+    container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--ink-4);">
+      <div style="font-size:48px;margin-bottom:12px;">📜</div>
+      <div style="font-size:15px;font-weight:600;">No activity logged yet</div>
+      <div style="font-size:13px;margin-top:4px;color:var(--ink-5);">Actions like intakes, dispatches and bin updates will appear here</div>
+    </div>`;
+    return;
+  }
+
+  // Group by date
+  const grouped = {};
+  filtered.forEach(log => {
+    const d = new Date(log.created_at);
+    const key = d.toLocaleDateString('en-IN', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(log);
+  });
+
+  container.innerHTML = Object.entries(grouped).map(([dateStr, entries]) => {
+    const entriesHtml = entries.map(log => {
+      const d = new Date(log.created_at);
+      const timeStr = d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
+      const color = actionColors[log.action_type] || '#6B7280';
+      const icon = actionIcons[log.action_type] || '📝';
+      const meta = log.metadata ? (typeof log.metadata === 'object' ? JSON.stringify(log.metadata).slice(0,80) : String(log.metadata).slice(0,80)) : '';
+      return `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--surface-3);">
+        <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:${color}1a;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:2px;">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:600;color:var(--ink);">${esc(log.description || log.action_type)}</span>
+            <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:${color}1a;color:${color};">${(log.action_type||'').replace(/_/g,' ')}</span>
+          </div>
+          ${log.user_email ? `<div style="font-size:11px;color:var(--ink-5);margin-top:2px;">👤 ${esc(log.user_email)}</div>` : ''}
+          ${meta ? `<div style="font-size:10px;color:var(--ink-5);margin-top:2px;font-family:'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(meta)}</div>` : ''}
+        </div>
+        <div style="flex-shrink:0;font-size:11px;color:var(--ink-5);white-space:nowrap;">${timeStr}</div>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span style="flex:1;height:1px;background:var(--surface-3);"></span>
+        <span>${dateStr}</span>
+        <span style="flex:1;height:1px;background:var(--surface-3);"></span>
+      </div>
+      <div>${entriesHtml}</div>
+    </div>`;
+  }).join('');
 }
 
 // Predictable state management subscription
