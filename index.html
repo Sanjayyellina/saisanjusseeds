@@ -174,21 +174,46 @@
     <div class="live-pill"><div class="live-dot"></div> Live</div>
     <div class="topbar-time" id="clock">--:--:--</div>
 
-    <!-- Boiler Temperature -->
+    <!-- Boiler Temps + Pressure -->
     <div class="boiler-wrap" id="boiler-wrap">
-      <button class="boiler-pill" id="boiler-btn" onclick="toggleBoilerEdit()" title="Boiler temperature — click to update">
+      <button class="boiler-pill" id="boiler-btn" onclick="toggleBoilerEdit()" title="Boiler temps & pressure — click to update" style="gap:10px;padding:0 12px;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>
-        <span id="boiler-temp-display">—</span><span class="boiler-unit">°C</span>
+        <span style="font-size:10px;opacity:.7;">B1</span><span id="boiler-1-display">—</span>
+        <span style="font-size:10px;opacity:.5;">|</span>
+        <span style="font-size:10px;opacity:.7;">B2</span><span id="boiler-2-display">—</span>
+        <span style="font-size:10px;opacity:.5;">|</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="boiler-pressure-display">—</span><span style="font-size:9px;opacity:.6;" id="boiler-pressure-unit-display">kg/cm²</span>
       </button>
-      <div class="boiler-popup" id="boiler-popup" style="display:none;">
-        <div class="boiler-popup-title">🔥 Boiler Temperature</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <input type="number" id="boiler-temp-input" class="form-input" style="width:100px;font-size:20px;font-weight:700;text-align:center;padding:6px 10px;" placeholder="65" min="0" max="300"
-            onkeydown="if(event.key==='Enter')saveBoilerTemp()">
-          <span style="font-size:20px;font-weight:700;color:var(--ink-3);">°C</span>
+      <div class="boiler-popup" id="boiler-popup" style="display:none;min-width:260px;">
+        <div class="boiler-popup-title">🔥 Boiler Status</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--ink-4);letter-spacing:.5px;margin-bottom:4px;">B.No:1 Temp</div>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" id="boiler-1-input" class="form-input" style="font-size:16px;font-weight:700;text-align:center;padding:5px 6px;" placeholder="42.6" step="0.1" min="0" max="999">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--ink-4);letter-spacing:.5px;margin-bottom:4px;">B.No:2 Temp</div>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" id="boiler-2-input" class="form-input" style="font-size:16px;font-weight:700;text-align:center;padding:5px 6px;" placeholder="42.2" step="0.1" min="0" max="999">
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:10px;font-weight:700;color:var(--ink-4);letter-spacing:.5px;margin-bottom:4px;">Pressure</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="boiler-pressure-input" class="form-input" style="flex:1;font-size:16px;font-weight:700;text-align:center;padding:5px 6px;" placeholder="5.0" step="0.1" min="0">
+            <select id="boiler-pressure-unit" class="form-input" style="width:90px;padding:5px 6px;font-size:12px;">
+              <option value="kg/cm²">kg/cm²</option>
+              <option value="PSI">PSI</option>
+              <option value="bar">bar</option>
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button class="btn btn-solid btn-sm" style="flex:1;" onclick="saveBoilerTemp()">Save</button>
+          <button class="btn btn-solid btn-sm" style="flex:1;" onclick="saveBoilerStatus()">Save All</button>
           <button class="btn btn-ghost btn-sm" onclick="toggleBoilerEdit()">Cancel</button>
         </div>
       </div>
@@ -1543,12 +1568,33 @@
         <input type="number" class="form-input" id="upd-moisture" step="0.1" min="0" max="99" placeholder="e.g. 38.0" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;">
       </div>
 
-      <!-- Boiler temp — shown for boiler_temp -->
-      <div class="form-group" id="upd-temp-group" style="display:none;">
-        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-          Temperature °C <span id="upd-temp-detected" style="font-size:11px;color:var(--green);font-weight:600;"></span>
-        </label>
-        <input type="number" class="form-input" id="upd-temp" step="0.1" min="0" max="200" placeholder="e.g. 55.0" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;">
+      <!-- Boiler temps + pressure — shown for boiler_temp -->
+      <div id="upd-temp-group" style="display:none;">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-4);letter-spacing:.5px;margin-bottom:8px;">🔥 BOILER READINGS <span id="upd-temp-detected" style="font-size:11px;color:var(--green);font-weight:600;margin-left:8px;"></span></div>
+        <div class="form-row cols2" style="margin-bottom:0;">
+          <div class="form-group">
+            <label class="form-label">B.No:1 Temp (°C)</label>
+            <input type="number" class="form-input" id="upd-temp" step="0.1" min="0" max="999" placeholder="42.6" style="font-family:'DM Mono',monospace;font-size:20px;font-weight:700;text-align:center;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">B.No:2 Temp (°C)</label>
+            <input type="number" class="form-input" id="upd-temp2" step="0.1" min="0" max="999" placeholder="42.2" style="font-family:'DM Mono',monospace;font-size:20px;font-weight:700;text-align:center;">
+          </div>
+        </div>
+        <div class="form-row cols2" style="margin-bottom:0;">
+          <div class="form-group">
+            <label class="form-label">Pressure</label>
+            <input type="number" class="form-input" id="upd-pressure" step="0.1" min="0" placeholder="5.0" style="font-family:'DM Mono',monospace;font-size:20px;font-weight:700;text-align:center;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <select class="form-input" id="upd-pressure-unit">
+              <option value="kg/cm²">kg/cm²</option>
+              <option value="PSI">PSI</option>
+              <option value="bar">bar</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- Hybrid + Qty — shown for intake_photo -->
@@ -1617,7 +1663,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="js/error-boundary.js"></script>
 <script src="js/offline-queue.js?v=2"></script>
-<script src="js/db.js?v=12"></script>
+<script src="js/db.js?v=13"></script>
 <!-- Modular JavaScript -->
 <script src="js/config.js?v=1"></script>
 <script src="js/state.js?v=3"></script>
@@ -1626,10 +1672,10 @@
 <script src="js/i18n.js?v=7"></script>
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=19"></script>
-<script src="js/render.js?v=29"></script>
-<script src="js/actions.js?v=31"></script>
+<script src="js/render.js?v=30"></script>
+<script src="js/actions.js?v=32"></script>
 <script src="js/receipt.js?v=7"></script>
 <script src="js/clock.js?v=2"></script>
-<script src="js/init.js?v=18"></script>
+<script src="js/init.js?v=19"></script>
 </body>
 </html>

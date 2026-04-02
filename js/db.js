@@ -504,15 +504,19 @@ async function dbUploadFieldUpdateImage(file) {
 // ── Plant Settings (boiler temp etc.) ────────────────────────
 async function dbFetchBoilerTemp() {
   try {
-    const { data } = await dbClient.from('plant_settings').select('value').eq('key','boiler_temp').single();
-    return data?.value || '—';
-  } catch(e) { return '—'; }
+    const { data } = await dbClient.from('plant_settings').select('key,value')
+      .in('key', ['boiler_temp','boiler_1_temp','boiler_2_temp','boiler_pressure','boiler_pressure_unit']);
+    const map = {};
+    (data||[]).forEach(r => { map[r.key] = r.value; });
+    return map;
+  } catch(e) { return {}; }
 }
 
-async function dbSetBoilerTemp(temp) {
+// key defaults to 'boiler_temp' for backward compat; pass explicit key for dual-boiler
+async function dbSetBoilerTemp(temp, key = 'boiler_temp') {
   try {
     const { error } = await dbClient.from('plant_settings')
-      .upsert({ key:'boiler_temp', value:String(temp), updated_at:new Date().toISOString() }, { onConflict:'key' });
+      .upsert({ key, value: String(temp), updated_at: new Date().toISOString() }, { onConflict: 'key' });
     return !error;
   } catch(e) { return false; }
 }

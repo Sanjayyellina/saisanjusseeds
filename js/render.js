@@ -1577,8 +1577,13 @@ function renderUpdatesPage() {
         if (u.updateType === 'moisture_photo' && u.moistureValue != null) {
           const color = u.moistureValue <= 12 ? 'var(--green)' : u.moistureValue <= 18 ? 'var(--amber)' : 'var(--red)';
           valueBadge = `<div style="font-size:28px;font-weight:800;font-family:'DM Mono',monospace;color:${color};line-height:1;margin:4px 0 2px;">${u.moistureValue}%</div><div style="font-size:10px;color:var(--ink-4);">moisture</div>`;
-        } else if (u.updateType === 'boiler_temp' && u.temperatureValue != null) {
-          valueBadge = `<div style="font-size:28px;font-weight:800;font-family:'DM Mono',monospace;color:var(--amber);line-height:1;margin:4px 0 2px;">${u.temperatureValue}°C</div><div style="font-size:10px;color:var(--ink-4);">boiler temp</div>`;
+        } else if (u.updateType === 'boiler_temp') {
+          const parts = [];
+          if (u.boilerTemp1 != null) parts.push(`<span>B1 <b>${u.boilerTemp1}°C</b></span>`);
+          if (u.boilerTemp2 != null) parts.push(`<span>B2 <b>${u.boilerTemp2}°C</b></span>`);
+          if (u.pressureValue != null) parts.push(`<span>P <b>${u.pressureValue} ${u.pressureUnit||'kg/cm²'}</b></span>`);
+          if (parts.length)
+            valueBadge = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 4px;font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--amber);">${parts.join('<span style="color:var(--ink-5)"> | </span>')}</div><div style="font-size:10px;color:var(--ink-4);">boiler readings</div>`;
         }
 
         // Sub-details line

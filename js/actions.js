@@ -1295,34 +1295,59 @@ async function saveLabor() {
 // ================================================================
 // ENTRY TRUCKS
 // ================================================================
-// ── Boiler Temperature ────────────────────────────────────────
+// ── Boiler Status (dual temp + pressure) ─────────────────────
 window.toggleBoilerEdit = function() {
   const popup = document.getElementById('boiler-popup');
   if (!popup) return;
   const isOpen = popup.style.display !== 'none';
   popup.style.display = isOpen ? 'none' : 'block';
   if (!isOpen) {
-    const input = document.getElementById('boiler-temp-input');
-    const current = document.getElementById('boiler-temp-display').textContent;
-    if (input) { input.value = current !== '—' ? current : ''; setTimeout(() => input.focus(), 50); }
+    const b1 = document.getElementById('boiler-1-display')?.textContent;
+    const b2 = document.getElementById('boiler-2-display')?.textContent;
+    const pr = document.getElementById('boiler-pressure-display')?.textContent;
+    const pu = document.getElementById('boiler-pressure-unit-display')?.textContent;
+    const i1 = document.getElementById('boiler-1-input');
+    const i2 = document.getElementById('boiler-2-input');
+    const ip = document.getElementById('boiler-pressure-input');
+    const iu = document.getElementById('boiler-pressure-unit');
+    if (i1) i1.value = b1 !== '—' ? b1 : '';
+    if (i2) i2.value = b2 !== '—' ? b2 : '';
+    if (ip) ip.value = pr !== '—' ? pr : '';
+    if (iu && pu) iu.value = pu;
+    setTimeout(() => document.getElementById('boiler-1-input')?.focus(), 50);
   }
 };
 
-window.saveBoilerTemp = async function() {
-  const input = document.getElementById('boiler-temp-input');
-  const val = (input?.value || '').trim();
-  if (!val) { toast('Enter a temperature', 'error'); return; }
-  const ok = await dbSetBoilerTemp(val);
-  if (ok) {
-    state.boilerTemp = val;
-    const display = document.getElementById('boiler-temp-display');
-    if (display) display.textContent = val;
-    toggleBoilerEdit();
-    toast('Boiler temp updated to ' + val + '°C', 'success');
-  } else {
-    toast('Failed to save temperature', 'error');
+window.saveBoilerStatus = async function() {
+  const b1  = document.getElementById('boiler-1-input')?.value?.trim();
+  const b2  = document.getElementById('boiler-2-input')?.value?.trim();
+  const pr  = document.getElementById('boiler-pressure-input')?.value?.trim();
+  const pu  = document.getElementById('boiler-pressure-unit')?.value || 'kg/cm²';
+
+  if (!b1 && !b2 && !pr) { toast('Enter at least one reading', 'warn'); return; }
+
+  const saves = [];
+  if (b1) saves.push(dbSetBoilerTemp(b1, 'boiler_1_temp'));
+  if (b2) saves.push(dbSetBoilerTemp(b2, 'boiler_2_temp'));
+  if (pr) {
+    saves.push(dbSetBoilerTemp(pr, 'boiler_pressure'));
+    saves.push(dbSetBoilerTemp(pu, 'boiler_pressure_unit'));
   }
+  await Promise.all(saves);
+
+  if (b1) { state.boiler1Temp = b1; const el = document.getElementById('boiler-1-display'); if (el) el.textContent = b1; }
+  if (b2) { state.boiler2Temp = b2; const el = document.getElementById('boiler-2-display'); if (el) el.textContent = b2; }
+  if (pr) {
+    state.boilerPressure = pr; state.boilerPressureUnit = pu;
+    const ep = document.getElementById('boiler-pressure-display'); if (ep) ep.textContent = pr;
+    const eu = document.getElementById('boiler-pressure-unit-display'); if (eu) eu.textContent = pu;
+  }
+  toggleBoilerEdit();
+  toast(`Boiler updated${b1?' B1:'+b1+'°C':''}${b2?' B2:'+b2+'°C':''}${pr?' P:'+pr+pu:''}`, 'success');
 };
+
+// Legacy single-temp save (kept for backward compat)
+window.saveBoilerTemp = window.saveBoilerStatus;
 
 // Close boiler popup when clicking outside
 document.addEventListener('click', function(e) {
@@ -1865,7 +1890,7 @@ window.onUpdTypeChange = function() {
 };
 
 window.openUpdateModal = function() {
-  ['upd-type','upd-bin','upd-notes','upd-ocr-text','upd-moisture','upd-temp','upd-hybrid','upd-qty'].forEach(id => {
+  ['upd-type','upd-bin','upd-notes','upd-ocr-text','upd-moisture','upd-temp','upd-temp2','upd-pressure','upd-hybrid','upd-qty'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1891,7 +1916,10 @@ window.saveFieldUpdate = async function() {
   const notes      = document.getElementById('upd-notes')?.value?.trim() || '';
   const ocrText    = document.getElementById('upd-ocr-text')?.value?.trim() || '';
   const moistureVal= parseFloat(document.getElementById('upd-moisture')?.value) || null;
-  const tempVal    = parseFloat(document.getElementById('upd-temp')?.value) || null;
+  const tempVal    = parseFloat(document.getElementById('upd-temp')?.value) || null;   // B1
+  const temp2Val   = parseFloat(document.getElementById('upd-temp2')?.value) || null;  // B2
+  const pressureVal= parseFloat(document.getElementById('upd-pressure')?.value) || null;
+  const pressureUnit= document.getElementById('upd-pressure-unit')?.value || 'kg/cm²';
   const hybrid     = document.getElementById('upd-hybrid')?.value?.trim() || null;
   const qty        = parseFloat(document.getElementById('upd-qty')?.value) || null;
   const file       = document.getElementById('upd-photo')?.files?.[0] || null;
@@ -1899,8 +1927,8 @@ window.saveFieldUpdate = async function() {
 
   // Validation
   if (type === 'moisture_photo' && !moistureVal) { toast('Enter the moisture % reading.', 'warn'); return; }
-  if (type === 'boiler_temp'    && !tempVal)     { toast('Enter the temperature reading.', 'warn'); return; }
-  if (!notes && !file && !moistureVal && !tempVal) { toast('Add a photo, reading, or note before saving.', 'warn'); return; }
+  if (type === 'boiler_temp' && !tempVal && !temp2Val && !pressureVal) { toast('Enter at least one boiler reading.', 'warn'); return; }
+  if (!notes && !file && !moistureVal && !tempVal && !temp2Val && !pressureVal) { toast('Add a photo, reading, or note before saving.', 'warn'); return; }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
@@ -1925,6 +1953,10 @@ window.saveFieldUpdate = async function() {
       submitted_by:      submittedBy,
       moisture_value:    moistureVal,
       temperature_value: tempVal,
+      boiler_temp_1:     tempVal,
+      boiler_temp_2:     temp2Val,
+      pressure_value:    pressureVal,
+      pressure_unit:     pressureVal ? pressureUnit : null,
       hybrid:            hybrid,
       qty_bags:          qty
     };
@@ -1948,12 +1980,17 @@ window.saveFieldUpdate = async function() {
       toast(`Bin moisture updated to ${moistureVal}%`, 'success');
     }
 
-    if (type === 'boiler_temp' && tempVal) {
-      await dbSetBoilerTemp(tempVal);
-      state.boilerTemp = String(tempVal);
-      const el = document.getElementById('boiler-temp-display');
-      if (el) el.textContent = tempVal;
-      toast(`Boiler temp updated to ${tempVal}°C`, 'success');
+    if (type === 'boiler_temp') {
+      const saves = [];
+      if (tempVal)     saves.push(dbSetBoilerTemp(tempVal,  'boiler_1_temp'));
+      if (temp2Val)    saves.push(dbSetBoilerTemp(temp2Val, 'boiler_2_temp'));
+      if (pressureVal) { saves.push(dbSetBoilerTemp(pressureVal, 'boiler_pressure')); saves.push(dbSetBoilerTemp(pressureUnit, 'boiler_pressure_unit')); }
+      await Promise.all(saves);
+      const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      if (tempVal)     { state.boiler1Temp = String(tempVal);  setTxt('boiler-1-display', tempVal); setTxt('boiler-temp-display', tempVal); }
+      if (temp2Val)    { state.boiler2Temp = String(temp2Val); setTxt('boiler-2-display', temp2Val); }
+      if (pressureVal) { state.boilerPressure = String(pressureVal); state.boilerPressureUnit = pressureUnit; setTxt('boiler-pressure-display', pressureVal); setTxt('boiler-pressure-unit-display', pressureUnit); }
+      toast(`Boiler updated${tempVal?' B1:'+tempVal+'°C':''}${temp2Val?' B2:'+temp2Val+'°C':''}${pressureVal?' P:'+pressureVal+pressureUnit:''}`, 'success');
     }
 
     // 5. Update local state
@@ -1961,9 +1998,14 @@ window.saveFieldUpdate = async function() {
     state.fieldUpdates.unshift({
       id: saved.id, updateType: saved.update_type, binId: saved.bin_id || null,
       notes: saved.notes || '', ocrText: saved.ocr_text || '', photoUrl: saved.photo_url || null,
-      submittedBy: saved.submitted_by || '', moistureValue: saved.moisture_value || null,
-      temperatureValue: saved.temperature_value || null, hybrid: saved.hybrid || '',
-      qtyBags: saved.qty_bags || null,
+      submittedBy: saved.submitted_by || '',
+      moistureValue:    saved.moisture_value    != null ? parseFloat(saved.moisture_value)    : null,
+      temperatureValue: saved.temperature_value != null ? parseFloat(saved.temperature_value) : null,
+      boilerTemp1:      saved.boiler_temp_1     != null ? parseFloat(saved.boiler_temp_1)     : null,
+      boilerTemp2:      saved.boiler_temp_2     != null ? parseFloat(saved.boiler_temp_2)     : null,
+      pressureValue:    saved.pressure_value    != null ? parseFloat(saved.pressure_value)    : null,
+      pressureUnit:     saved.pressure_unit     || 'kg/cm²',
+      hybrid: saved.hybrid || '', qtyBags: saved.qty_bags != null ? parseFloat(saved.qty_bags) : null,
       createdAt: saved.created_at,
       createdAtDisplay: new Date(saved.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
     });
@@ -2022,18 +2064,19 @@ window.runOcrOnPhoto = async function(input) {
       if (typeEl && typeEl.value === 'general') { typeEl.value = 'moisture_photo'; onUpdTypeChange(); if (mEl) mEl.value = val; }
     }
 
-    // ── Smart parse: temperature ───────────────────────────────
-    const tempMatch = text.match(/TEMP[:\s]*(\d{2,3}[.,]\d)/i) || text.match(/(\d{2,3}[.,]\d)\s*°?C/i);
-    if (tempMatch) {
-      const val = parseFloat(tempMatch[1].replace(',', '.'));
-      if (val > 20 && val < 200) { // sanity check — actual temp range
-        const tEl = document.getElementById('upd-temp');
-        const tDet = document.getElementById('upd-temp-detected');
-        if (tEl) tEl.value = val;
-        if (tDet) tDet.textContent = `✓ Auto-detected: ${val}°C`;
-        const typeEl = document.getElementById('upd-type');
-        if (typeEl && typeEl.value === 'general') { typeEl.value = 'boiler_temp'; onUpdTypeChange(); if (tEl) tEl.value = val; }
-      }
+    // ── Smart parse: temperatures (may find B1 and B2) ────────
+    const tempMatches = [...text.matchAll(/(\d{2,3}[.,]\d)\s*°?C?/gi)]
+      .map(m => parseFloat(m[1].replace(',','.')))
+      .filter(v => v > 20 && v < 300); // realistic dryer temp range
+    if (tempMatches.length > 0) {
+      const t1El  = document.getElementById('upd-temp');
+      const t2El  = document.getElementById('upd-temp2');
+      const tDet  = document.getElementById('upd-temp-detected');
+      const typeEl = document.getElementById('upd-type');
+      if (t1El) t1El.value = tempMatches[0];
+      if (t2El && tempMatches[1]) t2El.value = tempMatches[1];
+      if (tDet) tDet.textContent = `✓ B1:${tempMatches[0]}°C${tempMatches[1]?' B2:'+tempMatches[1]+'°C':''}`;
+      if (typeEl && typeEl.value === 'general') { typeEl.value = 'boiler_temp'; onUpdTypeChange(); if (t1El) t1El.value = tempMatches[0]; if (t2El && tempMatches[1]) t2El.value = tempMatches[1]; }
     }
   } catch(e) {
     console.error('OCR error:', e);

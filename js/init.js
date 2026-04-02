@@ -247,10 +247,14 @@ async function bootApp() {
     ocrText: u.ocr_text || '',
     photoUrl: u.photo_url || null,
     submittedBy: u.submitted_by || '',
-    moistureValue: u.moisture_value != null ? parseFloat(u.moisture_value) : null,
+    moistureValue:    u.moisture_value    != null ? parseFloat(u.moisture_value)    : null,
     temperatureValue: u.temperature_value != null ? parseFloat(u.temperature_value) : null,
-    hybrid: u.hybrid || '',
-    qtyBags: u.qty_bags != null ? parseFloat(u.qty_bags) : null,
+    boilerTemp1:      u.boiler_temp_1     != null ? parseFloat(u.boiler_temp_1)     : null,
+    boilerTemp2:      u.boiler_temp_2     != null ? parseFloat(u.boiler_temp_2)     : null,
+    pressureValue:    u.pressure_value    != null ? parseFloat(u.pressure_value)    : null,
+    pressureUnit:     u.pressure_unit     || 'kg/cm²',
+    hybrid:           u.hybrid            || '',
+    qtyBags:          u.qty_bags          != null ? parseFloat(u.qty_bags)          : null,
     createdAt: u.created_at,
     createdAtDisplay: new Date(u.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
   }));
@@ -298,11 +302,22 @@ async function bootApp() {
     }));
   }
 
-  // Fetch boiler temp (non-blocking)
-  dbFetchBoilerTemp().then(temp => {
-    state.boilerTemp = temp;
-    const el = document.getElementById('boiler-temp-display');
-    if (el) el.textContent = temp !== '—' ? temp : '—';
+  // Fetch boiler / pressure readings (non-blocking)
+  dbFetchBoilerTemp().then(map => {
+    state.boiler1Temp        = map['boiler_1_temp']        || map['boiler_temp'] || '—';
+    state.boiler2Temp        = map['boiler_2_temp']        || '—';
+    state.boilerPressure     = map['boiler_pressure']      || '—';
+    state.boilerPressureUnit = map['boiler_pressure_unit'] || 'kg/cm²';
+    // Legacy single-temp compat
+    state.boilerTemp = state.boiler1Temp;
+
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('boiler-1-display',          state.boiler1Temp);
+    setTxt('boiler-2-display',          state.boiler2Temp);
+    setTxt('boiler-pressure-display',   state.boilerPressure);
+    setTxt('boiler-pressure-unit-display', state.boilerPressureUnit);
+    // Legacy single element
+    setTxt('boiler-temp-display', state.boiler1Temp);
   });
 
   // Record activity so inactivity timer resets on successful boot
