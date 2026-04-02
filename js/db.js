@@ -150,37 +150,63 @@ async function dbFetchBackyardRemovals() {
   }
 }
 
-async function dbInsertTruck(truck) {
+async function _directInsertTruck(truck) {
   try {
     const { error } = await dbClient.from('entry_trucks').insert([truck]);
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error('dbInsertTruck:', err);
+    console.error('_directInsertTruck:', err);
     return false;
   }
 }
 
-async function dbUpdateTruck(id, updates) {
+async function _directUpdateTruck(id, updates) {
   try {
     const { error } = await dbClient.from('entry_trucks').update(updates).eq('id', id);
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error('dbUpdateTruck:', err);
+    console.error('_directUpdateTruck:', err);
     return false;
   }
 }
 
-async function dbInsertBackyardRemoval(record) {
+async function _directInsertBackyardRemoval(record) {
   try {
     const { error } = await dbClient.from('backyard_removals').insert([record]);
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error('dbInsertBackyardRemoval:', err);
+    console.error('_directInsertBackyardRemoval:', err);
     return false;
   }
+}
+
+async function dbInsertTruck(truck) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_TRUCK', truck);
+    if (typeof showToast === 'function') showToast('Truck saved locally — will sync when online', 'info');
+    return true;
+  }
+  return _directInsertTruck(truck);
+}
+
+async function dbUpdateTruck(id, updates) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('UPDATE_TRUCK', { id, updates });
+    return true;
+  }
+  return _directUpdateTruck(id, updates);
+}
+
+async function dbInsertBackyardRemoval(record) {
+  if (!navigator.onLine) {
+    OfflineQueue.enqueue('INSERT_BACKYARD', record);
+    if (typeof showToast === 'function') showToast('Removal saved locally — will sync when online', 'info');
+    return true;
+  }
+  return _directInsertBackyardRemoval(record);
 }
 
 // ============================================================

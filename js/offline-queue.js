@@ -122,6 +122,15 @@ const OfflineQueue = {
           case 'LOG_ACTIVITY':
             ok = await _directLogActivity(op.payload.action_type, op.payload.description);
             break;
+          case 'INSERT_TRUCK':
+            ok = await _directInsertTruck(op.payload);
+            break;
+          case 'UPDATE_TRUCK':
+            ok = await _directUpdateTruck(op.payload.id, op.payload.updates);
+            break;
+          case 'INSERT_BACKYARD':
+            ok = await _directInsertBackyardRemoval(op.payload);
+            break;
           default:
             console.warn('OfflineQueue: unknown op type', op.type);
             ok = true; // discard unknown ops

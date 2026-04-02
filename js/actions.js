@@ -33,6 +33,10 @@ function openIntakeModal() {
   addLotRow();
   ['i-challan','i-location','i-hybrid','i-moisture','i-remarks','i-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('i-company').value = '';
+  const truckSel = document.getElementById('i-truck-select');
+  if (truckSel) truckSel.value = '';
+  const truckHidden = document.getElementById('i-truck-id');
+  if (truckHidden) truckHidden.value = '';
   document.querySelector('#intake-modal .modal-title').textContent = 'New Intake Entry';
   document.querySelector('#intake-modal .btn-solid span').textContent = 'Save Intake';
   openModal('intake-modal');
@@ -164,7 +168,7 @@ function addDispatchBinRow() {
   const activeBins = state.bins.filter(b => b.status !== 'empty');
   let options = '<option value="">— Select bin —</option>';
   activeBins.forEach(b => {
-    options += `<option value="${b.id}">BIN-${b.binLabel||b.id} — ${b.hybrid||'?'} (${b.qty||0}T)</option>`;
+    options += `<option value="${b.id}">BIN-${b.binLabel||b.id} — ${b.hybrid||'?'} (${parseInt(b.qty||0).toLocaleString('en-IN')} Kg)</option>`;
   });
 
   row.innerHTML = `
@@ -379,6 +383,8 @@ async function saveIntake(){
   const totalVehWeight = vehWeights.reduce((s, w) => s + w, 0);
   const totalGrossWeight = grossWeights.reduce((s, w) => s + w, 0);
 
+  const selectedTruckId = document.getElementById('i-truck-id')?.value || null;
+
   const intakeFields = {
       challan,
       vehicle,
@@ -395,7 +401,8 @@ async function saveIntake(){
       remarks: document.getElementById('i-remarks').value,
       vehicle_weight: vehWeights.join(', '),
       gross_weight: grossWeights.join(', '),
-      net_weight: 0
+      net_weight: 0,
+      ...(selectedTruckId ? { truck_id: selectedTruckId } : {})
   };
 
   intakeFields.net_weight = totalGrossWeight && totalVehWeight ? totalGrossWeight - totalVehWeight : 0;
@@ -493,6 +500,13 @@ async function saveIntake(){
              airflow: 'up'
          });
       });
+
+      // Link the selected truck back to this intake (new intakes only)
+      if (!isEdit && selectedTruckId) {
+        dbUpdateTruck(selectedTruckId, { intake_id: intakeId, status: 'intake' });
+        const t = (state.entryTrucks || []).find(t => t.id === selectedTruckId);
+        if (t) { t.intakeId = intakeId; t.status = 'intake'; }
+      }
 
       _editingIntakeId = null;
       closeModal('intake-modal');
@@ -1291,9 +1305,9 @@ function onTruckSelected(truckId) {
   // Auto-fill vehicle rows
   const vehicleInputs = document.querySelectorAll('.i-vehicle-input');
   if (vehicleInputs.length > 0) vehicleInputs[0].value = truck.vehicleNo;
-  // Auto-fill weights if present
-  const gwInputs = document.querySelectorAll('.i-gross-input');
-  const vwInputs = document.querySelectorAll('.i-tare-input');
+  // Auto-fill weights (match actual input classes in addVehicleRow)
+  const gwInputs = document.querySelectorAll('.i-gross-weight-input');
+  const vwInputs = document.querySelectorAll('.i-veh-weight-input');
   if (gwInputs.length > 0 && truck.grossWeight) gwInputs[0].value = truck.grossWeight;
   if (vwInputs.length > 0 && truck.tareWeight) vwInputs[0].value = truck.tareWeight;
   toast(`Truck ${truck.vehicleNo} selected — details pre-filled`, 'info');

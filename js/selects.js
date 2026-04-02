@@ -20,7 +20,7 @@ function populateModalSelects(){
     dSelects.forEach(dsel => {
       const currentVal = dsel.value;
       let opts = '<option value="">— Select bin —</option>';
-      activeBins.forEach(b => { opts += `<option value="${b.id}">BIN-${b.binLabel||b.id} — ${b.hybrid||'?'} (${b.qty||0}T)</option>`; });
+      activeBins.forEach(b => { opts += `<option value="${b.id}">BIN-${b.binLabel||b.id} — ${b.hybrid||'?'} (${parseInt(b.qty||0).toLocaleString('en-IN')} Kg)</option>`; });
       dsel.innerHTML = opts;
       if (currentVal) dsel.value = currentVal;
     });
