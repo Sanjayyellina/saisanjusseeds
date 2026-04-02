@@ -4,6 +4,23 @@
 "use strict";
 // ============================================================
 
+function predictDaysLeft(bin) {
+  if (!bin.intakeDateTS || bin.status === 'empty') return null;
+  const daysElapsed = (Date.now() - parseInt(bin.intakeDateTS)) / Config.MS_PER_DAY;
+  if (daysElapsed < 0.5) return null; // too early to extrapolate
+  const entry   = parseFloat(bin.entryMoisture)   || 0;
+  const current = parseFloat(bin.currentMoisture) || 0;
+  const target  = parseFloat(bin.targetMoisture)  || Config.TARGET_MOISTURE;
+  const dropped = entry - current;
+  if (dropped <= 0.5) return null; // no meaningful drop yet
+  const dropRate = dropped / daysElapsed; // % per day
+  const remaining = current - target;
+  if (remaining <= 0) return 0; // already at or below target
+  const days = remaining / dropRate;
+  if (days > 45 || days < 0) return null; // unrealistic
+  return Math.ceil(days);
+}
+
 function renderBinTile(bin, isManager = false){
   const sc = `s-${bin.status}`;
   const lbl = bin.binLabel || bin.id;
@@ -70,6 +87,13 @@ function renderBinTile(bin, isManager = false){
     ${intakeDateFmt ? `<div class="bin-intake-date">Since ${intakeDateFmt}</div>` : ''}
 
     <div class="bin-gauge-center">${gaugeSvg}</div>
+    ${(() => {
+      const daysLeft = predictDaysLeft(bin);
+      if (daysLeft === null) return '';
+      if (daysLeft === 0) return `<div style="display:flex;justify-content:center;"><div style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:99px;padding:2px 10px;font-size:10px;font-weight:700;margin:4px auto 0;width:fit-content;">🎯 Ready to dispatch</div></div>`;
+      if (daysLeft <= 3) return `<div style="display:flex;justify-content:center;"><div style="display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:99px;padding:2px 10px;font-size:10px;font-weight:700;margin:4px auto 0;width:fit-content;">⏳ ~${daysLeft}d left</div></div>`;
+      return `<div style="display:flex;justify-content:center;"><div style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,0.05);color:var(--ink-4);border:1px solid rgba(0,0,0,0.08);border-radius:99px;padding:2px 10px;font-size:10px;font-weight:600;margin:4px auto 0;width:fit-content;">~${daysLeft}d left</div></div>`;
+    })()}
 
     <div class="bin-stats-row">
       <div class="bin-stat">

@@ -139,6 +139,9 @@ function openDispatchModal() {
   document.getElementById('d-lot-rows').innerHTML = '';
   addDispatchLotRow();
   ['d-party','d-address','d-vehicle','d-hybrid','d-bags','d-qty','d-moisture','d-amount','d-lr','d-remarks','d-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const _gstinEl = document.getElementById('d-buyer-gstin'); if (_gstinEl) _gstinEl.value = '';
+  const _hsnEl   = document.getElementById('d-hsn-code');    if (_hsnEl)   _hsnEl.value   = '1005 10 90';
+  const _gstEl   = document.getElementById('d-gst-rate');    if (_gstEl)   _gstEl.value   = '0';
   openModal('dispatch-modal');
 }
 
@@ -562,6 +565,9 @@ async function saveDispatch(){
   const dtInput=document.getElementById('d-datetime')?.value;
   const driverName = document.getElementById('d-driver-name')?.value.trim() || '';
   const driverPhone = document.getElementById('d-driver-phone')?.value.trim() || '';
+  const buyerGstin = (document.getElementById('d-buyer-gstin')?.value || '').toUpperCase().trim() || null;
+  const hsnCode    = document.getElementById('d-hsn-code')?.value?.trim() || '1005 10 90';
+  const gstRate    = parseFloat(document.getElementById('d-gst-rate')?.value) || 0;
 
   const btn = document.getElementById('dispatch-save-btn') || document.querySelector('#dispatch-modal .btn-gold');
   const ogText = btn.innerHTML;
@@ -581,7 +587,8 @@ async function saveDispatch(){
       bags, qty,
       moisture: parseFloat(document.getElementById('d-moisture').value) || 0,
       amount, remarks: document.getElementById('d-remarks').value,
-      driverName, driverPhone
+      driverName, driverPhone,
+      buyerGstin, hsnCode, gstRate
     };
     updatedD.hash = generateHash(updatedD);
     updatedD.signature = generateSignature(updatedD);
@@ -603,7 +610,10 @@ async function saveDispatch(){
       driver_name: driverName || null,
       driver_phone: driverPhone || null,
       hash: updatedD.hash,
-      signature: updatedD.signature
+      signature: updatedD.signature,
+      buyer_gstin: buyerGstin,
+      hsn_code: hsnCode,
+      gst_rate: gstRate
     };
 
     const saved = await dbUpdateDispatch(editReceiptId, dispatchRecord);
@@ -643,6 +653,7 @@ async function saveDispatch(){
     moisture:parseFloat(document.getElementById('d-moisture').value)||0,
     amount,remarks:document.getElementById('d-remarks').value,
     driverName, driverPhone,
+    buyerGstin, hsnCode, gstRate,
     hash:'',signature:''
   };
   d.hash=generateHash(d);
@@ -667,6 +678,9 @@ async function saveDispatch(){
       driver_phone: driverPhone || null,
       hash: d.hash,
       signature: d.signature,
+      buyer_gstin: buyerGstin,
+      hsn_code: hsnCode,
+      gst_rate: gstRate,
       created_at: now.toISOString()
   };
 
@@ -1902,6 +1916,12 @@ window.openEditDispatchModal = function(receiptId) {
   const driverPhone = document.getElementById('d-driver-phone');
   if (driverName)  driverName.value  = d.driverName  || '';
   if (driverPhone) driverPhone.value = d.driverPhone || '';
+  const buyerGstinEl = document.getElementById('d-buyer-gstin');
+  const hsnCodeEl    = document.getElementById('d-hsn-code');
+  const gstRateEl    = document.getElementById('d-gst-rate');
+  if (buyerGstinEl) buyerGstinEl.value = d.buyerGstin || '';
+  if (hsnCodeEl)    hsnCodeEl.value    = d.hsnCode    || '1005 10 90';
+  if (gstRateEl)    gstRateEl.value    = String(d.gstRate != null ? d.gstRate : 0);
   // Lots
   const lotInputs = document.querySelectorAll('.d-lot-input');
   const lots = (d.lot || '').split(',').map(l => l.trim()).filter(Boolean);

@@ -226,7 +226,10 @@ async function bootApp() {
       signature: d.signature || '',
       dateTS: new Date(d.created_at).getTime(),
       date: new Date(d.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-      season_year: d.season_year || new Date(d.created_at).getFullYear()
+      season_year: d.season_year || new Date(d.created_at).getFullYear(),
+      buyerGstin: d.buyer_gstin || null,
+      hsnCode:    d.hsn_code    || '1005 10 90',
+      gstRate:    parseFloat(d.gst_rate) || 0
     }));
     if (state.dispatches.length > 0) {
       const maxReceipt = Math.max(...state.dispatches.map(d => parseInt(d.receiptId.split('-')[2]) || 0));
@@ -346,6 +349,103 @@ async function bootApp() {
       setTimeout(() => OfflineQueue.sync(), 2000);
     }
   }
+
+  // Start real-time sync
+  initRealtime();
+}
+
+function initRealtime() {
+  // Clean up existing subscription
+  if (window._realtimeChannel) {
+    try { dbClient.removeChannel(window._realtimeChannel); } catch(e) {}
+    window._realtimeChannel = null;
+  }
+
+  const _livePill = document.querySelector('.live-pill');
+  const _liveDot  = document.querySelector('.live-dot');
+  const _setLiveStatus = (status) => {
+    if (!_livePill || !_liveDot) return;
+    const map = {
+      live:         { dot: '#22c55e', text: 'Live',          title: 'Real-time sync active' },
+      reconnecting: { dot: '#f59e0b', text: 'Syncing…',      title: 'Reconnecting to live updates' },
+      offline:      { dot: '#9ca3af', text: 'Offline',       title: 'Not connected' },
+    };
+    const s = map[status] || map.offline;
+    _liveDot.style.background = s.dot;
+    _livePill.title = s.title;
+    // Replace text node (keep the dot div)
+    const textNode = [..._livePill.childNodes].find(n => n.nodeType === 3);
+    if (textNode) textNode.textContent = ' ' + s.text;
+    _livePill.style.opacity = status === 'offline' ? '0.5' : '1';
+  };
+
+  const _isModalOpen = () => !!document.querySelector('.overlay[style*="flex"]');
+
+  // Fast-path bins refresher with full mapping
+  const refreshBins = debounce(async () => {
+    if (_isModalOpen()) return;
+    try {
+      const raw = await dbFetchBins();
+      if (!raw) return;
+      state.bins = raw.map(b => ({
+        id: b.id,
+        binLabel: b.bin_label || null,
+        sortOrder: b.sort_order || b.id,
+        status: b.status,
+        hybrid: b.hybrid || '',
+        company: b.company || '',
+        lot: b.lot || '',
+        qty: parseFloat(b.qty) || 0,
+        pkts: parseInt(b.pkts) || 0,
+        entryMoisture: parseFloat(b.entry_moisture) || 0,
+        currentMoisture: parseFloat(b.current_moisture) || 0,
+        airflow: b.airflow || 'up',
+        intakeDateTS: b.intake_date_ts ? parseInt(b.intake_date_ts) : null,
+        intakeDate: b.intake_date_ts ? new Date(parseInt(b.intake_date_ts)).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
+        targetMoisture: parseFloat(b.target_moisture) || 10,
+        capacityKg: parseFloat(b.capacity_kg) || 0,
+        notes: b.notes || '',
+        updatedBy: b.updated_by || ''
+      }));
+      if (window.Store) window.Store.emitChange();
+    } catch(e) { console.warn('Realtime bins refresh error:', e); }
+  }, 1500);
+
+  // Other tables use a debounced full bootApp (handles complex mappings)
+  const _silentBoot = debounce(() => { if (!_isModalOpen()) bootApp(); }, 2500);
+
+  const refreshSettings = debounce(async () => {
+    try {
+      const map = await dbFetchBoilerTemp();
+      if (map) {
+        state.boiler1Temp        = map['boiler_1_temp'] || map['boiler_temp'] || '—';
+        state.boiler2Temp        = map['boiler_2_temp'] || '—';
+        state.boilerPressure     = map['boiler_pressure'] || '—';
+        state.boilerPressureUnit = map['boiler_pressure_unit'] || 'kg/cm²';
+        const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        setTxt('boiler-1-display', state.boiler1Temp);
+        setTxt('boiler-2-display', state.boiler2Temp);
+        setTxt('boiler-pressure-display', state.boilerPressure);
+      }
+    } catch(e) { console.warn('Realtime settings refresh error:', e); }
+  }, 1500);
+
+  _setLiveStatus('reconnecting');
+
+  window._realtimeChannel = dbClient.channel('yellina-live-v2')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bins' },             () => refreshBins())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'intakes' },          () => _silentBoot())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' },       () => _silentBoot())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'entry_trucks' },     () => _silentBoot())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'field_updates' },    () => _silentBoot())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'plant_settings' },   () => refreshSettings())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance_logs' }, debounce(() => { if (!_isModalOpen()) bootApp(); }, 3000))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'labor_logs' },       debounce(() => { if (!_isModalOpen()) bootApp(); }, 3000))
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED')  _setLiveStatus('live');
+      else if (status === 'CLOSED') _setLiveStatus('offline');
+      else                          _setLiveStatus('reconnecting');
+    });
 }
 
 // Forgot password — simple prompt for now

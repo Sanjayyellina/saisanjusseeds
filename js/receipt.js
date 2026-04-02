@@ -49,8 +49,16 @@ function viewReceipt(receiptId) {
 function buildReceipt(d) {
   const qrId = 'r-qr-' + d.receiptId.replace(/\W/g, '');
   const ratePerKg = d.qty > 0 ? (d.amount / d.qty).toFixed(2) : '—';
-  const words = amountInWords(d.amount);
   const hashDisplay = d.hash.match(/.{1,16}/g).join(' ');
+
+  // GST calculations
+  const gstRate   = parseFloat(d.gstRate || 0);
+  const taxableAmt = parseInt(d.amount);
+  const cgstAmt   = gstRate > 0 ? Math.round(taxableAmt * (gstRate / 2) / 100) : 0;
+  const sgstAmt   = gstRate > 0 ? Math.round(taxableAmt * (gstRate / 2) / 100) : 0;
+  const totalAmt  = taxableAmt + cgstAmt + sgstAmt;
+  const invoiceType = gstRate > 0 ? 'TAX INVOICE' : 'BILL OF SUPPLY';
+  const words = amountInWords(totalAmt);
 
   return `<div id="print-receipt">
   <div class="invoice-wrap">
@@ -67,7 +75,7 @@ function buildReceipt(d) {
         </div>
       </div>
       <div class="inv-title-block">
-        <div class="inv-title">DISPATCH INVOICE</div>
+        <div class="inv-title">${invoiceType}</div>
         <table class="inv-meta-table">
           <tr><td class="inv-meta-key">Invoice No.</td><td class="inv-meta-val">${d.receiptId}</td></tr>
           <tr><td class="inv-meta-key">Date</td><td class="inv-meta-val">${d.date}</td></tr>
@@ -85,6 +93,7 @@ function buildReceipt(d) {
         <div class="inv-box-title">Bill To / Consignee</div>
         <div class="inv-party-name">${d.party}</div>
         ${d.address ? `<div class="inv-party-addr">${d.address}</div>` : ''}
+        ${d.buyerGstin ? `<div class="inv-party-addr" style="font-family:'DM Mono',monospace;font-size:10px;margin-top:4px;">GSTIN: ${d.buyerGstin}</div>` : ''}
       </div>
       <div class="inv-party-box">
         <div class="inv-box-title">Dispatch From</div>
@@ -98,6 +107,7 @@ function buildReceipt(d) {
       <thead>
         <tr>
           <th class="col-sno">#</th>
+          <th class="col-hsn">HSN</th>
           <th class="col-desc">Description / Hybrid</th>
           <th class="col-lot">Lot No.</th>
           <th class="col-moisture">Moisture</th>
@@ -110,6 +120,7 @@ function buildReceipt(d) {
       <tbody>
         <tr>
           <td class="col-sno center">1</td>
+          <td class="col-hsn center mono">${d.hsnCode || '1005 10 90'}</td>
           <td class="col-desc"><strong>${d.hybrid}</strong><br><span class="item-sub">Dried Corn Seed</span></td>
           <td class="col-lot center mono">${d.lot || '—'}</td>
           <td class="col-moisture center">${d.moisture ? d.moisture + '%' : '—'}</td>
@@ -121,17 +132,33 @@ function buildReceipt(d) {
       </tbody>
       <tfoot>
         <tr class="subtotal-row">
-          <td colspan="4"></td>
-          <td class="label right" colspan="3">Sub Total</td>
-          <td class="right mono">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
+          <td colspan="5"></td>
+          <td class="label right" colspan="3">Taxable Value</td>
+          <td class="right mono">₹${taxableAmt.toLocaleString('en-IN')}</td>
         </tr>
+        ${cgstAmt > 0 ? `
+        <tr class="subtotal-row">
+          <td colspan="5"></td>
+          <td class="label right" colspan="3">CGST @ ${gstRate/2}%</td>
+          <td class="right mono">₹${cgstAmt.toLocaleString('en-IN')}</td>
+        </tr>
+        <tr class="subtotal-row">
+          <td colspan="5"></td>
+          <td class="label right" colspan="3">SGST @ ${gstRate/2}%</td>
+          <td class="right mono">₹${sgstAmt.toLocaleString('en-IN')}</td>
+        </tr>` : `
+        <tr class="subtotal-row">
+          <td colspan="5"></td>
+          <td class="label right" colspan="3" style="font-size:9px;color:#9ca3af;">GST Exempt / Nil Rated</td>
+          <td class="right mono" style="color:#9ca3af;">—</td>
+        </tr>`}
         <tr class="total-row">
-          <td colspan="4" class="words-cell">
+          <td colspan="5" class="words-cell">
             <span class="words-label">Amount in Words:</span><br>
             <span class="words-val">${words}</span>
           </td>
           <td class="label right" colspan="3">TOTAL</td>
-          <td class="right total-amount">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
+          <td class="right total-amount">₹${totalAmt.toLocaleString('en-IN')}</td>
         </tr>
       </tfoot>
     </table>
