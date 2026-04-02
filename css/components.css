@@ -57,7 +57,7 @@
 /* ============================================================
    BIN GRID
    ============================================================ */
-.bins-master { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.bins-master { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:24px; }
 @media(max-width:1300px) { .bins-master { grid-template-columns:repeat(3,1fr); } }
 
 /* ============================================================
@@ -69,12 +69,12 @@
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   border: 1.5px solid rgba(255,255,255,0.65);
   border-radius: var(--radius-xl);
-  padding: 13px;
+  padding: 11px;
   cursor: pointer;
   transition: all var(--transition);
   position: relative;
   overflow: hidden;
-  min-height: 80px;
+  min-height: 70px;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.88),
     0 4px 24px rgba(15,25,35,.08),
@@ -104,8 +104,8 @@
 .bin-tile.s-intake  { background: rgba(219,234,254,0.48); border-color: rgba(147,197,253,0.55); }
 .bin-tile.s-empty   { background: rgba(255,255,255,0.38); border-color: rgba(180,195,210,0.5); border-style: dashed; }
 
-.bin-tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.bin-num-label { font-size: 14px; font-weight: 800; color: var(--ink-2); letter-spacing: 1px; text-transform: uppercase; }
+.bin-tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.bin-num-label { font-size: 12px; font-weight: 800; color: var(--ink-2); letter-spacing: 1px; text-transform: uppercase; }
 
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot-empty   { background: var(--surface-4); }
@@ -116,16 +116,16 @@
 
 /* Active bin — vertical full-width layout */
 .bin-hybrid-name {
-  font-size: 20px; font-weight: 800; color: #0F5132;
+  font-size: 17px; font-weight: 800; color: #0F5132;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-bottom: 4px; letter-spacing: .3px;
+  margin-bottom: 3px; letter-spacing: .3px;
 }
 .bin-gauge-center {
   display: flex; justify-content: center; align-items: center;
   margin: 2px 0 8px;
 }
 .bin-meta-row {
-  font-size: 12px; font-weight: 700; margin-bottom: 10px;
+  font-size: 11px; font-weight: 700; margin-bottom: 8px;
   line-height: 1.5; display: flex; align-items: center;
   flex-wrap: wrap; gap: 3px; justify-content: center;
 }
@@ -142,9 +142,9 @@
   display: inline-flex; align-items: baseline; gap: 4px;
   font-family: 'DM Mono', monospace;
 }
-.bh-elapsed { font-size: 16px; font-weight: 800; /* color set inline via hoursColor */ }
-.bh-sep     { font-size: 13px; font-weight: 400; color: var(--ink-4); }
-.bh-target  { font-size: 15px; font-weight: 700; color: var(--ink-4); }
+.bh-elapsed { font-size: 14px; font-weight: 800; /* color set inline via hoursColor */ }
+.bh-sep     { font-size: 11px; font-weight: 400; color: var(--ink-4); }
+.bh-target  { font-size: 13px; font-weight: 700; color: var(--ink-4); }
 .bin-hours-track { height: 5px; background: rgba(0,0,0,.07); border-radius: 99px; overflow: hidden; }
 .bin-hours-fill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.4,0,.2,1); }
 
@@ -166,8 +166,8 @@
 /* Airflow arrow badge — sits in tile header */
 .air-arrow {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: 50%;
-  font-size: 17px; font-weight: 900; line-height: 1;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 15px; font-weight: 900; line-height: 1;
   border: 2px solid currentColor;
   flex-shrink: 0;
 }
