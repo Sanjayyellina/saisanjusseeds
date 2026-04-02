@@ -2043,51 +2043,119 @@ window.saveFieldUpdate = async function() {
       createdAtDisplay: new Date(saved.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
     });
 
-    closeModal('update-modal');
+    // 5a. Weigh slip cross-table writes
     if (type === 'weigh_slip') {
-      if (materialDir === 'INWARD' && vehicleNo) {
-        // Find existing entry_truck or create new one
-        const existing = (state.entryTrucks || []).find(t => t.vehicleNo === vehicleNo);
-        const truckData = {
-          tare_weight:  tareWt,
-          gross_weight: grossWt,
-          net_weight:   netWt,
-          company:      companyName || undefined,
-          status:       'weighed',
-          updated_at:   new Date().toISOString()
+      if (materialDir === 'INWARD') {
+        // ── INWARD: create or update entry_trucks ──────────────
+        const existing = (state.entryTrucks || []).find(t =>
+          vehicleNo && t.vehicleNo?.toUpperCase() === vehicleNo.toUpperCase());
+        const truckPayload = {
+          ...(tareWt  != null && { tare_weight:  tareWt }),
+          ...(grossWt != null && { gross_weight: grossWt }),
+          ...(netWt   != null && { net_weight:   netWt }),
+          ...(companyName     && { company:       companyName }),
+          status:    'weighed',
+          updated_at: new Date().toISOString()
         };
         if (existing) {
-          await dbClient.from('entry_trucks').update(truckData).eq('id', existing.id);
-          Object.assign(existing, { tareWeight: tareWt||0, grossWeight: grossWt||0, netWeight: netWt||0, company: companyName||existing.company, status:'weighed' });
-          toast(`Entry truck ${vehicleNo} weights updated`, 'success');
+          await dbClient.from('entry_trucks').update(truckPayload).eq('id', existing.id);
+          Object.assign(existing, {
+            tareWeight:  tareWt  ?? existing.tareWeight,
+            grossWeight: grossWt ?? existing.grossWeight,
+            netWeight:   netWt   ?? existing.netWeight,
+            company:     companyName || existing.company,
+            status:      'weighed'
+          });
+          toast(`✅ Entry truck ${vehicleNo} — weights updated`, 'success');
         } else {
+          // No existing truck — create one from the slip
           const { data: newTruck } = await dbClient.from('entry_trucks').insert([{
-            vehicle_no: vehicleNo, tare_weight: tareWt, gross_weight: grossWt, net_weight: netWt,
-            company: companyName, status: 'weighed', arrival_time: new Date().toISOString()
+            vehicle_no:   vehicleNo || 'UNKNOWN',
+            tare_weight:  tareWt,
+            gross_weight: grossWt,
+            net_weight:   netWt,
+            company:      companyName,
+            status:       'weighed',
+            arrival_time: new Date().toISOString()
           }]).select().single();
           if (newTruck) {
-            (state.entryTrucks = state.entryTrucks||[]).unshift({ id:newTruck.id, vehicleNo, tareWeight:tareWt||0, grossWeight:grossWt||0, netWeight:netWt||0, company:companyName||'', status:'weighed', arrivalTime:newTruck.arrival_time, arrivalDisplay:new Date(newTruck.arrival_time).toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), driverName:'', driverPhone:'', notes:'', lotNumbers:[], intakeId:null });
+            const ts = new Date(newTruck.arrival_time);
+            (state.entryTrucks = state.entryTrucks||[]).unshift({
+              id: newTruck.id, vehicleNo: vehicleNo||'UNKNOWN',
+              tareWeight: tareWt||0, grossWeight: grossWt||0, netWeight: netWt||0,
+              company: companyName||'', status: 'weighed',
+              arrivalTime: newTruck.arrival_time,
+              arrivalDisplay: ts.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+              driverName:'', driverPhone:'', notes:'', lotNumbers:[], intakeId:null
+            });
           }
-          toast(`Entry truck ${vehicleNo} created from weigh slip`, 'success');
+          toast(`✅ New entry truck ${vehicleNo||'?'} created from weigh slip`, 'success');
         }
-      } else if (materialDir === 'OUTWARD' && vehicleNo) {
-        // Find matching dispatch by vehicle and update weights
-        const disp = (state.dispatches || []).find(d => (d.vehicle||'').toUpperCase() === vehicleNo);
+
+      } else if (materialDir === 'OUTWARD') {
+        // ── OUTWARD: update existing dispatch, or create draft ─
+        const disp = (state.dispatches || []).find(d =>
+          vehicleNo && (d.vehicle||'').toUpperCase() === vehicleNo.toUpperCase());
         if (disp) {
-          await dbClient.from('dispatches').update({ bags: bagsCount || disp.bags, qty: netWt || disp.qty }).eq('receipt_id', disp.receiptId);
-          if (bagsCount) disp.bags = bagsCount;
-          if (netWt)     disp.qty  = netWt;
-          toast(`Dispatch ${disp.receiptId} updated from weigh slip`, 'success');
+          const upd = {};
+          if (bagsCount) upd.bags = bagsCount;
+          if (netWt)     upd.qty  = netWt;
+          if (Object.keys(upd).length) {
+            await dbClient.from('dispatches').update(upd).eq('receipt_id', disp.receiptId);
+            Object.assign(disp, upd);
+          }
+          toast(`✅ Dispatch ${disp.receiptId} updated from weigh slip`, 'success');
         } else {
-          toast(`Weigh slip saved — no matching dispatch found for ${vehicleNo}`, 'info');
+          // No existing dispatch — create a draft dispatch from the slip
+          state.receiptCounter = state.receiptCounter || 1001;
+          const receiptId = `YDS-${new Date().getFullYear()}-${String(state.receiptCounter++).padStart(6,'0')}`;
+          const now = new Date();
+          const { buildHash, buildSignature } = window;
+          const draftDispatch = {
+            receipt_id:  receiptId,
+            party:       companyName || 'From Weigh Slip',
+            address:     '',
+            vehicle:     vehicleNo || '',
+            hybrid:      weighHybrid || '',
+            lot:         ticketNo   || '',
+            bags:        bagsCount  || 0,
+            qty:         netWt      || 0,
+            amount:      0,
+            moisture:    0,
+            remarks:     `Auto-created from weigh slip. Ticket: ${ticketNo||'—'}`,
+            bins:        [],
+            season_year: now.getFullYear()
+          };
+          // Generate hash for receipt integrity
+          if (typeof buildHash === 'function') {
+            draftDispatch.hash = buildHash(draftDispatch);
+            draftDispatch.signature = typeof buildSignature === 'function' ? buildSignature(draftDispatch.hash) : '';
+          }
+          const { data: newDisp } = await dbClient.from('dispatches').insert([draftDispatch]).select().single();
+          if (newDisp) {
+            const stateDisp = {
+              receiptId, party: draftDispatch.party, address: '', vehicle: vehicleNo||'',
+              hybrid: weighHybrid||'', lot: ticketNo||'', bins:[], bags: bagsCount||0,
+              qty: netWt||0, amount:0, moisture:0, remarks: draftDispatch.remarks,
+              hash: draftDispatch.hash||'', signature: draftDispatch.signature||'',
+              dateTS: now.getTime(),
+              date: now.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}),
+              season_year: now.getFullYear()
+            };
+            (state.dispatches = state.dispatches||[]).unshift(stateDisp);
+          }
+          toast(`✅ Draft dispatch ${receiptId} created from weigh slip — complete it in Dispatch tab`, 'success');
         }
       }
     }
 
+    closeModal('update-modal');
     if (type !== 'moisture_photo' && type !== 'boiler_temp' && type !== 'weigh_slip') toast('Update saved!', 'success');
-    if (typeof renderUpdatesPage === 'function') renderUpdatesPage();
-    if (typeof renderDashboard   === 'function' && (type === 'moisture_photo' || type === 'boiler_temp')) renderDashboard();
-    if (typeof renderBinsPage    === 'function' && type === 'moisture_photo') renderBinsPage();
+    if (typeof renderUpdatesPage    === 'function') renderUpdatesPage();
+    if (typeof renderDashboard      === 'function' && (type === 'moisture_photo' || type === 'boiler_temp')) renderDashboard();
+    if (typeof renderBinsPage       === 'function' && type === 'moisture_photo') renderBinsPage();
+    if (typeof renderEntryTrucksPage=== 'function' && type === 'weigh_slip' && materialDir === 'INWARD')  renderEntryTrucksPage();
+    if (typeof renderDispatchPage   === 'function' && type === 'weigh_slip' && materialDir === 'OUTWARD') renderDispatchPage();
     _directLogActivity('field_update_added', `${type} by ${submittedBy}${moistureVal ? ' — ' + moistureVal + '%' : ''}${tempVal ? ' — ' + tempVal + '°C' : ''}`, 'field_update', saved.id);
   } catch(e) {
     console.error('saveFieldUpdate:', e);
