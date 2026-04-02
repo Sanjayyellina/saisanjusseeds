@@ -421,6 +421,22 @@ async function dbLogin(email, password) {
   }
 }
 
+// ── Plant Settings (boiler temp etc.) ────────────────────────
+async function dbFetchBoilerTemp() {
+  try {
+    const { data } = await dbClient.from('plant_settings').select('value').eq('key','boiler_temp').single();
+    return data?.value || '—';
+  } catch(e) { return '—'; }
+}
+
+async function dbSetBoilerTemp(temp) {
+  try {
+    const { error } = await dbClient.from('plant_settings')
+      .upsert({ key:'boiler_temp', value:String(temp), updated_at:new Date().toISOString() }, { onConflict:'key' });
+    return !error;
+  } catch(e) { return false; }
+}
+
 async function dbLogout() {
   try {
     const { error } = await dbClient.auth.signOut();

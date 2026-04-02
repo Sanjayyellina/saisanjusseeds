@@ -1193,6 +1193,44 @@ async function saveLabor() {
 // ================================================================
 // ENTRY TRUCKS
 // ================================================================
+// ── Boiler Temperature ────────────────────────────────────────
+window.toggleBoilerEdit = function() {
+  const popup = document.getElementById('boiler-popup');
+  if (!popup) return;
+  const isOpen = popup.style.display !== 'none';
+  popup.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const input = document.getElementById('boiler-temp-input');
+    const current = document.getElementById('boiler-temp-display').textContent;
+    if (input) { input.value = current !== '—' ? current : ''; setTimeout(() => input.focus(), 50); }
+  }
+};
+
+window.saveBoilerTemp = async function() {
+  const input = document.getElementById('boiler-temp-input');
+  const val = (input?.value || '').trim();
+  if (!val) { toast('Enter a temperature', 'error'); return; }
+  const ok = await dbSetBoilerTemp(val);
+  if (ok) {
+    state.boilerTemp = val;
+    const display = document.getElementById('boiler-temp-display');
+    if (display) display.textContent = val;
+    toggleBoilerEdit();
+    toast('Boiler temp updated to ' + val + '°C', 'success');
+  } else {
+    toast('Failed to save temperature', 'error');
+  }
+};
+
+// Close boiler popup when clicking outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('boiler-wrap');
+  const popup = document.getElementById('boiler-popup');
+  if (popup && popup.style.display !== 'none' && wrap && !wrap.contains(e.target)) {
+    popup.style.display = 'none';
+  }
+});
+
 function calcTruckNetWeight() {
   const gross = parseFloat(document.getElementById('t-gross').value) || 0;
   const tare = parseFloat(document.getElementById('t-tare').value) || 0;

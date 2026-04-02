@@ -273,6 +273,13 @@ async function bootApp() {
     }));
   }
 
+  // Fetch boiler temp (non-blocking)
+  dbFetchBoilerTemp().then(temp => {
+    state.boilerTemp = temp;
+    const el = document.getElementById('boiler-temp-display');
+    if (el) el.textContent = temp !== '—' ? temp : '—';
+  });
+
   // Record activity so inactivity timer resets on successful boot
   _touchActivity();
 

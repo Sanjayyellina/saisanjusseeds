@@ -83,6 +83,29 @@
 }
 .topbar-time { font-family:'DM Mono',monospace; font-size:12px; font-weight:500; color:var(--ink-4); padding:0 4px; }
 
+/* ── Boiler Temperature pill ── */
+.boiler-wrap { position:relative; }
+.boiler-pill {
+  display:flex; align-items:center; gap:5px;
+  height:36px; padding:0 12px;
+  background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.28);
+  border-radius:var(--radius); cursor:pointer;
+  font-family:'DM Mono',monospace; font-size:13px; font-weight:700; color:#dc2626;
+  transition:all var(--transition);
+}
+.boiler-pill:hover { background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.5); }
+.boiler-unit { font-size:10px; font-weight:600; opacity:.75; }
+.boiler-popup {
+  position:absolute; top:calc(100% + 10px); right:0;
+  background:var(--surface); border:1px solid var(--surface-4);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-xl);
+  padding:16px; z-index:9100; min-width:200px;
+}
+.boiler-popup-title {
+  font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--ink-4); margin-bottom:10px;
+}
+
 /* Notification Bell */
 .notif-wrap { position:relative; }
 .notif-btn {

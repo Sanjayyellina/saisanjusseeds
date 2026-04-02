@@ -49,7 +49,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Modular Stylesheets -->
 <link rel="stylesheet" href="css/variables.css?v=21">
-<link rel="stylesheet" href="css/layout.css?v=23">
+<link rel="stylesheet" href="css/layout.css?v=24">
 <link rel="stylesheet" href="css/components.css?v=45">
 </head>
 <body>
@@ -173,6 +173,27 @@
     </select>
     <div class="live-pill"><div class="live-dot"></div> Live</div>
     <div class="topbar-time" id="clock">--:--:--</div>
+
+    <!-- Boiler Temperature -->
+    <div class="boiler-wrap" id="boiler-wrap">
+      <button class="boiler-pill" id="boiler-btn" onclick="toggleBoilerEdit()" title="Boiler temperature — click to update">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>
+        <span id="boiler-temp-display">—</span><span class="boiler-unit">°C</span>
+      </button>
+      <div class="boiler-popup" id="boiler-popup" style="display:none;">
+        <div class="boiler-popup-title">🔥 Boiler Temperature</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <input type="number" id="boiler-temp-input" class="form-input" style="width:100px;font-size:20px;font-weight:700;text-align:center;padding:6px 10px;" placeholder="65" min="0" max="300"
+            onkeydown="if(event.key==='Enter')saveBoilerTemp()">
+          <span style="font-size:20px;font-weight:700;color:var(--ink-3);">°C</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-solid btn-sm" style="flex:1;" onclick="saveBoilerTemp()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleBoilerEdit()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div class="notif-wrap" id="notif-wrap">
       <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Alerts">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -1396,7 +1417,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="js/error-boundary.js"></script>
 <script src="js/offline-queue.js"></script>
-<script src="js/db.js?v=8"></script>
+<script src="js/db.js?v=9"></script>
 <!-- Modular JavaScript -->
 <script src="js/config.js?v=1"></script>
 <script src="js/state.js?v=3"></script>
@@ -1406,9 +1427,9 @@
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=19"></script>
 <script src="js/render.js?v=24"></script>
-<script src="js/actions.js?v=26"></script>
+<script src="js/actions.js?v=27"></script>
 <script src="js/receipt.js?v=7"></script>
 <script src="js/clock.js?v=2"></script>
-<script src="js/init.js?v=14"></script>
+<script src="js/init.js?v=15"></script>
 </body>
 </html>
