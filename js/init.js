@@ -46,21 +46,42 @@ function _showBootError() {
     </div>`;
 }
 
-// ── Check for existing session on page load; skip login if already signed in ──
+// ── Session timeout: 8 hours of inactivity forces re-login ──
+const _SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hours
+const _ACTIVITY_KEY = 'yellina_last_active';
+
+function _touchActivity() {
+  localStorage.setItem(_ACTIVITY_KEY, Date.now().toString());
+}
+
+function _sessionExpired() {
+  const last = parseInt(localStorage.getItem(_ACTIVITY_KEY) || '0');
+  if (!last) return true; // no record = treat as expired
+  return (Date.now() - last) > _SESSION_TIMEOUT_MS;
+}
+
+// Keep activity timestamp fresh while the user is on the page
+document.addEventListener('click', _touchActivity, { passive: true });
+document.addEventListener('keydown', _touchActivity, { passive: true });
+
 async function initApp() {
   const loginScreen = document.getElementById('login-screen');
-  const appShell = document.getElementById('app-shell');
+  const appShell    = document.getElementById('app-shell');
   try {
     const { data: { session } } = await dbClient.auth.getSession();
-    if (session) {
-      // Already logged in — go straight to the app
+    if (session && !_sessionExpired()) {
+      // Valid session + active within 8 hours → skip login
+      _touchActivity();
       if (loginScreen) loginScreen.style.display = 'none';
       bootApp();
       return;
     }
+    // Session exists but timed out — sign out cleanly
+    if (session) await dbClient.auth.signOut();
   } catch(e) { /* fall through to login */ }
+  localStorage.removeItem(_ACTIVITY_KEY);
   if (loginScreen) loginScreen.style.display = 'flex';
-  if (appShell) appShell.style.display = 'none';
+  if (appShell)    appShell.style.display    = 'none';
 }
 
 // Toggle the user dropdown menu
@@ -250,6 +271,9 @@ async function bootApp() {
       removedAtDisplay: new Date(r.removed_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
     }));
   }
+
+  // Record activity so inactivity timer resets on successful boot
+  _touchActivity();
 
   // Hide spinner BEFORE emitting change so first render is visible
   _hideBootSpinner();

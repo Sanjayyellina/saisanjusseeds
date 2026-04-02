@@ -425,6 +425,7 @@ async function dbLogout() {
   try {
     const { error } = await dbClient.auth.signOut();
     if(error) throw error;
+    localStorage.removeItem('yellina_last_active'); // clear inactivity timer
     if(window.Store) window.Store.reset();
     window.location.reload();
   } catch(err) {
