@@ -1415,6 +1415,13 @@ function openTruckModal() {
   document.getElementById('t-arrival').value = new Date().toISOString().slice(0,16);
   document.getElementById('truck-modal-title').textContent = 'Register Truck';
   _renderTruckLots([]);
+  // Reset slip scan state
+  const slipPhoto = document.getElementById('t-slip-photo');
+  const slipStatus = document.getElementById('t-slip-status');
+  const slipPreview = document.getElementById('t-slip-preview');
+  if (slipPhoto)   slipPhoto.value = '';
+  if (slipStatus)  { slipStatus.style.display = 'none'; slipStatus.textContent = ''; }
+  if (slipPreview) { slipPreview.style.display = 'none'; slipPreview.src = ''; }
   openModal('truck-modal');
 }
 
@@ -2272,6 +2279,82 @@ window.runOcrOnPhoto = async function(input) {
   } catch(e) {
     console.error('OCR error:', e);
     if (statusEl) statusEl.textContent = 'Could not read text — enter values manually';
+  }
+};
+
+// ── Truck modal: scan weighing slip ───────────────────────────
+window.runTruckSlipOcr = async function(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+
+  const preview  = document.getElementById('t-slip-preview');
+  const statusEl = document.getElementById('t-slip-status');
+
+  if (preview)  { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '🔍 Reading slip…'; }
+
+  if (typeof Tesseract === 'undefined') {
+    if (statusEl) statusEl.textContent = '⚠️ OCR not available — enter weights manually';
+    return;
+  }
+
+  try {
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (statusEl && m.status === 'recognizing text')
+          statusEl.textContent = `🔍 Reading… ${Math.round((m.progress||0)*100)}%`;
+      }
+    });
+    const text = result?.data?.text || '';
+    const filled = [];
+
+    const setField = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val) { el.value = val; return true; }
+      return false;
+    };
+
+    // Vehicle Number
+    const vehM = text.match(/vehicle\s*no\.?\s*[:\s]+([A-Z0-9]{6,12})/i);
+    if (vehM && setField('t-vehicle', vehM[1].toUpperCase())) filled.push(`Vehicle: ${vehM[1].toUpperCase()}`);
+
+    // Company
+    const cmpM = text.match(/company\s*[:\s]+(.{2,30}?)[\r\n]/i);
+    if (cmpM && setField('t-company', cmpM[1].trim())) filled.push(`Company: ${cmpM[1].trim()}`);
+
+    // Gross weight (2nd Weight = loaded truck)
+    const w2M = text.match(/2nd\s*weight\s*[:\s]+(\d{3,6})/i);
+    if (w2M && setField('t-gross', w2M[1])) filled.push(`Gross: ${w2M[1]} kg`);
+
+    // Tare weight (1st Weight = empty truck)
+    const w1M = text.match(/1st\s*weight\s*[:\s]+(\d{3,6})/i);
+    if (w1M && setField('t-tare', w1M[1])) filled.push(`Tare: ${w1M[1]} kg`);
+
+    // Fallback: if direct gross/tare labels used
+    if (!w2M) { const gM = text.match(/gross\s*weight\s*[:\s]+(\d{3,6})/i); if (gM) { setField('t-gross', gM[1]); filled.push(`Gross: ${gM[1]} kg`); } }
+    if (!w1M) { const tM = text.match(/tare\s*weight\s*[:\s]+(\d{3,6})/i);  if (tM) { setField('t-tare',  tM[1]); filled.push(`Tare: ${tM[1]} kg`); } }
+
+    // Recalculate net weight display
+    calcTruckNetWeight();
+
+    // Net weight from slip (for verification)
+    const nwM = text.match(/net\.?\s*weight\s*[:\s]+(\d{3,6})/i);
+    if (nwM) filled.push(`Net: ${nwM[1]} kg ✓`);
+
+    if (statusEl) {
+      if (filled.length > 0) {
+        statusEl.textContent = `✅ Auto-filled — ${filled.join(' · ')}`;
+        statusEl.style.background = 'var(--green-pale,#f0fdf4)';
+        statusEl.style.color = 'var(--green)';
+      } else {
+        statusEl.textContent = '⚠️ Could not read slip — enter values manually';
+        statusEl.style.background = '#fffbeb';
+        statusEl.style.color = 'var(--amber)';
+      }
+    }
+  } catch(e) {
+    console.error('Truck slip OCR error:', e);
+    if (statusEl) { statusEl.textContent = '⚠️ OCR failed — enter weights manually'; statusEl.style.background = '#fffbeb'; statusEl.style.color = 'var(--amber)'; }
   }
 };
 
