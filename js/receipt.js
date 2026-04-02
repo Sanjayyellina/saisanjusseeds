@@ -398,3 +398,176 @@ document.addEventListener('click', function(e) {
     if (dropdown) dropdown.style.display = 'none';
   }
 });
+
+// ================================================================
+// DRIVER SLIP — printable gate-pass handed to truck driver
+// Prints 2 copies on one page (top + bottom, with cut-line)
+// ================================================================
+window.printDriverSlip = function(receiptId) {
+  const rid = receiptId || _currentReceiptId;
+  const d = rid ? state.dispatches.find(x => x.receiptId === rid) : null;
+  if (!d) { toast('Dispatch record not found', 'error'); return; }
+
+  const date = d.date || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const slipNo = d.receiptId;
+  const hybrid = d.hybrid || '—';
+  const lots = d.lot || '—';
+  const bags = (d.bags || 0).toLocaleString('en-IN');
+  const qty = (d.qty || 0).toLocaleString('en-IN');
+  const moisture = d.moisture ? d.moisture + '%' : '—';
+  const party = d.party || '—';
+  const address = d.address || '';
+  const vehicle = d.vehicle || '—';
+  const driverName = d.driverName || '—';
+  const remarks = d.remarks || '';
+
+  const slipHtml = `
+    <div class="slip-box">
+      <div class="slip-header">
+        <div class="slip-logo-wrap">
+          <img src="${LOGO}" class="slip-logo" onerror="this.style.display='none'">
+          <div>
+            <div class="slip-company">Yellina Seeds Pvt. Ltd.</div>
+            <div class="slip-addr">Sathupally, Khammam Dist – 507303, Telangana</div>
+            <div class="slip-addr">Cell: +91 99494 84078</div>
+          </div>
+        </div>
+        <div class="slip-title-block">
+          <div class="slip-title">DRIVER SLIP</div>
+          <div class="slip-sub">Gate Pass / Delivery Copy</div>
+          <table class="slip-meta">
+            <tr><td class="sk">Slip No.</td><td class="sv">${slipNo}</td></tr>
+            <tr><td class="sk">Date</td><td class="sv">${date}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="slip-body">
+        <div class="slip-row2">
+          <div class="slip-field">
+            <div class="sf-label">To (Party / Buyer)</div>
+            <div class="sf-val bold">${party}</div>
+            ${address ? `<div class="sf-sub">${address}</div>` : ''}
+          </div>
+          <div class="slip-field">
+            <div class="sf-label">Vehicle No.</div>
+            <div class="sf-val bold mono">${vehicle}</div>
+            <div class="sf-label" style="margin-top:6px;">Driver Name</div>
+            <div class="sf-val">${driverName}</div>
+          </div>
+        </div>
+
+        <div class="slip-divider"></div>
+
+        <table class="slip-table">
+          <thead>
+            <tr>
+              <th>Hybrid / Material</th>
+              <th>Lot Nos</th>
+              <th>Bags</th>
+              <th>Net Weight (Kg)</th>
+              <th>Moisture %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="bold">${hybrid}<br><span class="sub">Dried Corn Seed</span></td>
+              <td class="mono center">${lots}</td>
+              <td class="mono center bold">${bags}</td>
+              <td class="mono center bold">${qty}</td>
+              <td class="center">${moisture}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        ${remarks ? `<div class="slip-remarks"><span class="sk">Remarks:</span> ${remarks}</div>` : ''}
+
+        <div class="slip-footer-row">
+          <div class="sign-block">
+            <div class="sign-line"></div>
+            <div class="sign-label">Driver Signature</div>
+          </div>
+          <div class="slip-stamp">
+            <div class="stamp-circle">
+              <div class="stamp-text">YELLINA SEEDS</div>
+              <div class="stamp-text2">SATHUPALLY</div>
+            </div>
+          </div>
+          <div class="sign-block">
+            <div class="sign-line"></div>
+            <div class="sign-label">Authorised Signatory</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const html = `<!DOCTYPE html><html><head><title>Driver Slip — ${slipNo}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{size:A4 portrait;margin:10mm 12mm;}
+  body{font-family:'DM Sans',sans-serif;font-size:11px;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
+  .slip-box{border:2px solid #1b3a2d;border-radius:6px;overflow:hidden;margin-bottom:0;}
+  .slip-copy-label{text-align:center;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;padding:5px 0;}
+  .cut-line{border:none;border-top:1.5px dashed #bbb;margin:8px 0;position:relative;}
+  .cut-line::before{content:'✂';position:absolute;left:50%;top:-9px;transform:translateX(-50%);background:#fff;padding:0 6px;font-size:12px;color:#aaa;}
+
+  /* Header */
+  .slip-header{display:flex;justify-content:space-between;align-items:flex-start;background:#1b3a2d;padding:12px 16px;color:#fff;gap:10px;}
+  .slip-logo-wrap{display:flex;align-items:flex-start;gap:10px;}
+  .slip-logo{width:40px;height:40px;object-fit:contain;background:#fff;border-radius:5px;padding:2px;flex-shrink:0;}
+  .slip-company{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.1px;}
+  .slip-addr{font-size:8.5px;color:rgba(255,255,255,.65);line-height:1.7;}
+  .slip-title-block{text-align:right;flex-shrink:0;}
+  .slip-title{font-size:20px;font-weight:800;color:#f5c842;letter-spacing:1px;}
+  .slip-sub{font-size:8.5px;color:rgba(255,255,255,.6);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
+  .slip-meta{border-collapse:collapse;}
+  .slip-meta td{font-size:9.5px;padding:1px 0;}
+  .sk{color:rgba(255,255,255,.5);padding-right:8px;text-align:right;}
+  .sv{font-weight:700;font-family:'DM Mono',monospace;color:#fff;}
+
+  /* Body */
+  .slip-body{padding:12px 16px;}
+  .slip-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;}
+  .slip-field{background:#f8f9fa;border-radius:4px;padding:8px 10px;}
+  .sf-label{font-size:8px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#6b7280;margin-bottom:3px;}
+  .sf-val{font-size:12px;font-weight:600;color:#111;}
+  .sf-sub{font-size:9px;color:#666;margin-top:2px;}
+  .bold{font-weight:700;}
+  .mono{font-family:'DM Mono',monospace;}
+  .center{text-align:center;}
+  .sub{font-size:8.5px;color:#888;font-weight:400;}
+
+  .slip-divider{border:none;border-top:1px solid #e5e7eb;margin:10px 0;}
+
+  .slip-table{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:10px;}
+  .slip-table thead tr{background:#1b3a2d;}
+  .slip-table th{padding:6px 8px;font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#f5c842;text-align:left;}
+  .slip-table td{padding:8px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top;}
+  .slip-table tbody tr{background:#fff;}
+
+  .slip-remarks{font-size:9.5px;color:#555;background:#fffbeb;border-left:3px solid #f5a623;padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:10px;}
+
+  .slip-footer-row{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:14px;padding-top:10px;border-top:1px solid #e5e7eb;}
+  .sign-block{flex:1;text-align:center;}
+  .sign-line{border-top:1.5px solid #1b3a2d;margin-bottom:4px;margin-top:40px;}
+  .sign-label{font-size:9px;font-weight:600;color:#374151;}
+
+  .slip-stamp{flex-shrink:0;display:flex;justify-content:center;}
+  .stamp-circle{width:80px;height:80px;border:2.5px solid #1b3a2d;border-radius:50%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;}
+  .stamp-text{font-size:7.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#1b3a2d;text-align:center;}
+  .stamp-text2{font-size:7px;color:#5a8a6a;text-align:center;letter-spacing:.3px;}
+  </style></head><body>
+  <div class="slip-copy-label">Company Copy</div>
+  ${slipHtml}
+  <hr class="cut-line">
+  <div class="slip-copy-label">Driver Copy</div>
+  ${slipHtml}
+  <script>window.onload=function(){window.print();};<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (w) { w.document.write(html); w.document.close(); }
+  else { toast('Please allow pop-ups to print the driver slip', 'info'); }
+};

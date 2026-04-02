@@ -364,7 +364,10 @@ function renderDispatchPage(){
       <td class="fw700 text-green">₹${parseInt(d.amount).toLocaleString('en-IN')}</td>
       <td class="mono fs12">${esc(d.vehicle)}</td>
       <td><span class="chip chip-green">✓ ${t('actions.view') || 'Signed'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="viewReceipt('${esc(d.receiptId)}')">${t('actions.view')}</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${esc(d.receiptId)}')" style="margin-right:4px;">${t('actions.view')}</button>
+        <button class="btn btn-ghost btn-sm" onclick="printDriverSlip('${esc(d.receiptId)}')" style="color:var(--green);border-color:var(--green);" title="Print Driver Slip">🚚 Slip</button>
+      </td>
     </tr>`).join('')
     :`<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">${t('dash.noDispatches')}</div><div class="empty-sub">Create a dispatch to generate a signed receipt</div></div></td></tr>`;
   _renderPagination('dispatch-pagination', window._dispatchPage, state.dispatches.length, 'goDispatchPage');

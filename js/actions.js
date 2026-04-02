@@ -2318,9 +2318,9 @@ window.runTruckSlipOcr = async function(input) {
     const vehM = text.match(/vehicle\s*no\.?\s*[:\s]+([A-Z0-9]{6,12})/i);
     if (vehM && setField('t-vehicle', vehM[1].toUpperCase())) filled.push(`Vehicle: ${vehM[1].toUpperCase()}`);
 
-    // Company
-    const cmpM = text.match(/company\s*[:\s]+(.{2,30}?)[\r\n]/i);
-    if (cmpM && setField('t-company', cmpM[1].trim())) filled.push(`Company: ${cmpM[1].trim()}`);
+    // NOTE: We intentionally skip filling t-company from the weighbridge slip.
+    // The weighbridge "Company" field is the material/cargo owner, not the transport company.
+    // The truck modal's company field is for the carrier/transporter — let the user fill it.
 
     // Gross weight (2nd Weight = loaded truck)
     const w2M = text.match(/2nd\s*weight\s*[:\s]+(\d{3,6})/i);
