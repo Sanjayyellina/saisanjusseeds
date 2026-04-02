@@ -125,9 +125,9 @@ async function bootApp() {
   });
 
   // Fetch all data in parallel for faster boot
-  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings;
+  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates;
   try {
-    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings] = await Promise.all([
+    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates] = await Promise.all([
       dbFetchBins(),
       dbFetchIntakes(),
       dbFetchDispatches(),
@@ -137,7 +137,8 @@ async function bootApp() {
       dbFetchEntryTrucks(),
       dbFetchBackyardRemovals(),
       dbFetchLaborGroups(),
-      dbFetchMoistureReadings()
+      dbFetchMoistureReadings(),
+      dbFetchFieldUpdates()
     ]);
   } catch (err) {
     console.error('bootApp: fetch error', err);
@@ -237,6 +238,18 @@ async function bootApp() {
   if (labor) state.labor = labor;
   if (binHistory) state.binHistory = binHistory;
   state.moistureReadings = moistureReadings || [];
+  state.fieldUpdates = (fieldUpdates || []).map(u => ({
+    id: u.id,
+    updateType: u.update_type,
+    binId: u.bin_id || null,
+    intakeId: u.intake_id || null,
+    notes: u.notes || '',
+    ocrText: u.ocr_text || '',
+    photoUrl: u.photo_url || null,
+    submittedBy: u.submitted_by || '',
+    createdAt: u.created_at,
+    createdAtDisplay: new Date(u.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  }));
   state.laborGroups = (laborGroups || []).map(g => ({
     id: g.id,
     name: g.name,

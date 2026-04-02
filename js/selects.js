@@ -39,6 +39,14 @@ function populateModalSelects(){
       if (currentVal) selectEl.value = currentVal;
   });
 
+  // Populate bin selector in update modal
+  const updBinSel = document.getElementById('upd-bin');
+  if (updBinSel) {
+    const allBins = state.bins || [];
+    updBinSel.innerHTML = '<option value="">— None —</option>' +
+      allBins.map(b => `<option value="${b.id}">BIN-${b.binLabel||b.id}${b.hybrid ? ' — ' + b.hybrid : ''} (${b.status})</option>`).join('');
+  }
+
   // Populate truck selector in intake modal
   const truckSel = document.getElementById('i-truck-select');
   if (truckSel) {

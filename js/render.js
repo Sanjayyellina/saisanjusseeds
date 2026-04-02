@@ -93,7 +93,7 @@ function renderPage(name){
   const map={dashboard:renderDashboard,intake:renderIntakePage,bins:renderBinsPage,
     moisture:null,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
     analytics:renderAnalytics, manager: renderManagerPage, maintenance: renderMaintenancePage, labor: renderLaborPage,
-    'entry-trucks': renderEntryTrucksPage, backyard: renderBackyardPage};
+    'entry-trucks': renderEntryTrucksPage, backyard: renderBackyardPage, updates: renderUpdatesPage};
   if(map[name])map[name]();
 }
 
@@ -1537,6 +1537,61 @@ function renderBackyardPage() {
       <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-4);">${r.notes || '—'}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Field Updates Page ────────────────────────────────────────
+function renderUpdatesPage() {
+  const updates = state.fieldUpdates || [];
+  const typeConfig = {
+    moisture_photo: { label: 'Moisture Reading', color: 'chip-blue', icon: '💧' },
+    intake_photo:   { label: 'Intake Photo',     color: 'chip-green', icon: '🌽' },
+    bin_note:       { label: 'Bin Note',         color: 'chip-purple', icon: '🏠' },
+    general:        { label: 'General',          color: 'chip-gray', icon: '📝' }
+  };
+
+  // Filter state
+  const activeFilter = window._updatesFilter || 'all';
+  const filtered = activeFilter === 'all' ? updates : updates.filter(u => u.updateType === activeFilter);
+
+  const filterBtns = ['all','moisture_photo','intake_photo','bin_note','general'].map(f => {
+    const cfg = typeConfig[f] || { label:'All', icon:'📋' };
+    const label = f === 'all' ? 'All Updates' : cfg.label;
+    const active = activeFilter === f;
+    return `<button onclick="window._updatesFilter='${f}';renderUpdatesPage();" class="btn btn-ghost btn-sm" style="${active?'background:var(--gold);color:#fff;border-color:var(--gold);':''}">${label}</button>`;
+  }).join('');
+
+  const feedHtml = filtered.length === 0
+    ? `<div style="text-align:center;padding:60px 20px;color:var(--ink-4);">
+        <div style="font-size:48px;margin-bottom:12px;">📋</div>
+        <div style="font-size:15px;font-weight:600;">No updates yet</div>
+        <div style="font-size:13px;margin-top:4px;">Tap "New Update" to post a field update or photo</div>
+      </div>`
+    : filtered.map(u => {
+        const cfg = typeConfig[u.updateType] || typeConfig.general;
+        const binLabel = u.binId ? `BIN-${(state.bins||[]).find(b=>b.id===u.binId)?.binLabel || u.binId}` : '';
+        return `<div class="card" style="padding:0;overflow:hidden;display:flex;gap:0;align-items:stretch;margin-bottom:10px;">
+          ${u.photoUrl ? `<div style="flex:0 0 100px;background:#f4f4f4;"><img src="${esc(u.photoUrl)}" style="width:100px;height:100%;object-fit:cover;display:block;" loading="lazy" onclick="window.open('${esc(u.photoUrl)}','_blank')" title="View full image"></div>` : ''}
+          <div style="flex:1;padding:14px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <span class="chip ${cfg.color}">${cfg.icon} ${cfg.label}</span>
+              ${binLabel ? `<span class="chip chip-gray" style="font-size:10px;">${binLabel}</span>` : ''}
+              <span style="margin-left:auto;font-size:11px;color:var(--ink-4);">${esc(u.createdAtDisplay)}</span>
+            </div>
+            ${u.ocrText ? `<div style="font-size:12px;background:var(--surface-2);border-radius:6px;padding:6px 10px;margin-bottom:6px;font-family:'DM Mono',monospace;color:var(--ink-3);white-space:pre-wrap;max-height:60px;overflow:hidden;">${esc(u.ocrText)}</div>` : ''}
+            ${u.notes ? `<div style="font-size:13px;color:var(--ink-2);">${esc(u.notes)}</div>` : ''}
+            <div style="font-size:11px;color:var(--ink-5);margin-top:6px;">By ${esc(u.submittedBy || 'Unknown')}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+  const container = document.getElementById('updates-feed');
+  const filterContainer = document.getElementById('updates-filters');
+  if (filterContainer) filterContainer.innerHTML = filterBtns;
+  if (container) container.innerHTML = feedHtml;
+
+  // Update count badge
+  const badge = document.getElementById('updates-count');
+  if (badge) badge.textContent = filtered.length;
 }
 
 // Predictable state management subscription

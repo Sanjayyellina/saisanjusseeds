@@ -1835,6 +1835,133 @@ window.populateLaborGroupSelect = function() {
   if (cur) sel.value = cur;
 };
 
+// ── Field Updates ─────────────────────────────────────────────
+window.openUpdateModal = function() {
+  // Reset form fields
+  ['upd-type','upd-bin','upd-notes','upd-ocr-text'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const preview = document.getElementById('upd-photo-preview');
+  if (preview) { preview.src = ''; preview.style.display = 'none'; }
+  const ocrWrap = document.getElementById('upd-ocr-wrap');
+  if (ocrWrap) ocrWrap.style.display = 'none';
+  const photoEl = document.getElementById('upd-photo');
+  if (photoEl) photoEl.value = '';
+  const typeEl = document.getElementById('upd-type');
+  if (typeEl) typeEl.value = 'general';
+  openModal('update-modal');
+};
+window.saveFieldUpdate = async function() {
+  const typeEl   = document.getElementById('upd-type');
+  const binEl    = document.getElementById('upd-bin');
+  const notesEl  = document.getElementById('upd-notes');
+  const photoEl  = document.getElementById('upd-photo');
+  const ocrEl    = document.getElementById('upd-ocr-text');
+  const btn      = document.getElementById('upd-save-btn');
+
+  const updateType = typeEl?.value || 'general';
+  const notes      = notesEl?.value?.trim() || '';
+  const ocrText    = ocrEl?.value?.trim() || '';
+  const binId      = binEl?.value ? parseInt(binEl.value) : null;
+  const file       = photoEl?.files?.[0] || null;
+
+  if (!notes && !file) { toast('Add a note or photo before saving.', 'warn'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    let photoUrl = null;
+    if (file) {
+      toast('Uploading photo…', 'info');
+      photoUrl = await dbUploadFieldUpdateImage(file);
+      if (!photoUrl) { toast('Photo upload failed — saving without image.', 'warn'); }
+    }
+
+    let submittedBy = '';
+    try { const { data: { user } } = await dbClient.auth.getUser(); submittedBy = user?.email || ''; } catch(e) {}
+
+    const record = {
+      update_type: updateType,
+      notes: notes || null,
+      ocr_text: ocrText || null,
+      photo_url: photoUrl,
+      bin_id: binId,
+      submitted_by: submittedBy
+    };
+
+    const saved = await dbInsertFieldUpdate(record);
+    if (!saved) throw new Error('Insert failed');
+
+    // Add to local state
+    state.fieldUpdates = state.fieldUpdates || [];
+    state.fieldUpdates.unshift({
+      id: saved.id,
+      updateType: saved.update_type,
+      binId: saved.bin_id || null,
+      intakeId: saved.intake_id || null,
+      notes: saved.notes || '',
+      ocrText: saved.ocr_text || '',
+      photoUrl: saved.photo_url || null,
+      submittedBy: saved.submitted_by || '',
+      createdAt: saved.created_at,
+      createdAtDisplay: new Date(saved.created_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+    });
+
+    closeModal('update-modal');
+    toast('Update saved!', 'success');
+    if (typeof renderUpdatesPage === 'function') renderUpdatesPage();
+    _directLogActivity('field_update_added', `New ${updateType} update by ${submittedBy}`, 'field_update', saved.id);
+  } catch(e) {
+    console.error('saveFieldUpdate:', e);
+    toast('Failed to save update.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Update'; }
+  }
+};
+
+// Tesseract OCR — run when a photo is selected
+window.runOcrOnPhoto = async function(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const ocrEl    = document.getElementById('upd-ocr-text');
+  const ocrWrap  = document.getElementById('upd-ocr-wrap');
+  const preview  = document.getElementById('upd-photo-preview');
+  const statusEl = document.getElementById('upd-ocr-status');
+
+  // Show image preview
+  if (preview) {
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.style.display = 'block';
+  }
+
+  // Check Tesseract is available
+  if (typeof Tesseract === 'undefined') {
+    if (ocrWrap) ocrWrap.style.display = 'none';
+    return;
+  }
+
+  if (ocrWrap) ocrWrap.style.display = 'block';
+  if (statusEl) statusEl.textContent = 'Reading text from photo…';
+  if (ocrEl) ocrEl.value = '';
+
+  try {
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (statusEl && m.status === 'recognizing text') {
+          statusEl.textContent = `Reading… ${Math.round((m.progress||0)*100)}%`;
+        }
+      }
+    });
+    const text = result?.data?.text?.trim() || '';
+    if (ocrEl) ocrEl.value = text;
+    if (statusEl) statusEl.textContent = text ? 'Text extracted — edit if needed' : 'No text found in image';
+  } catch(e) {
+    console.error('OCR error:', e);
+    if (statusEl) statusEl.textContent = 'Could not read text from image';
+  }
+};
+
 window.onLaborGroupChange = function() {
   const id = document.getElementById('labor-group').value;
   const g = getLaborGroups().find(x => x.id == id);

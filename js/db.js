@@ -473,6 +473,34 @@ async function dbSetPinHash(hash) {
   } catch(e) { return false; }
 }
 
+// ── Field Updates ─────────────────────────────────────────────
+async function dbFetchFieldUpdates() {
+  try {
+    const { data, error } = await dbClient.from('field_updates').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('dbFetchFieldUpdates:', e); return []; }
+}
+
+async function dbInsertFieldUpdate(record) {
+  try {
+    const { data, error } = await dbClient.from('field_updates').insert([record]).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbInsertFieldUpdate:', e); return null; }
+}
+
+async function dbUploadFieldUpdateImage(file) {
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await dbClient.storage.from('field-updates').upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw error;
+    const { data: urlData } = dbClient.storage.from('field-updates').getPublicUrl(path);
+    return urlData?.publicUrl || null;
+  } catch(e) { console.error('dbUploadFieldUpdateImage:', e); return null; }
+}
+
 // ── Plant Settings (boiler temp etc.) ────────────────────────
 async function dbFetchBoilerTemp() {
   try {
