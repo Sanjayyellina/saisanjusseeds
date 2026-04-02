@@ -1259,6 +1259,16 @@ function renderFaangAnalytics() {
 }
 
 function renderMaintenancePage() {
+  const statusBadge = s => {
+    const map = { open:'amber', in_progress:'blue', closed:'green' };
+    const label = { open:'Open', in_progress:'In Progress', closed:'Closed' };
+    return `<span class="chip chip-${map[s]||'gray'}" style="font-size:10px;padding:2px 7px;">${label[s]||s}</span>`;
+  };
+  const priorityBadge = p => {
+    const map = { low:'gray', medium:'amber', high:'red' };
+    const icon = { low:'▼', medium:'▶', high:'▲' };
+    return `<span class="chip chip-${map[p]||'gray'}" style="font-size:10px;padding:2px 7px;">${icon[p]||''} ${p||'medium'}</span>`;
+  };
   document.getElementById('maintenance-tbody').innerHTML = state.maintenance.length ? state.maintenance.map(m => {
     const imgs = Array.isArray(m.image_urls) ? m.image_urls : [];
     const thumbs = imgs.slice(0, 3).map((url, i) =>
@@ -1270,6 +1280,8 @@ function renderMaintenancePage() {
     const extra = imgs.length > 3 ? `<span style="font-size:11px;color:var(--ink-5);align-self:center;">+${imgs.length-3}</span>` : '';
     return `<tr>
       <td class="fs12 text-muted">${new Date(m.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
+      <td>${statusBadge(m.status || 'open')}</td>
+      <td>${priorityBadge(m.priority || 'medium')}</td>
       <td class="fw700">${esc(m.reported_by || '—')}</td>
       <td class="fw700">${esc(m.work_done)}</td>
       <td class="mono">${esc(m.equipment_name)}</td>
@@ -1280,7 +1292,7 @@ function renderMaintenancePage() {
       <td><div style="display:flex;gap:4px;align-items:center;">${thumbs || '<span style="color:var(--ink-5);font-size:11px;">—</span>'}${extra}</div></td>
     </tr>`;
   }).join('')
-    : `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
+    : `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
 }
 
 function renderLaborPage() {
@@ -1300,7 +1312,13 @@ function renderLaborPage() {
   }
 
   // Table
-  document.getElementById('labor-tbody').innerHTML = state.labor.length ? state.labor.map(l => `
+  document.getElementById('labor-tbody').innerHTML = state.labor.length ? state.labor.map(l => {
+    const wages = (l.total_wages != null && l.total_wages > 0)
+      ? `<span class="fw700 text-gold">₹${Number(l.total_wages).toLocaleString('en-IN')}</span>`
+      : (l.wage_per_day > 0
+        ? `<span class="fw700 text-gold">₹${(l.headcount * l.wage_per_day).toLocaleString('en-IN')}</span>`
+        : '<span class="text-muted">—</span>');
+    return `
     <tr>
       <td class="fs12 text-muted">${new Date(l.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</td>
       <td class="fw700">${esc(l.role || '—')}</td>
@@ -1308,8 +1326,10 @@ function renderLaborPage() {
       <td><span class="chip chip-blue mono fw700">${esc(l.headcount)}</span></td>
       <td class="fs12 truncate" style="max-width:200px;" title="${esc(l.people_names || '')}">${esc(l.people_names || '—')}</td>
       <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(l.notes || '—')}</td>
-    </tr>`).join('')
-    : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">&#128119;</div><div class="empty-title">No shift logs yet</div><div class="empty-sub">Set up your groups first, then log shifts</div></div></td></tr>`;
+      <td>${wages}</td>
+    </tr>`;
+  }).join('')
+    : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">&#128119;</div><div class="empty-title">No shift logs yet</div><div class="empty-sub">Set up your groups first, then log shifts</div></div></td></tr>`;
 }
 
 function renderEntryTrucksPage() {

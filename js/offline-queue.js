@@ -120,7 +120,7 @@ const OfflineQueue = {
             ok = await _directInsertBinHistory(op.payload);
             break;
           case 'LOG_ACTIVITY':
-            ok = await _directLogActivity(op.payload.action_type, op.payload.description);
+            ok = await _directLogActivity(op.payload.action_type, op.payload.description, op.payload.entity_type, op.payload.entity_id, op.payload.metadata);
             break;
           case 'INSERT_TRUCK':
             ok = await _directInsertTruck(op.payload);

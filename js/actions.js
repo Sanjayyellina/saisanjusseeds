@@ -465,7 +465,7 @@ async function saveIntake(){
             allocations: allocations.map(a => ({ binId: a.binId, qty: a.qty, unit: a.unit||'kg', pkts: a.pkts }))
           };
         }
-        dbLogActivity('INTAKE_UPDATED', `Intake ${intakeId} updated — ${qty} ${qtyUnit} of ${hybrid} (DR: ${challan})`);
+        dbLogActivity('INTAKE_UPDATED', `Intake ${intakeId} updated — ${qty} ${qtyUnit} of ${hybrid} (DR: ${challan})`, 'intake', intakeId);
       } else {
         const intakeRecord = { id: intakeId, ...intakeFields, created_at: dateStr };
         const entry = {
@@ -481,7 +481,7 @@ async function saveIntake(){
           date: now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
         };
         state.intakes.unshift(entry);
-        dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} ${qtyUnit} of ${hybrid} (DR: ${challan})`);
+        dbLogActivity('INTAKE_CREATED', `Intake ${intakeId} created for ${qty} ${qtyUnit} of ${hybrid} (DR: ${challan})`, 'intake', intakeId);
       }
 
       allocations.forEach(a => {
@@ -560,6 +560,9 @@ async function saveDispatch(){
   const now=dtInput ? new Date(dtInput) : new Date();
   const receiptId=`YDS-${new Date().getFullYear()}-${String(state.receiptCounter++).padStart(6,'0')}`;
   // For backward-compat store first bin id (or null) in d.bin; full list in d.bins
+  const driverName = document.getElementById('d-driver-name')?.value.trim() || '';
+  const driverPhone = document.getElementById('d-driver-phone')?.value.trim() || '';
+
   const d={
     receiptId,dateTS:now.getTime(),
     date:now.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}),
@@ -571,11 +574,12 @@ async function saveDispatch(){
     bags,qty,
     moisture:parseFloat(document.getElementById('d-moisture').value)||0,
     amount,remarks:document.getElementById('d-remarks').value,
+    driverName, driverPhone,
     hash:'',signature:''
   };
   d.hash=generateHash(d);
   d.signature=generateSignature(d);
-  
+
   const dispatchRecord = {
       receipt_id: d.receiptId,
       party: d.party,
@@ -591,6 +595,8 @@ async function saveDispatch(){
       moisture: d.moisture,
       amount: d.amount,
       remarks: d.remarks,
+      driver_name: driverName || null,
+      driver_phone: driverPhone || null,
       hash: d.hash,
       signature: d.signature,
       created_at: now.toISOString()
@@ -606,7 +612,7 @@ async function saveDispatch(){
   if (success) {
       state.dispatches.unshift(d);
       const binLabels = binAllocations.length ? binAllocations.map(a=>`BIN-${getBinLabel(a.binId)}`).join(', ') : 'N/A';
-      dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Kg / ₹${d.amount}) from ${binLabels}`);
+      dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Kg / ₹${d.amount}) from ${binLabels}`, 'dispatch', d.receiptId);
       // Deduct inventory from all selected bins
       binAllocations.forEach(a => {
           const b = state.bins.find(x => x.id === a.binId);
@@ -726,7 +732,7 @@ async function saveBinModal(binId){
   const success = await dbUpdateBin(b.id, updates);
   if (success) {
       if (oldStatus !== b.status) {
-          dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.binLabel||b.id} changed to ${b.status}`);
+          dbLogActivity('BIN_STATUS_CHANGED', `BIN-${b.binLabel||b.id} changed to ${b.status}`, 'bin', String(b.id));
           // Snapshot bin cycle history when bin is cleared
           if (b.status === 'empty' && snapshotBefore.hybrid) {
               const daysInBin = snapshotBefore.intakeDateTS
@@ -1069,6 +1075,8 @@ async function saveMaintenance() {
   const checker = document.getElementById('maint-checker').value.trim();
   const items = document.getElementById('maint-items').value.trim();
   const cost = parseFloat(document.getElementById('maint-cost').value) || 0;
+  const status = document.getElementById('maint-status')?.value || 'open';
+  const priority = document.getElementById('maint-priority')?.value || 'medium';
 
   if (!date || !work) {
     toast('Date and Work Done are required', 'error');
@@ -1094,7 +1102,9 @@ async function saveMaintenance() {
       checked_by: checker,
       items_bought: items,
       cost_amount: cost,
-      image_urls: imageUrls
+      image_urls: imageUrls,
+      status: status,
+      priority: priority
     };
 
     const saved = await dbInsertMaintenance(log);
@@ -1114,9 +1124,11 @@ async function saveMaintenance() {
       document.getElementById('maint-cost').value = '';
       document.getElementById('maint-images').value = '';
       document.getElementById('maint-img-preview').innerHTML = '';
+      if (document.getElementById('maint-status'))   document.getElementById('maint-status').value = 'open';
+      if (document.getElementById('maint-priority')) document.getElementById('maint-priority').value = 'medium';
 
       toast(imageUrls.length ? `Maintenance logged with ${imageUrls.length} photo${imageUrls.length>1?'s':''}` : 'Maintenance logged successfully', 'success');
-      dbLogActivity('MAINTENANCE_LOGGED', `Maintenance for ${equipment || 'Plant'}: ${work}`);
+      dbLogActivity('MAINTENANCE_LOGGED', `Maintenance for ${equipment || 'Plant'}: ${work}`, 'maintenance', null, { equipment, priority, status });
     } else {
       toast('Failed to save log', 'error');
     }
@@ -1140,6 +1152,7 @@ async function saveLabor() {
   const headcount = parseInt(document.getElementById('labor-headcount').value) || 0;
   const people = document.getElementById('labor-people').value.trim();
   const remarks = document.getElementById('labor-remarks').value.trim();
+  const wagePerDay = parseFloat(document.getElementById('labor-wage')?.value) || 0;
 
   if (!date || headcount <= 0) {
     toast('Date and valid headcount are required', 'error');
@@ -1152,7 +1165,9 @@ async function saveLabor() {
     role: role,
     headcount: headcount,
     people_names: people,
-    notes: remarks
+    notes: remarks,
+    wage_per_day: wagePerDay,
+    labor_group_id: groupId ? parseInt(groupId) : null
   };
 
   const btn = document.querySelector('#labor-modal .btn-solid');
@@ -1175,9 +1190,10 @@ async function saveLabor() {
       document.getElementById('labor-headcount').value = '';
       document.getElementById('labor-people').value = '';
       document.getElementById('labor-remarks').value = '';
+      if (document.getElementById('labor-wage')) document.getElementById('labor-wage').value = '';
 
       toast('Labor shift logged', 'success');
-      dbLogActivity('LABOR_LOGGED', `${headcount} people added for ${shift} shift (${role})`);
+      dbLogActivity('LABOR_LOGGED', `${headcount} people added for ${shift} shift (${role})`, 'labor');
     } else {
       toast('Failed to save log', 'error');
     }

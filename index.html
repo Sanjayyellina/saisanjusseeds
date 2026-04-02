@@ -512,6 +512,8 @@
         <thead>
           <tr>
             <th data-i18n="maint.date">Date</th>
+            <th>Status</th>
+            <th>Priority</th>
             <th data-i18n="maint.reportedBy">Reported By</th>
             <th data-i18n="maint.workDone">Work Done</th>
             <th data-i18n="maint.equipment">Equipment</th>
@@ -563,6 +565,7 @@
             <th>Count</th>
             <th>Members</th>
             <th>Remarks</th>
+            <th>Wages (₹)</th>
           </tr>
         </thead>
         <tbody id="labor-tbody">
@@ -986,6 +989,10 @@
         <div class="form-group"><label class="form-label" data-i18n="dispatch.modal.address">Address / Location</label><input class="form-input" id="d-address" placeholder="Village, Mandal, District"></div>
         <div class="form-group"><label class="form-label">Vehicle Number *</label><input class="form-input" id="d-vehicle" placeholder="e.g. TS08UD5119" style="text-transform:uppercase;"></div>
       </div>
+      <div class="form-row cols2">
+        <div class="form-group"><label class="form-label">Driver Name</label><input class="form-input" id="d-driver-name" placeholder="Driver's name"></div>
+        <div class="form-group"><label class="form-label">Driver Phone</label><input class="form-input" id="d-driver-phone" placeholder="e.g. 9876543210" type="tel"></div>
+      </div>
       <div class="form-row cols2" style="margin-bottom:4px;">
         <div class="form-group"><label class="form-label">Date & Time <span style="color:var(--ink-4);font-weight:400;">(optional — leave blank for now)</span></label><input class="form-input" id="d-datetime" type="datetime-local"></div>
       </div>
@@ -1139,14 +1146,34 @@
       <button class="modal-close" onclick="closeModal('maintenance-modal')">✕</button>
     </div>
     <div class="modal-body" style="padding:20px;">
-      <div class="form-row"><div class="form-group">
+      <div class="form-row cols2">
+        <div class="form-group">
           <label class="form-label" data-i18n="maint.date">Date</label>
           <input type="date" id="maint-date" class="form-input">
-      </div></div>
-      <div class="form-row"><div class="form-group">
+        </div>
+        <div class="form-group">
           <label class="form-label" data-i18n="maint.reportedBy">Reported By</label>
           <input type="text" id="maint-reported" class="form-input" placeholder="Name">
-      </div></div>
+        </div>
+      </div>
+      <div class="form-row cols2">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="maint-status" class="form-input">
+            <option value="open">🔴 Open</option>
+            <option value="in_progress">🟡 In Progress</option>
+            <option value="closed">🟢 Closed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select id="maint-priority" class="form-input">
+            <option value="low">▼ Low</option>
+            <option value="medium" selected>▶ Medium</option>
+            <option value="high">▲ High</option>
+          </select>
+        </div>
+      </div>
       <div class="form-row cols1"><div class="form-group">
           <label class="form-label" data-i18n="maint.equipment">Equipment Name</label>
           <input type="text" id="maint-equipment" class="form-input" placeholder="e.g. Dryer 1, Boiler, Conveyor">
@@ -1217,10 +1244,14 @@
         <label class="form-label">Shift Timings</label>
         <input type="text" id="labor-shift" class="form-input" placeholder="e.g. Morning 6–2, Night 10–6, Full Day">
       </div></div>
-      <div class="form-row cols2">
+      <div class="form-row cols3">
         <div class="form-group">
           <label class="form-label">Headcount *</label>
           <input type="number" id="labor-headcount" class="form-input" placeholder="e.g. 5" min="1" max="999">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Wage / Person (₹)</label>
+          <input type="number" id="labor-wage" class="form-input" placeholder="e.g. 450" min="0" step="10">
         </div>
         <div class="form-group">
           <label class="form-label">Work Area</label>
@@ -1416,8 +1447,8 @@
      ============================================================ -->
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="js/error-boundary.js"></script>
-<script src="js/offline-queue.js"></script>
-<script src="js/db.js?v=9"></script>
+<script src="js/offline-queue.js?v=2"></script>
+<script src="js/db.js?v=10"></script>
 <!-- Modular JavaScript -->
 <script src="js/config.js?v=1"></script>
 <script src="js/state.js?v=3"></script>
@@ -1426,8 +1457,8 @@
 <script src="js/i18n.js?v=7"></script>
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=19"></script>
-<script src="js/render.js?v=24"></script>
-<script src="js/actions.js?v=27"></script>
+<script src="js/render.js?v=25"></script>
+<script src="js/actions.js?v=28"></script>
 <script src="js/receipt.js?v=7"></script>
 <script src="js/clock.js?v=2"></script>
 <script src="js/init.js?v=15"></script>

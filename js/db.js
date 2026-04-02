@@ -302,9 +302,19 @@ async function _directInsertBinHistory(record) {
   }
 }
 
-async function _directLogActivity(action_type, description) {
+async function _directLogActivity(action_type, description, entity_type = null, entity_id = null, metadata = null) {
   try {
-    const { error } = await dbClient.from('activity_logs').insert([{ action_type, description }]);
+    let user_email = null;
+    try {
+      const { data: { user } } = await dbClient.auth.getUser();
+      user_email = user?.email || null;
+    } catch(e) {}
+    const record = { action_type, description };
+    if (user_email)   record.user_email   = user_email;
+    if (entity_type)  record.entity_type  = entity_type;
+    if (entity_id)    record.entity_id    = String(entity_id);
+    if (metadata)     record.metadata     = metadata;
+    const { error } = await dbClient.from('activity_logs').insert([record]);
     if (error) throw error;
     return true;
   } catch (err) {
@@ -395,12 +405,12 @@ async function dbInsertBinHistory(record) {
   return _directInsertBinHistory(record);
 }
 
-async function dbLogActivity(action_type, description) {
+async function dbLogActivity(action_type, description, entity_type = null, entity_id = null, metadata = null) {
   if (!navigator.onLine) {
-    OfflineQueue.enqueue('LOG_ACTIVITY', { action_type, description });
+    OfflineQueue.enqueue('LOG_ACTIVITY', { action_type, description, entity_type, entity_id, metadata });
     return true;
   }
-  return _directLogActivity(action_type, description);
+  return _directLogActivity(action_type, description, entity_type, entity_id, metadata);
 }
 
 // ============================================================
