@@ -7,7 +7,7 @@
 function renderBinTile(bin, isManager = false){
   const sc = `s-${bin.status}`;
   const lbl = bin.binLabel || bin.id;
-  const clickAction = isManager ? `onclick="openBinModal(${bin.id})"` : '';
+  const clickAction = `onclick="openBinModal(${bin.id})" style="cursor:pointer;"`;
 
   if (bin.status === 'empty') {
     return `<div class="bin-tile ${sc}" ${clickAction}>
