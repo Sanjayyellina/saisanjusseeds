@@ -597,7 +597,7 @@ async function saveDispatch(){
       binAllocations.forEach(a => {
           const b = state.bins.find(x => x.id === a.binId);
           if (b) {
-              b.qty = Math.max(0, (b.qty || 0) - (a.qty / 1000)); // convert kg to tons
+              b.qty = Math.max(0, (b.qty || 0) - (a.qty));
               b.pkts = Math.max(0, (b.pkts || 0) - a.bags);
               dbUpdateBin(b.id, { qty: b.qty, pkts: b.pkts });
           }
@@ -622,7 +622,7 @@ function openBinModal(binId){
     <div class="grid2 mb16" id="bm-details-container" style="${bin.status==='empty'?'display:none;':''}">
       <div class="form-group"><label class="form-label">Hybrid</label><input class="form-input fw700" id="bm-hybrid" value="${bin.hybrid||''}"></div>
       <div style="display:flex;gap:8px;">
-        <div class="form-group" style="flex:1;"><label class="form-label">Qty (Tons)</label><input class="form-input fw700 text-gold" type="number" step="0.1" id="bm-qty" value="${bin.qty||''}"></div>
+        <div class="form-group" style="flex:1;"><label class="form-label">Qty (KG)</label><input class="form-input fw700 text-gold" type="number" step="1" id="bm-qty" value="${bin.qty||''}"></div>
         <div class="form-group" style="flex:1;"><label class="form-label">Bags</label><input class="form-input fw700 text-gold" type="number" id="bm-pkts" value="${bin.pkts||''}"></div>
       </div>
       <div class="form-group"><label class="form-label">Entry Moisture %</label><input class="form-input fw700" type="number" step="0.1" id="bm-entry-m" value="${bin.entryMoisture||''}"></div>
@@ -853,7 +853,7 @@ function executeExport() {
           Hybrid: b.hybrid,
           Company: b.company,
           LotNo: b.lot,
-          Tons: b.qty,
+          QtyKg: b.qty,
           Bags: b.pkts,
           EntryMoisture: b.entryMoisture,
           CurrentMoisture: b.currentMoisture,
@@ -869,7 +869,7 @@ function executeExport() {
           Date: i.date,
           DRNo: i.challan,
           Hybrid: i.hybrid,
-          QtyTons: i.qty,
+          QtyKg: i.qty,
           Bags: i.pkts,
           Company: i.company,
           LotNo: i.lot,
@@ -891,7 +891,7 @@ function executeExport() {
             Party: d.party,
             Hybrid: d.hybrid,
             Bags: d.bags,
-            Tons: d.qty,
+            QtyKg: d.qty,
             Amount: d.amount,
             Vehicle: d.vehicle,
             LR: d.lr,
@@ -937,7 +937,7 @@ function executeExport() {
             Hybrid: h.hybrid,
             Company: h.company || '—',
             LotNo: h.lot || '—',
-            QtyTons: h.qty,
+            QtyKg: h.qty,
             Bags: h.pkts,
             EntryMoisture: h.entry_moisture,
             FinalMoisture: h.final_moisture,
