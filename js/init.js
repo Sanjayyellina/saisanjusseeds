@@ -251,7 +251,8 @@ async function bootApp() {
       arrivalDisplay: new Date(t.arrival_time).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }),
       status: t.status,
       intakeId: t.intake_id || null,
-      notes: t.notes || ''
+      notes: t.notes || '',
+      lotNumbers: Array.isArray(t.lot_numbers) ? t.lot_numbers : []
     }));
   }
 

@@ -1203,6 +1203,44 @@ function calcTruckNetWeight() {
 
 let _editingTruckId = null;
 
+// ── Lot number helpers ────────────────────────────────────────
+function _renderTruckLots(lots) {
+  const container = document.getElementById('t-lots-container');
+  if (!container) return;
+  container.innerHTML = (lots || []).map((lot, i) => `
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input class="form-input" style="flex:1;" placeholder="e.g. LOT-2026-001" value="${escapeHtml(lot)}"
+        oninput="_updateTruckLot(${i}, this.value)">
+      <button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;color:var(--red);" onclick="_removeTruckLot(${i})">✕</button>
+    </div>`).join('');
+}
+
+window._updateTruckLot = function(i, val) {
+  const inputs = document.querySelectorAll('#t-lots-container .form-input');
+  // live update is handled on save by reading all inputs
+};
+
+window._removeTruckLot = function(i) {
+  const inputs = [...document.querySelectorAll('#t-lots-container .form-input')];
+  const lots = inputs.map(el => el.value.trim()).filter((_, idx) => idx !== i);
+  _renderTruckLots(lots);
+};
+
+window.addTruckLot = function() {
+  const inputs = [...document.querySelectorAll('#t-lots-container .form-input')];
+  const lots = inputs.map(el => el.value.trim());
+  lots.push('');
+  _renderTruckLots(lots);
+  // Focus the new input
+  const newInputs = document.querySelectorAll('#t-lots-container .form-input');
+  if (newInputs.length) newInputs[newInputs.length - 1].focus();
+};
+
+function _collectTruckLots() {
+  return [...document.querySelectorAll('#t-lots-container .form-input')]
+    .map(el => el.value.trim()).filter(Boolean);
+}
+
 function openTruckModal() {
   _editingTruckId = null;
   ['t-vehicle','t-company','t-location','t-driver','t-phone','t-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -1211,6 +1249,7 @@ function openTruckModal() {
   document.getElementById('t-status').value = 'waiting';
   document.getElementById('t-arrival').value = new Date().toISOString().slice(0,16);
   document.getElementById('truck-modal-title').textContent = 'Register Truck';
+  _renderTruckLots([]);
   openModal('truck-modal');
 }
 
@@ -1228,6 +1267,7 @@ function editTruck(id) {
   document.getElementById('t-status').value = truck.status;
   document.getElementById('t-notes').value = truck.notes;
   document.getElementById('t-arrival').value = truck.arrivalTime ? truck.arrivalTime.slice(0,16) : '';
+  _renderTruckLots(truck.lotNumbers || []);
   calcTruckNetWeight();
   document.getElementById('truck-modal-title').textContent = 'Edit Truck';
   openModal('truck-modal');
@@ -1247,7 +1287,8 @@ async function saveTruck() {
     tare_weight: parseFloat(document.getElementById('t-tare').value) || 0,
     status: document.getElementById('t-status').value,
     notes: document.getElementById('t-notes').value.trim() || null,
-    arrival_time: document.getElementById('t-arrival').value ? new Date(document.getElementById('t-arrival').value).toISOString() : new Date().toISOString()
+    arrival_time: document.getElementById('t-arrival').value ? new Date(document.getElementById('t-arrival').value).toISOString() : new Date().toISOString(),
+    lot_numbers: _collectTruckLots()
   };
 
   let ok;

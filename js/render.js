@@ -1366,7 +1366,8 @@ function renderEntryTrucksPage() {
           <div><div style="font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--gold-dark);text-transform:uppercase;">Net ✓</div><div style="font-size:14px;font-weight:800;color:var(--gold-dark);font-family:'DM Mono',monospace;">${netDisplay}</div></div>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--ink-5);margin-bottom:12px;">🕐 Arrived: ${t.arrivalDisplay}</div>
+      <div style="font-size:11px;color:var(--ink-5);margin-bottom:8px;">🕐 Arrived: ${t.arrivalDisplay}</div>
+      ${t.lotNumbers && t.lotNumbers.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${t.lotNumbers.map(l=>`<span style="font-size:10px;font-weight:700;padding:2px 8px;background:#f0fdf4;color:#15803D;border:1px solid #bbf7d0;border-radius:99px;font-family:'DM Mono',monospace;">🏷️ ${esc(l)}</span>`).join('')}</div>` : ''}
       ${t.notes ? `<div style="font-size:11px;color:var(--ink-4);margin-bottom:10px;padding:6px 8px;background:var(--surface-2);border-radius:var(--radius-sm);">📝 ${t.notes}</div>` : ''}
       <div style="display:flex;gap:6px;margin-top:4px;">
         ${t.status === 'waiting' ? `<button class="btn btn-sm btn-gold" onclick="markTruckIntake('${t.id}')" style="flex:1;">Assign to Intake</button>` : ''}
