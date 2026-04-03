@@ -131,9 +131,7 @@ function openEditIntakeModal(intakeId) {
 
   // Prefill optional cost fields
   const _procRateEl = document.getElementById('intake-proc-rate');
-  const _moistBonusEl = document.getElementById('intake-moisture-bonus');
   if (_procRateEl)   _procRateEl.value   = intake.procurementRate != null ? intake.procurementRate : '';
-  if (_moistBonusEl) _moistBonusEl.value = intake.moistureBonus   != null ? intake.moistureBonus   : '';
 
   document.querySelector('#intake-modal .modal-title').textContent = 'Edit Intake';
   document.querySelector('#intake-modal .btn-solid span').textContent = 'Update Intake';
@@ -397,7 +395,6 @@ async function saveIntake(){
 
   // Optional cost fields (columns may not exist in DB yet — handled gracefully)
   const _procRate = parseFloat(document.getElementById('intake-proc-rate')?.value) || null;
-  const _moistBonus = parseFloat(document.getElementById('intake-moisture-bonus')?.value) || null;
 
   const intakeFields = {
       challan,
@@ -417,7 +414,6 @@ async function saveIntake(){
       gross_weight: grossWeights.join(', '),
       net_weight: 0,
       ...(_procRate  != null ? { procurement_rate: _procRate }  : {}),
-      ...(_moistBonus != null ? { moisture_bonus: _moistBonus } : {}),
       ...(selectedTruckId ? { truck_id: selectedTruckId } : {})
   };
 
