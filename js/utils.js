@@ -10,6 +10,13 @@
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+function debounce(fn, wait) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), wait);
+  };
+}
 function getMoistureColor(m){
   if(m>Config.MOISTURE_HIGH)return 'var(--blue)';
   if(m>Config.MOISTURE_MID)return 'var(--amber)';
