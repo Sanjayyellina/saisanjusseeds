@@ -1,6 +1,6 @@
 // ============================================================
 // ACTIONS & EVENT HANDLERS
-// v40
+// v41
 "use strict";
 // Yellina Seeds Private Limited — Operations Platform
 // ============================================================
@@ -2794,5 +2794,90 @@ window.onLaborGroupChange = function() {
   if (g) {
     document.getElementById('labor-headcount').value = g.members.length;
     document.getElementById('labor-people').value = g.members.join(', ');
+  }
+};
+
+// ── User Management Modals (RBAC) ──────────────────────────────
+window.openAddUserModal = function() {
+  const roles = ['super_admin','manager','operator','viewer'];
+  const html = `<div class="modal-overlay" id="add-user-overlay" style="display:flex;" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header"><h3>Add User</h3><button class="modal-close" onclick="document.getElementById('add-user-overlay').remove()">✕</button></div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div><label class="form-label">Email Address</label><input id="add-user-email" type="email" class="form-input" placeholder="user@yellinaseeds.com"></div>
+        <div><label class="form-label">Display Name</label><input id="add-user-name" type="text" class="form-input" placeholder="e.g. Ravi Kumar"></div>
+        <div><label class="form-label">Role</label>
+          <select id="add-user-role" class="form-input">
+            ${roles.map(r => `<option value="${r}">${(window.ROLE_CONFIG && window.ROLE_CONFIG[r] ? window.ROLE_CONFIG[r].icon + ' ' + window.ROLE_CONFIG[r].label : r)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="document.getElementById('add-user-overlay').remove()">Cancel</button>
+        <button class="btn btn-gold" onclick="saveUserRole()">Add User</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.openEditRoleModal = function(userObj) {
+  const u = typeof userObj === 'string' ? JSON.parse(userObj) : userObj;
+  const roles = ['super_admin','manager','operator','viewer'];
+  const html = `<div class="modal-overlay" id="edit-role-overlay" style="display:flex;" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header"><h3>Edit Role</h3><button class="modal-close" onclick="document.getElementById('edit-role-overlay').remove()">✕</button></div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:10px 14px;background:var(--surface-2);border-radius:var(--radius);">
+          <div style="font-weight:700;color:var(--ink);">${escapeHtml(u.display_name || u.email)}</div>
+          <div style="font-size:12px;color:var(--ink-5);">${escapeHtml(u.email)}</div>
+        </div>
+        <div><label class="form-label">Display Name</label><input id="edit-user-name" type="text" class="form-input" value="${escapeHtml(u.display_name || '')}"></div>
+        <div><label class="form-label">Role</label>
+          <select id="edit-user-role" class="form-input">
+            ${roles.map(r => `<option value="${r}" ${u.role===r?'selected':''}>${(window.ROLE_CONFIG && window.ROLE_CONFIG[r] ? window.ROLE_CONFIG[r].icon + ' ' + window.ROLE_CONFIG[r].label : r)}</option>`).join('')}
+          </select>
+        </div>
+        <input type="hidden" id="edit-user-email" value="${escapeHtml(u.email)}">
+        <input type="hidden" id="edit-user-id" value="${u.id}">
+      </div>
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button class="btn btn-ghost" style="color:var(--red);" onclick="deleteUserRole(${u.id},'${escapeHtml(u.email)}')">Remove User</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('edit-role-overlay').remove()">Cancel</button>
+          <button class="btn btn-gold" onclick="saveUserRole(true)">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.saveUserRole = async function(isEdit = false) {
+  const email   = isEdit ? document.getElementById('edit-user-email')?.value : document.getElementById('add-user-email')?.value;
+  const role    = isEdit ? document.getElementById('edit-user-role')?.value   : document.getElementById('add-user-role')?.value;
+  const name    = isEdit ? document.getElementById('edit-user-name')?.value   : document.getElementById('add-user-name')?.value;
+  if (!email || !role) { toast('Email and role are required', 'error'); return; }
+  const ok = await dbUpsertUserRole(email.trim().toLowerCase(), role, name.trim() || null);
+  if (ok) {
+    toast(isEdit ? 'Role updated' : 'User added', 'success');
+    document.getElementById(isEdit ? 'edit-role-overlay' : 'add-user-overlay')?.remove();
+    state.allUserRoles = await dbFetchAllRoles();
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to save — check permissions', 'error');
+  }
+};
+
+window.deleteUserRole = async function(id, email) {
+  if (!confirm(`Remove ${email} from the platform?`)) return;
+  const ok = await dbDeleteUserRole(id);
+  if (ok) {
+    toast('User removed', 'success');
+    document.getElementById('edit-role-overlay')?.remove();
+    state.allUserRoles = await dbFetchAllRoles();
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to remove — check permissions', 'error');
   }
 };

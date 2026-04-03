@@ -4,7 +4,7 @@
    ============================================================ */
 'use strict';
 
-const CACHE_VERSION = 'v101';
+const CACHE_VERSION = 'v102';
 const CACHE_NAME = `yellina-seeds-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -29,6 +29,7 @@ const STATIC_ASSETS = [
   '/js/utils.js',
   '/js/actions.js',
   '/js/cmdPalette.js',
+  '/js/roles.js',
   '/js/notifications.js',
   '/js/init.js',
   '/assets/logo.jpg',

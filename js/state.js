@@ -28,7 +28,11 @@ const initialState = {
   activityLogs: [],
   receiptCounter:1001,
   activeReceiptHash:null,
-  currentPage: 'dashboard'
+  currentPage: 'dashboard',
+  userRole: 'manager',        // 'super_admin' | 'manager' | 'operator' | 'viewer'
+  userDisplayName: null,
+  userEmail: null,
+  allUserRoles: [],           // only populated for super_admin
 };
 
 const listeners = new Set();

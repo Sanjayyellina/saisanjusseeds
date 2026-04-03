@@ -1,6 +1,6 @@
 // ============================================================
 // SUPABASE CLIENT & DB FUNCTIONS
-// v17
+// v18
 // ============================================================
 "use strict";
 
@@ -127,6 +127,49 @@ async function dbFetchBinHistory() {
     console.error('Error fetching bin history:', err);
     return null;
   }
+}
+
+async function dbFetchMyRole() {
+  try {
+    const { data, error } = await dbClient
+      .from('user_roles')
+      .select('role, display_name, email')
+      .limit(1)
+      .single();
+    // If no row found (user not in user_roles table), default to 'manager'
+    if (error || !data) return { role: 'manager', display_name: null, email: null };
+    return data;
+  } catch(e) { return { role: 'manager', display_name: null, email: null }; }
+}
+
+async function dbFetchAllRoles() {
+  try {
+    const { data, error } = await dbClient
+      .from('user_roles')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('dbFetchAllRoles:', e); return []; }
+}
+
+async function dbUpsertUserRole(email, role, display_name) {
+  try {
+    const { error } = await dbClient.from('user_roles').upsert(
+      [{ email, role, display_name, updated_at: new Date().toISOString() }],
+      { onConflict: 'email' }
+    );
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbUpsertUserRole:', e); return false; }
+}
+
+async function dbDeleteUserRole(id) {
+  try {
+    const { error } = await dbClient.from('user_roles').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteUserRole:', e); return false; }
 }
 
 async function dbFetchActivityLogs() {

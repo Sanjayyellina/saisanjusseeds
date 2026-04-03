@@ -1,7 +1,7 @@
 // ============================================================
 // RENDER PAGES
 // Yellina Seeds Private Limited — Operations Platform
-// v36
+// v37
 "use strict";
 // ============================================================
 
@@ -350,6 +350,71 @@ function renderManagerPage(){
   html += `</tbody></table></div></div>`;
 
   document.getElementById('manager-content-area').innerHTML = html;
+
+  // Render User Management section (super_admin only)
+  renderUserManagement();
+}
+
+function renderUserManagement() {
+  const el = document.getElementById('user-mgmt-section');
+  if (!el) return;
+
+  // Only super_admin can see this
+  if ((state.userRole || 'manager') !== 'super_admin') {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-5);">
+      <div style="font-size:32px;margin-bottom:8px;">🔐</div>
+      <div style="font-size:14px;font-weight:600;">Super Admin only</div>
+    </div>`;
+    return;
+  }
+
+  const roles = state.allUserRoles || [];
+  const roleOptions = ['super_admin','manager','operator','viewer'].map(r =>
+    `<option value="${r}">${ROLE_CONFIG[r].icon} ${ROLE_CONFIG[r].label}</option>`
+  ).join('');
+
+  el.innerHTML = `
+    <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink);">👥 User Management</div>
+        <div style="font-size:12px;color:var(--ink-5);margin-top:2px;">Manage who can access this platform and what they can do</div>
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="openAddUserModal()">+ Add User</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:var(--surface-2);">
+          <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.05em;">User</th>
+          <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.05em;">Role</th>
+          <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.05em;">Added By</th>
+          <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.05em;">Since</th>
+          <th style="padding:10px 14px;"></th>
+        </tr></thead>
+        <tbody>
+          ${roles.map(u => {
+            const cfg = (window.ROLE_CONFIG && window.ROLE_CONFIG[u.role]) || { icon: '👤', label: u.role, color: '#6B7280', bg: '#F9FAFB' };
+            const isSelf = u.email === state.userEmail;
+            return `<tr style="border-bottom:1px solid var(--surface-3);">
+              <td style="padding:10px 14px;">
+                <div style="font-weight:700;color:var(--ink);">${esc(u.display_name || u.email)}</div>
+                <div style="font-size:11px;color:var(--ink-5);">${esc(u.email)}</div>
+              </td>
+              <td style="padding:10px 14px;">
+                <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:${cfg.bg};color:${cfg.color};border:1px solid ${cfg.color}40;">
+                  ${cfg.icon} ${cfg.label}
+                </span>
+              </td>
+              <td style="padding:10px 14px;font-size:12px;color:var(--ink-4);">${esc(u.added_by || '—')}</td>
+              <td style="padding:10px 14px;font-size:12px;color:var(--ink-5);">${new Date(u.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+              <td style="padding:10px 14px;">
+                ${isSelf ? `<span style="font-size:11px;color:var(--ink-5);">you</span>` :
+                  `<button class="btn btn-ghost btn-sm" onclick="openEditRoleModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">✏️ Edit</button>`}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function renderDispatchPage(){
@@ -1335,6 +1400,9 @@ function renderFaangAnalytics() {
 
   // ── COST & MARGIN ─────────────────────────────────────────────
   renderCostAnalytics();
+
+  // ── MOISTURE CHARTS ──────────────────────────────────────────
+  renderMoistureCharts();
 }
 
 function renderCostAnalytics() {
@@ -1744,30 +1812,202 @@ function renderUpdatesPage() {
 }
 
 // ── Weather Widget ────────────────────────────────────────────
-function renderWeatherWidget() {
-  const el = document.getElementById('weather-widget-card');
-  if (!el) return;
+function renderMoistureCharts() {
+  const bins = (state.bins || []).filter(b => b.status !== 'empty' && b.entryMoisture > 0);
+  const readings = state.moistureReadings || [];
 
-  // Use cache if < 30 min old
-  const cache = window._weatherCache;
-  if (cache && (Date.now() - cache.ts) < 30 * 60 * 1000) {
-    _applyWeatherData(el, cache.data);
+  // ── Chart 1: Active Bins Progress ──────────────────────────
+  const c1el = document.getElementById('chart-bin-moisture');
+  if (c1el && bins.length > 0) {
+    if (window._chart1) { window._chart1.destroy(); window._chart1 = null; }
+    const labels = bins.map(b => `BIN-${b.binLabel || b.id}`);
+    const entryData = bins.map(b => b.entryMoisture || 0);
+    const currentData = bins.map(b => b.currentMoisture || 0);
+    const TARGET = (window.Config && Config.TARGET_MOISTURE) || 10;
+
+    if (typeof Chart === 'undefined') return;
+    window._chart1 = new Chart(c1el, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Entry Moisture %',
+            data: entryData,
+            backgroundColor: 'rgba(245,166,35,0.25)',
+            borderColor: 'rgba(245,166,35,0.8)',
+            borderWidth: 1.5,
+            borderRadius: 4,
+          },
+          {
+            label: 'Current Moisture %',
+            data: currentData,
+            backgroundColor: currentData.map(v => v <= TARGET ? 'rgba(16,185,129,0.7)' : v <= TARGET + 4 ? 'rgba(245,158,11,0.7)' : 'rgba(239,68,68,0.7)'),
+            borderColor: currentData.map(v => v <= TARGET ? '#10B981' : v <= TARGET + 4 ? '#F59E0B' : '#EF4444'),
+            borderWidth: 1.5,
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` } },
+        },
+        scales: {
+          x: {
+            min: 0,
+            max: Math.max(...entryData, 30),
+            title: { display: true, text: 'Moisture %', font: { size: 11 } },
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { callback: v => v + '%', font: { size: 10 } },
+          },
+          y: { ticks: { font: { size: 11, weight: '600' } }, grid: { display: false } },
+        },
+      },
+    });
+  } else if (c1el) {
+    c1el.style.display = 'none';
+    const p = c1el.parentElement;
+    if (p) p.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-5);font-size:12px;">No active bins with moisture data</div>`;
+  }
+
+  // ── Chart 2: Moisture History Lines ──────────────────────────
+  const c2el = document.getElementById('chart-moisture-history');
+  if (!c2el) return;
+  if (window._chart2) { window._chart2.destroy(); window._chart2 = null; }
+
+  if (typeof Chart === 'undefined') return;
+
+  const TARGET = (window.Config && Config.TARGET_MOISTURE) || 10;
+  const COLORS = ['#F5A623','#10B981','#3B82F6','#8B5CF6','#EF4444','#F59E0B','#06B6D4','#EC4899','#14B8A6','#F97316'];
+
+  const activeBins = (state.bins || []).filter(b => b.status !== 'empty' && b.intakeDateTS && b.entryMoisture > 0);
+  const datasets = [];
+
+  if (readings.length > 0) {
+    // Real readings: group by bin_id
+    const byBin = {};
+    readings.forEach(r => {
+      if (!byBin[r.bin_id]) byBin[r.bin_id] = [];
+      byBin[r.bin_id].push({ x: new Date(r.recorded_at).getTime(), y: parseFloat(r.moisture) });
+    });
+    Object.entries(byBin).forEach(([binId, pts], i) => {
+      const bin = activeBins.find(b => b.id === parseInt(binId)) || { binLabel: binId, id: parseInt(binId) };
+      pts.sort((a, b) => a.x - b.x);
+      datasets.push({
+        label: `BIN-${bin.binLabel || bin.id}`,
+        data: pts,
+        borderColor: COLORS[i % COLORS.length],
+        backgroundColor: 'transparent',
+        tension: 0.3, pointRadius: 4, borderWidth: 2,
+      });
+    });
+  } else {
+    // Synthetic 2-point lines from entry→current per active bin
+    activeBins.forEach((b, i) => {
+      const pts = [
+        { x: parseInt(b.intakeDateTS), y: b.entryMoisture },
+        { x: Date.now(), y: b.currentMoisture || b.entryMoisture },
+      ];
+      datasets.push({
+        label: `BIN-${b.binLabel || b.id}`,
+        data: pts,
+        borderColor: COLORS[i % COLORS.length],
+        backgroundColor: COLORS[i % COLORS.length] + '15',
+        fill: false,
+        tension: 0.2, pointRadius: 5, borderWidth: 2,
+      });
+    });
+  }
+
+  // Target line dataset
+  const allXValues = datasets.flatMap(d => d.data.map(p => p.x));
+  if (allXValues.length >= 2) {
+    const minX = Math.min(...allXValues);
+    const maxX = Math.max(...allXValues);
+    datasets.push({
+      label: `Target (${TARGET}%)`,
+      data: [{ x: minX, y: TARGET }, { x: maxX, y: TARGET }],
+      borderColor: '#EF4444', borderDash: [6,4], borderWidth: 1.5,
+      backgroundColor: 'transparent', pointRadius: 0, tension: 0,
+    });
+  }
+
+  if (!datasets.length || datasets.length === 1) {
+    if (c2el.parentElement) c2el.parentElement.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-5);font-size:12px;">No active bins to chart — add intakes to see moisture trends</div>`;
     return;
   }
 
-  // Show loading state
-  el.innerHTML = `<div class="kpi-icon">🌤️</div><div class="kpi-val" style="font-size:22px;">…</div><div class="kpi-label">Sathupally Weather</div><div class="kpi-delta">Loading…</div>`;
+  const allY = datasets.flatMap(d => d.data.map(p => p.y));
+  window._chart2 = new Chart(c2el, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      parsing: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            title: items => new Date(items[0].parsed.x).toLocaleDateString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }),
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          ticks: {
+            font: { size: 10 },
+            callback: function(value) {
+              return new Date(value).toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+            }
+          },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+        },
+        y: {
+          min: 0, max: Math.max(...allY, 35) + 2,
+          title: { display: true, text: 'Moisture %', font: { size: 11 } },
+          ticks: { callback: v => v + '%', font: { size: 10 } },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+        },
+      },
+    },
+  });
+}
 
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=17.1&longitude=80.9&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FKolkata')
-    .then(r => r.json())
-    .then(json => {
-      const c = json.current || {};
-      window._weatherCache = { ts: Date.now(), data: c };
-      _applyWeatherData(el, c);
-    })
-    .catch(() => {
-      el.innerHTML = `<div class="kpi-icon">🌤️</div><div class="kpi-val" style="font-size:18px;">—</div><div class="kpi-label">Sathupally Weather</div><div class="kpi-delta" style="color:var(--ink-5);">Unavailable</div>`;
-    });
+async function renderWeatherWidget() {
+  const el = document.getElementById('weather-widget-card');
+  if (!el) return;
+
+  // Show loading skeleton
+  el.innerHTML = `<div style="padding:16px;text-align:center;color:var(--ink-5);font-size:12px;">🌤️ Loading weather…</div>`;
+
+  // Cache check (30 min)
+  const now = Date.now();
+  if (window._weatherCache && (now - window._weatherCache.ts) < 30 * 60 * 1000) {
+    _renderWeatherData(el, window._weatherCache.data);
+    return;
+  }
+
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=17.1&longitude=80.9' +
+      '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,dew_point_2m,apparent_temperature' +
+      '&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,relative_humidity_2m_max,relative_humidity_2m_min,weather_code' +
+      '&timezone=Asia%2FKolkata&forecast_days=4';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    window._weatherCache = { ts: now, data };
+    _renderWeatherData(el, data);
+  } catch(e) {
+    el.innerHTML = `<div style="padding:16px;text-align:center;color:var(--ink-5);font-size:12px;">⚠️ Weather unavailable</div>`;
+  }
 }
 
 function _weatherCodeEmoji(code) {
@@ -1780,37 +2020,119 @@ function _weatherCodeEmoji(code) {
   return '⛈️';
 }
 
-function _applyWeatherData(el, c) {
-  const temp = c.temperature_2m != null ? c.temperature_2m : '—';
-  const hum = c.relative_humidity_2m != null ? c.relative_humidity_2m : null;
-  const wind = c.wind_speed_10m != null ? c.wind_speed_10m : '—';
-  const emoji = _weatherCodeEmoji(c.weather_code || 0);
+function _renderWeatherData(el, data) {
+  const c = data.current || {};
+  const temp       = Math.round(c.temperature_2m != null ? c.temperature_2m : 0);
+  const feelsLike  = Math.round(c.apparent_temperature != null ? c.apparent_temperature : temp);
+  const humidity   = Math.round(c.relative_humidity_2m != null ? c.relative_humidity_2m : 0);
+  const wind       = Math.round(c.wind_speed_10m != null ? c.wind_speed_10m : 0);
+  const dew        = Math.round(c.dew_point_2m != null ? c.dew_point_2m : 0);
+  const code       = c.weather_code || 0;
+  const emoji      = _weatherCodeEmoji(code);
 
-  let humColor = 'var(--ink-4)';
-  let condition = 'Good';
-  let condColor = 'var(--green)';
-  if (hum !== null) {
-    if (hum > 75) { humColor = 'var(--red)'; condition = 'Poor'; condColor = 'var(--red)'; }
-    else if (hum > 65) { humColor = 'var(--amber)'; condition = 'Fair'; condColor = 'var(--amber)'; }
-    else if (hum < 55) { humColor = 'var(--green)'; condition = 'Excellent'; condColor = 'var(--green)'; }
+  // Drying condition
+  let dryColor, dryLabel, dryBg;
+  if (humidity < 55)       { dryColor='#059669'; dryBg='#ECFDF5'; dryLabel='🟢 Excellent drying conditions'; }
+  else if (humidity < 65)  { dryColor='#D97706'; dryBg='#FFFBEB'; dryLabel='🟡 Good drying conditions'; }
+  else if (humidity < 75)  { dryColor='#EA580C'; dryBg='#FFF7ED'; dryLabel='🟠 Fair — monitor closely'; }
+  else                      { dryColor='#DC2626'; dryBg='#FEF2F2'; dryLabel='🔴 Poor — high humidity'; }
+  if (wind > 20) dryLabel += ' · Good airflow 💨';
+
+  // Humidity pill color
+  const humColor = humidity < 55 ? '#059669' : humidity < 70 ? '#D97706' : '#DC2626';
+  const humBg    = humidity < 55 ? '#ECFDF5' : humidity < 70 ? '#FFFBEB' : '#FEF2F2';
+
+  // Next 6 hours
+  const hourlyTimes = (data.hourly && data.hourly.time) || [];
+  const hourlyHum   = (data.hourly && data.hourly.relative_humidity_2m) || [];
+  const hourlyTemp  = (data.hourly && data.hourly.temperature_2m) || [];
+  const nowISO = new Date().toISOString().slice(0,13);
+  const nowIdx = hourlyTimes.findIndex(t => t.startsWith(nowISO));
+  const next6 = [];
+  for (let i = Math.max(0, nowIdx); i < Math.min(hourlyTimes.length, nowIdx + 7); i++) {
+    if (next6.length >= 6) break;
+    const t = new Date(hourlyTimes[i]);
+    next6.push({ hour: t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}), hum: Math.round(hourlyHum[i]||0), temp: Math.round(hourlyTemp[i]||0) });
   }
+  const minHumIdx = next6.length ? next6.reduce((mi, h, i, arr) => h.hum < arr[mi].hum ? i : mi, 0) : 0;
 
-  const humWarning = hum !== null && hum > 75 ? `<div class="kpi-delta delta-down" style="font-size:10px;">⚠️ High humidity — slow drying</div>` :
-    hum !== null && hum < 55 ? `<div class="kpi-delta delta-up" style="font-size:10px;">✅ Low humidity — great drying</div>` : '';
+  // 3-day forecast (skip today = index 0)
+  const daily = data.daily || {};
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const forecast3 = ((daily.time || []).slice(1, 4)).map((dateStr, i) => ({
+    day:    dayNames[new Date(dateStr).getDay()],
+    emoji:  _weatherCodeEmoji(((daily.weather_code || [])[i+1]) || 0),
+    max:    Math.round(((daily.temperature_2m_max || [])[i+1]) || 0),
+    min:    Math.round(((daily.temperature_2m_min || [])[i+1]) || 0),
+    humMax: Math.round(((daily.relative_humidity_2m_max || [])[i+1]) || 0),
+    humMin: Math.round(((daily.relative_humidity_2m_min || [])[i+1]) || 0),
+  }));
 
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-      <span style="font-size:11px;font-weight:700;color:var(--ink-4);">🌤️ Sathupally</span>
-      <span style="font-size:9px;padding:1px 6px;background:var(--green);color:#fff;border-radius:99px;font-weight:700;">Live</span>
-    </div>
-    <div class="kpi-val" style="font-size:28px;line-height:1;">${emoji} ${temp}°C</div>
-    <div class="kpi-label">Current Weather</div>
-    <div style="display:flex;gap:10px;margin-top:6px;font-size:11px;color:var(--ink-4);">
-      <span style="color:${humColor};font-weight:600;">💧 ${hum !== null ? hum + '%' : '—'}</span>
-      <span>💨 ${wind} km/h</span>
-    </div>
-    <div style="margin-top:4px;font-size:11px;font-weight:700;color:${condColor};">Drying: ${condition}</div>
-    ${humWarning}`;
+    <div style="padding:16px 20px;">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">🌤️ Sathupally Weather</div>
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="font-size:36px;line-height:1;">${emoji}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:32px;font-weight:800;color:var(--ink);">${temp}°</span>
+            <span style="font-size:12px;color:var(--ink-5);">Feels ${feelsLike}°C</span>
+          </div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;background:${humBg};border:1px solid ${humColor}30;">
+            <span style="font-size:13px;">💧</span>
+            <span style="font-size:13px;font-weight:800;color:${humColor};">${humidity}%</span>
+          </div>
+          <div style="font-size:11px;color:var(--ink-5);">💨 ${wind} km/h</div>
+          <div style="font-size:11px;color:var(--ink-5);">🌡️ Dew ${dew}°C</div>
+        </div>
+      </div>
+
+      <!-- Drying condition banner -->
+      <div style="padding:8px 12px;background:${dryBg};border-radius:var(--radius);margin-bottom:12px;border:1px solid ${dryColor}25;">
+        <div style="font-size:12px;font-weight:700;color:${dryColor};">${dryLabel}</div>
+      </div>
+
+      <!-- Next 6 hours -->
+      ${next6.length ? `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">Next 6 Hours</div>
+        <div style="display:flex;gap:4px;overflow-x:auto;">
+          ${next6.map((h,i) => {
+            const isBest = i === minHumIdx;
+            const hc = h.hum < 55 ? '#059669' : h.hum < 75 ? '#D97706' : '#DC2626';
+            return `<div style="flex:1;min-width:44px;text-align:center;padding:6px 4px;border-radius:var(--radius);background:${isBest?'#ECFDF5':'var(--surface-2)'};border:1px solid ${isBest?'#10B98133':'transparent'};">
+              <div style="font-size:10px;color:var(--ink-5);margin-bottom:3px;white-space:nowrap;">${h.hour.replace(':00','')}</div>
+              <div style="font-size:11px;font-weight:700;color:${hc};">${h.hum}%</div>
+              <div style="font-size:10px;color:var(--ink-5);">${h.temp}°</div>
+              ${isBest ? `<div style="font-size:9px;color:#059669;font-weight:700;">best</div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- 3-day forecast -->
+      ${forecast3.length ? `
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">3-Day Forecast</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+          ${forecast3.map(d => {
+            const avgHum = Math.round((d.humMax + d.humMin) / 2);
+            const dc = avgHum < 65 ? '#059669' : avgHum < 75 ? '#D97706' : '#DC2626';
+            return `<div style="padding:8px;background:var(--surface-2);border-radius:var(--radius);text-align:center;">
+              <div style="font-size:11px;font-weight:700;color:var(--ink-4);margin-bottom:4px;">${d.day}</div>
+              <div style="font-size:18px;margin-bottom:3px;">${d.emoji}</div>
+              <div style="font-size:11px;color:var(--ink);">${d.max}° / ${d.min}°</div>
+              <div style="font-size:10px;font-weight:700;color:${dc};margin-top:2px;">${avgHum}% hum</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="font-size:10px;color:var(--ink-5);margin-top:10px;text-align:right;">Sathupally, Telangana · Open-Meteo</div>
+    </div>`;
 }
 
 // ── Audit Trail Page ──────────────────────────────────────────

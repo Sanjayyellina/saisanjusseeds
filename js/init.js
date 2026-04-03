@@ -1,7 +1,7 @@
 // ============================================================
 // INITIALISATION & BOOT
 // Yellina Seeds Private Limited — Operations Platform
-// v23
+// v24
 "use strict";
 // ============================================================
 
@@ -247,6 +247,15 @@ async function bootApp() {
   if (binHistory) state.binHistory = binHistory;
   state.activityLogs = activityLogs || [];
   state.moistureReadings = moistureReadings || [];
+
+  // Fetch and apply user role
+  const roleData = await dbFetchMyRole();
+  state.userRole = roleData.role || 'manager';
+  state.userDisplayName = roleData.display_name || null;
+  state.userEmail = roleData.email || null;
+  if (state.userRole === 'super_admin') {
+    state.allUserRoles = await dbFetchAllRoles();
+  }
   state.fieldUpdates = (fieldUpdates || []).map(u => ({
     id: u.id,
     updateType: u.update_type,
@@ -344,6 +353,9 @@ async function bootApp() {
   _hideBootSpinner();
 
   if (window.Store) window.Store.emitChange();
+
+  // Apply role-based access control gates
+  if (typeof applyRoleGates === 'function') applyRoleGates();
 
   // Request notification permission and check conditions on first load
   if (typeof requestNotifPermission === 'function') requestNotifPermission();
