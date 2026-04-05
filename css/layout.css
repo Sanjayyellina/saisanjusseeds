@@ -298,9 +298,14 @@ body.sidebar-collapsed .topbar-left {
   .topbar-left { width: auto; border-right: none; padding-right: 10px; padding-left: 12px; }
   .brand-text { display: none; }
   .topbar-center { display: none; }
+  .topbar-right { gap: 6px; }
   .topbar-right .live-pill, .topbar-right .topbar-time { display: none; }
   .topbar-right select { display: none; }
-  .topbar-right .topbar-btn span { display: none; } /* Hide 'New Intake' text, just show icon */
+  .topbar-right .topbar-btn span { display: none; }
+  #boiler-wrap { display: none; }
+  #role-badge { display: none !important; }
+  #cmd-k-btn { display: none !important; }
+  #notif-perm-btn { display: none !important; }
   .page-wrap { padding: 16px; min-width:100%; }
   .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .login-left { display: none !important; }
