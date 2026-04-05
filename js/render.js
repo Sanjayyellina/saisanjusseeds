@@ -251,7 +251,7 @@ function renderIntakePage(){
       <td>${binIds.map(b=>`<span class="chip chip-blue">BIN-${getBinLabel(b)}</span>`).join(' ')||'—'}</td>
       <td><span class="chip ${statusChipClass}">${statusLabel}</span></td>
       <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${esc(i.id)}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${parseInt(i.bin)||0})">${t('actions.view')} Bin</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="openEditIntakeModal('${esc(i.id)}')" title="Edit">✏️</button>${i.bin?` <button class="btn btn-ghost btn-sm" onclick="openBinModal(${parseInt(i.bin)||0})">${t('actions.view')} Bin</button>`:''} <button class="btn btn-ghost btn-sm" onclick="deleteIntake('${esc(i.id)}','${esc(i.challan)}')" title="Delete" style="color:var(--red);">🗑️</button>
       </td>
     </tr>`;}).join('')
     :`<tr><td colspan="15"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">${t('dash.noIntakes')}</div><div class="empty-sub">Start by logging a new truck intake above</div></div></td></tr>`;
@@ -437,7 +437,8 @@ function renderDispatchPage(){
       <td style="white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${esc(d.receiptId)}')" style="margin-right:4px;">${t('actions.view')}</button>
         <button class="btn btn-ghost btn-sm" onclick="openEditDispatchModal('${esc(d.receiptId)}')" style="margin-right:4px;" title="Edit dispatch">✏️</button>
-        <button class="btn btn-ghost btn-sm" onclick="printDriverSlip('${esc(d.receiptId)}')" style="color:var(--green);border-color:var(--green);" title="Print Driver Slip">🚚 Slip</button>
+        <button class="btn btn-ghost btn-sm" onclick="printDriverSlip('${esc(d.receiptId)}')" style="color:var(--green);border-color:var(--green);margin-right:4px;" title="Print Driver Slip">🚚 Slip</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteDispatch('${esc(d.id)}','${esc(d.receiptId)}')" title="Delete" style="color:var(--red);">🗑️</button>
       </td>
     </tr>`).join('')
     :`<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">${t('dash.noDispatches')}</div><div class="empty-sub">Create a dispatch to generate a signed receipt</div></div></td></tr>`;
@@ -1540,7 +1541,10 @@ function renderMaintenancePage() {
       <td class="fs12 truncate" style="max-width:140px;">${esc(m.items_bought || '—')}</td>
       <td><span class="fw700 text-gold">₹${parseInt(m.cost_amount).toLocaleString('en-IN')}</span></td>
       <td><div style="display:flex;gap:4px;align-items:center;">${thumbs || '<span style="color:var(--ink-5);font-size:11px;">—</span>'}${extra}</div></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="openEditMaintenanceModal(${m.id})">✏️ Edit</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditMaintenanceModal(${m.id})" style="margin-right:4px;">✏️ Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteMaintenance(${m.id})" title="Delete" style="color:var(--red);">🗑️</button>
+      </td>
     </tr>`;
   }).join('')
     : `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No Maintenance Logs found</div></div></td></tr>`;
@@ -1606,7 +1610,10 @@ function renderLaborPage() {
       <td class="fs12 truncate" style="max-width:200px;" title="${esc(l.people_names || '')}">${esc(l.people_names || '—')}${imgs}</td>
       <td class="fs12 text-muted truncate" style="max-width:140px;">${esc(l.notes || '—')}</td>
       <td>${wages}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="openEditLaborModal(${l.id})">✏️ Edit</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditLaborModal(${l.id})" style="margin-right:4px;">✏️ Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteLaborLog(${l.id})" title="Delete" style="color:var(--red);">🗑️</button>
+      </td>
     </tr>`;
   }).join('')
     : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128119;</div><div class="empty-title">No shift logs yet</div><div class="empty-sub">Set up your groups first, then log shifts</div></div></td></tr>`;

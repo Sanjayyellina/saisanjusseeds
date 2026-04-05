@@ -172,6 +172,39 @@ async function dbDeleteUserRole(id) {
   } catch(e) { console.error('dbDeleteUserRole:', e); return false; }
 }
 
+async function dbDeleteIntake(id) {
+  try {
+    await dbClient.from('intake_allocations').delete().eq('intake_id', id);
+    const { error } = await dbClient.from('intakes').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteIntake:', e); return false; }
+}
+
+async function dbDeleteDispatch(id) {
+  try {
+    const { error } = await dbClient.from('dispatches').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteDispatch:', e); return false; }
+}
+
+async function dbDeleteMaintenance(id) {
+  try {
+    const { error } = await dbClient.from('maintenance_logs').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteMaintenance:', e); return false; }
+}
+
+async function dbDeleteLaborLog(id) {
+  try {
+    const { error } = await dbClient.from('labor_logs').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteLaborLog:', e); return false; }
+}
+
 async function dbFetchActivityLogs() {
   try {
     const { data, error } = await dbClient.from('activity_logs')

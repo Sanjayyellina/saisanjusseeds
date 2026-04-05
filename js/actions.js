@@ -2865,6 +2865,54 @@ window.saveUserRole = async function(isEdit = false) {
   }
 };
 
+window.deleteIntake = async function(id, challan) {
+  if (!confirm(`Delete intake ${challan}? This will also remove its bin allocations. This cannot be undone.`)) return;
+  const ok = await dbDeleteIntake(id);
+  if (ok) {
+    state.intakes = state.intakes.filter(i => i.id !== id);
+    toast('Intake deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to delete intake', 'error');
+  }
+};
+
+window.deleteDispatch = async function(id, receiptId) {
+  if (!confirm(`Delete dispatch ${receiptId}? This cannot be undone.`)) return;
+  const ok = await dbDeleteDispatch(id);
+  if (ok) {
+    state.dispatches = state.dispatches.filter(d => d.id !== id);
+    toast('Dispatch deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to delete dispatch', 'error');
+  }
+};
+
+window.deleteMaintenance = async function(id) {
+  if (!confirm('Delete this maintenance record? This cannot be undone.')) return;
+  const ok = await dbDeleteMaintenance(id);
+  if (ok) {
+    state.maintenance = state.maintenance.filter(m => m.id !== id);
+    toast('Record deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to delete record', 'error');
+  }
+};
+
+window.deleteLaborLog = async function(id) {
+  if (!confirm('Delete this labor log entry? This cannot be undone.')) return;
+  const ok = await dbDeleteLaborLog(id);
+  if (ok) {
+    state.labor = state.labor.filter(l => l.id !== id);
+    toast('Labor log deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Failed to delete labor log', 'error');
+  }
+};
+
 window.deleteUserRole = async function(id, email) {
   if (!confirm(`Remove ${email} from the platform?`)) return;
   const ok = await dbDeleteUserRole(id);
