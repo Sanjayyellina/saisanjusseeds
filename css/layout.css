@@ -302,7 +302,7 @@ body.sidebar-collapsed .topbar-left {
   .topbar-right .live-pill, .topbar-right .topbar-time { display: none; }
   .topbar-right select { display: none; }
   .topbar-right .topbar-btn span { display: none; }
-  #boiler-wrap { display: none; }
+  #boiler-wrap { display: none !important; }
   #role-badge { display: none !important; }
   #cmd-k-btn { display: none !important; }
   #notif-perm-btn { display: none !important; }
