@@ -43,6 +43,11 @@ function showPage(name,el){
   document.body.dataset.page = name;
   if(el){const ni=el.closest('.nav-item');if(ni)ni.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+name+"'"))n.classList.add('active');});}
+  // Close sidebar on mobile after navigation
+  if(window.innerWidth <= 992){
+    const sidebar = document.querySelector('.sidebar');
+    if(sidebar) sidebar.classList.remove('open');
+  }
   renderPage(name);
 }
 function openModal(id){document.getElementById(id).classList.add('open');populateModalSelects();}
