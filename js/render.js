@@ -115,7 +115,7 @@ function renderDashboard(){
   // Ready to dispatch = shelling status OR at/below target moisture
   const readyBins=active.filter(b=>b.status==='shelling'||(b.currentMoisture||99)<=Config.TARGET_MOISTURE);
 
-  document.getElementById('kpi-intake').textContent=totalQty.toFixed(1);
+  document.getElementById('kpi-intake').textContent=totalQty.toLocaleString('en-IN',{minimumFractionDigits:1,maximumFractionDigits:1});
   const kpiIntakeD=document.getElementById('kpi-intake-d');
   if(kpiIntakeD)kpiIntakeD.textContent=todayIntakeQty>0?`↑ ${todayIntakeQty.toFixed(0)} Kg today`:'↑ Today';
 
