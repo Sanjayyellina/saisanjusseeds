@@ -50,7 +50,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <!-- Modular Stylesheets -->
 <link rel="stylesheet" href="css/variables.css?v=22">
-<link rel="stylesheet" href="css/layout.css?v=26">
+<link rel="stylesheet" href="css/layout.css?v=27">
 <link rel="stylesheet" href="css/components.css?v=46">
 </head>
 <body>
@@ -175,14 +175,13 @@
 
     <!-- Boiler Temps + Pressure -->
     <div class="boiler-wrap" id="boiler-wrap">
-      <button class="boiler-pill" id="boiler-btn" onclick="toggleBoilerEdit()" title="Boiler temps & pressure — click to update" style="gap:10px;padding:0 12px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>
-        <span style="font-size:10px;opacity:.7;">B1</span><span id="boiler-1-display">—</span>
-        <span style="font-size:10px;opacity:.5;">|</span>
-        <span style="font-size:10px;opacity:.7;">B2</span><span id="boiler-2-display">—</span>
-        <span style="font-size:10px;opacity:.5;">|</span>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span id="boiler-pressure-display">—</span><span style="font-size:9px;opacity:.6;" id="boiler-pressure-unit-display">kg/cm²</span>
+      <button class="boiler-pill" id="boiler-btn" onclick="toggleBoilerEdit()" title="Boiler temps & pressure — click to update" style="gap:6px;padding:0 8px;height:30px;font-size:11px;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>
+        <span style="opacity:.65;font-size:10px;">B1</span><span id="boiler-1-display" style="font-size:12px;">—</span>
+        <span style="opacity:.3;">|</span>
+        <span style="opacity:.65;font-size:10px;">B2</span><span id="boiler-2-display" style="font-size:12px;">—</span>
+        <span style="opacity:.3;">|</span>
+        <span id="boiler-pressure-display" style="font-size:12px;">—</span><span style="font-size:9px;opacity:.5;" id="boiler-pressure-unit-display">kg/cm²</span>
       </button>
       <div class="boiler-popup" id="boiler-popup" style="display:none;min-width:260px;">
         <div class="boiler-popup-title">🔥 Boiler Status</div>
