@@ -302,7 +302,10 @@ body.sidebar-collapsed .topbar-left {
   .topbar-right .live-pill, .topbar-right .topbar-time { display: none; }
   .topbar-right select { display: none; }
   .topbar-right .topbar-btn span { display: none; }
-  #boiler-wrap { display: none !important; }
+  #boiler-wrap { display: block; }
+  .boiler-pill { height:32px; padding:0 8px; gap:6px; }
+  .boiler-pill div span:first-child { font-size:7px; }
+  .boiler-pill div span:last-child { font-size:11px; }
   #role-badge { display: none !important; }
   #cmd-k-btn { display: none !important; }
   #notif-perm-btn { display: none !important; }
