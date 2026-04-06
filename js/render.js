@@ -482,7 +482,7 @@ function renderAnalytics(){
   document.getElementById('a-total').textContent=total.toLocaleString('en-IN');
   document.getElementById('a-disp').textContent=state.dispatches.length;
   const aRev=document.getElementById('a-rev');
-  if(aRev) aRev.textContent='₹'+rev.toLocaleString('en-IN');
+  if(aRev) aRev.textContent='₹'+rev.toLocaleString('en-IN',{maximumFractionDigits:0});
   const aMdrop=document.getElementById('a-mdrop');
   if(aMdrop) aMdrop.textContent=avgMoistureDrop>0?avgMoistureDrop+'%':'—';
   const aDays=document.getElementById('a-days');

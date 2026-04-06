@@ -4,6 +4,10 @@
    STAT CARDS
    ============================================================ */
 .kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:24px; }
+.kpi-grid-analytics { grid-template-columns:repeat(5,1fr); }
+.kpi-grid-analytics .kpi-card { padding:14px 16px; }
+.kpi-grid-analytics .kpi-val { font-size:22px; }
+.kpi-grid-analytics .kpi-icon { width:30px; height:30px; font-size:15px; margin-bottom:8px; }
 .kpi-card {
   background: var(--glass-white);
   backdrop-filter: var(--glass-blur);
@@ -656,6 +660,9 @@
 @media (max-width: 992px) {
   .kpi-grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .kpi-grid-analytics {
+    grid-template-columns: 1fr 1fr !important;
   }
   .kpi-card:first-child {
     grid-column: 1 / -1;
