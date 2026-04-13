@@ -20,6 +20,8 @@ const initialState = {
   })),
   intakes:[],
   dispatches:[],
+  shellingLots:[],
+  groundDrying:[],
   maintenance: [],
   labor: [],
   binHistory: [],

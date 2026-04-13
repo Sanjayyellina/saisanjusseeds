@@ -126,9 +126,9 @@ async function bootApp() {
   });
 
   // Fetch all data in parallel for faster boot
-  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates, activityLogs;
+  let bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates, activityLogs, shellingLots, groundDrying;
   try {
-    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates, activityLogs] = await Promise.all([
+    [bins, intakes, dispatches, maint, labor, binHistory, entryTrucks, backyardRemovals, laborGroups, moistureReadings, fieldUpdates, activityLogs, shellingLots, groundDrying] = await Promise.all([
       dbFetchBins(),
       dbFetchIntakes(),
       dbFetchDispatches(),
@@ -140,7 +140,9 @@ async function bootApp() {
       dbFetchLaborGroups(),
       dbFetchMoistureReadings(),
       dbFetchFieldUpdates(),
-      dbFetchActivityLogs()
+      dbFetchActivityLogs(),
+      dbFetchShellingLots(),
+      dbFetchGroundDrying()
     ]);
   } catch (err) {
     console.error('bootApp: fetch error', err);
@@ -241,6 +243,36 @@ async function bootApp() {
       state.receiptCounter = Math.max(1001, maxReceipt + 1);
     }
   }
+
+  if (shellingLots) state.shellingLots = shellingLots.map(s => ({
+    id: s.id,
+    binId: s.bin_id,
+    groundDryingId: s.ground_drying_id,
+    lotNumber: s.lot_number,
+    inputKg: parseFloat(s.input_kg) || 0,
+    outputKg: parseFloat(s.output_kg) || 0,
+    bags: parseInt(s.bags) || 0,
+    shellingDate: s.shelling_date,
+    status: s.status || 'pending',
+    hybrid: s.hybrid || '',
+    notes: s.notes || '',
+    dateTS: new Date(s.created_at).getTime(),
+    date: new Date(s.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric' })
+  }));
+
+  if (groundDrying) state.groundDrying = groundDrying.map(g => ({
+    id: g.id,
+    challan: g.challan || '',
+    hybrid: g.hybrid || '',
+    qtyKg: parseFloat(g.qty_kg) || 0,
+    entryMoisture: parseFloat(g.entry_moisture) || 0,
+    currentMoisture: parseFloat(g.current_moisture) || 0,
+    dryingDate: g.drying_date,
+    status: g.status || 'drying',
+    notes: g.notes || '',
+    dateTS: new Date(g.created_at).getTime(),
+    date: new Date(g.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric' })
+  }));
 
   if (maint) state.maintenance = maint;
   if (labor) state.labor = labor;

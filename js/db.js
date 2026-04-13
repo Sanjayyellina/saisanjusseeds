@@ -205,6 +205,85 @@ async function dbDeleteLaborLog(id) {
   } catch(e) { console.error('dbDeleteLaborLog:', e); return false; }
 }
 
+// ── Shelling Lots ─────────────────────────────────────────────
+async function dbFetchShellingLots() {
+  try {
+    const { data, error } = await dbClient.from('shelling_lots').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('dbFetchShellingLots:', e); return []; }
+}
+
+async function dbNextLotNumber() {
+  try {
+    const year = new Date().getFullYear();
+    const prefix = `YL-${year}-`;
+    const { data } = await dbClient.from('shelling_lots').select('lot_number').like('lot_number', `${prefix}%`).order('lot_number', { ascending: false }).limit(1);
+    if (data && data.length > 0) {
+      const last = parseInt(data[0].lot_number.split('-')[2]) || 0;
+      return prefix + String(last + 1).padStart(3, '0');
+    }
+    return prefix + '001';
+  } catch(e) { return `YL-${new Date().getFullYear()}-001`; }
+}
+
+async function dbInsertShellingLot(record) {
+  try {
+    const { data, error } = await dbClient.from('shelling_lots').insert([record]).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbInsertShellingLot:', e); throw e; }
+}
+
+async function dbUpdateShellingLot(id, updates) {
+  try {
+    const { data, error } = await dbClient.from('shelling_lots').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbUpdateShellingLot:', e); throw e; }
+}
+
+async function dbDeleteShellingLot(id) {
+  try {
+    const { error } = await dbClient.from('shelling_lots').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteShellingLot:', e); return false; }
+}
+
+// ── Ground Drying ─────────────────────────────────────────────
+async function dbFetchGroundDrying() {
+  try {
+    const { data, error } = await dbClient.from('ground_drying').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('dbFetchGroundDrying:', e); return []; }
+}
+
+async function dbInsertGroundDrying(record) {
+  try {
+    const { data, error } = await dbClient.from('ground_drying').insert([record]).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbInsertGroundDrying:', e); throw e; }
+}
+
+async function dbUpdateGroundDrying(id, updates) {
+  try {
+    const { data, error } = await dbClient.from('ground_drying').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  } catch(e) { console.error('dbUpdateGroundDrying:', e); throw e; }
+}
+
+async function dbDeleteGroundDrying(id) {
+  try {
+    const { error } = await dbClient.from('ground_drying').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteGroundDrying:', e); return false; }
+}
+
 async function dbFetchActivityLogs() {
   try {
     const { data, error } = await dbClient.from('activity_logs')

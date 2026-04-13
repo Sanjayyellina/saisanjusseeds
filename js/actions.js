@@ -139,8 +139,9 @@ function openEditIntakeModal(intakeId) {
 }
 
 function openDispatchModal() {
-  document.getElementById('d-bin-rows').innerHTML = '';
-  addDispatchBinRow();
+  const shellingRowsEl = document.getElementById('d-shelling-rows');
+  if (shellingRowsEl) shellingRowsEl.innerHTML = '';
+  addDispatchLotRowFromShelling();
   document.getElementById('d-lot-rows').innerHTML = '';
   addDispatchLotRow();
   ['d-party','d-address','d-vehicle','d-hybrid','d-bags','d-qty','d-moisture','d-amount','d-lr','d-remarks','d-datetime'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -192,6 +193,54 @@ function addDispatchBinRow() {
   `;
   container.appendChild(row);
 }
+
+window.addDispatchLotRowFromShelling = function() {
+  const container = document.getElementById('d-shelling-rows');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'form-row cols3 d-shelling-row mt8';
+  row.style.alignItems = 'flex-end';
+  row.style.marginTop = '8px';
+
+  // Available: complete shelling lots not yet fully dispatched
+  const available = (state.shellingLots || []).filter(l => l.status === 'complete');
+  let opts = '<option value="">— Select shelling lot —</option>';
+  available.forEach(l => {
+    opts += `<option value="${l.id}" data-bags="${l.bags}" data-kg="${l.outputKg}" data-hybrid="${(l.hybrid||'').replace(/"/g,'&quot;')}">${l.lotNumber} — ${l.hybrid||'?'} — ${l.outputKg.toLocaleString('en-IN')} Kg (${l.bags} bags)</option>`;
+  });
+  if (!available.length) {
+    opts = '<option value="">No completed shelling lots — shell bins first</option>';
+  }
+
+  row.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Shelling Lot *</label>
+      <select class="form-select d-shelling-select" onchange="autofillShellingRow(this)">${opts}</select>
+    </div>
+    <div class="form-group"><label class="form-label">Bags from this Lot</label><input class="form-input d-shelling-bags" type="number" placeholder="e.g. 200"></div>
+    <div class="form-group" style="position:relative;">
+      <label class="form-label">Qty (Kg)</label>
+      <div style="display:flex;gap:8px;">
+        <input class="form-input d-shelling-qty" type="number" placeholder="e.g. 8000" style="flex:1;">
+        <button class="btn btn-ghost" style="padding:0 8px;" onclick="this.closest('.d-shelling-row').remove()">✕</button>
+      </div>
+    </div>`;
+  container.appendChild(row);
+};
+
+window.autofillShellingRow = function(sel) {
+  const opt = sel.selectedOptions[0];
+  if (!opt || !opt.value) return;
+  const row = sel.closest('.d-shelling-row');
+  if (!row) return;
+  const bagsIn = row.querySelector('.d-shelling-bags');
+  const qtyIn  = row.querySelector('.d-shelling-qty');
+  if (bagsIn && !bagsIn.value) bagsIn.value = opt.dataset.bags || '';
+  if (qtyIn  && !qtyIn.value)  qtyIn.value  = opt.dataset.kg   || '';
+  // Also auto-fill hybrid on dispatch form if empty
+  const hybridEl = document.getElementById('d-hybrid');
+  if (hybridEl && !hybridEl.value) hybridEl.value = opt.dataset.hybrid || '';
+};
 
 function addVehicleRow() {
   const container = document.getElementById('i-vehicle-rows');
@@ -554,22 +603,23 @@ async function saveDispatch(){
   const dMoisture=parseFloat(document.getElementById('d-moisture').value);
   if(document.getElementById('d-moisture').value&&(dMoisture<0||dMoisture>60)){toast('Moisture must be between 0% and 60%','error');return;}
 
-  // Gather bin allocations
-  const binRows = document.querySelectorAll('.d-bin-row');
-  const binAllocations = [];
-  let binError = false;
-  binRows.forEach(row => {
-    const binId = row.querySelector('.d-bin-select').value;
-    const binBags = parseInt(row.querySelector('.d-bin-bags').value) || 0;
-    const binQty = parseFloat(row.querySelector('.d-bin-qty').value) || 0;
-    if (binId) {
-      binAllocations.push({ binId: parseInt(binId), bags: binBags, qty: binQty });
-    } else if (binBags || binQty) {
-      binError = true;
+  // Gather shelling lot allocations
+  const shellingRows = document.querySelectorAll('.d-shelling-row');
+  const shellingAllocations = [];
+  let shellingError = false;
+  shellingRows.forEach(row => {
+    const lotId  = row.querySelector('.d-shelling-select')?.value;
+    const lotBags = parseInt(row.querySelector('.d-shelling-bags')?.value) || 0;
+    const lotQty  = parseFloat(row.querySelector('.d-shelling-qty')?.value) || 0;
+    if (lotId) {
+      const lot = (state.shellingLots||[]).find(l => String(l.id) === String(lotId));
+      shellingAllocations.push({ lotId: parseInt(lotId), lotNumber: lot?.lotNumber||'', bags: lotBags, qty: lotQty });
+    } else if (lotBags || lotQty) {
+      shellingError = true;
     }
   });
-  if (binError) { toast('Please select a bin for every row or remove empty rows', 'error'); return; }
-  // binAllocations is optional — dispatch can have no bins selected
+  if (shellingError) { toast('Please select a shelling lot for every row or remove empty rows', 'error'); return; }
+  const binAllocations = []; // kept for backward compat in DB
 
   const dtInput=document.getElementById('d-datetime')?.value;
   const driverName = document.getElementById('d-driver-name')?.value.trim() || '';
@@ -658,8 +708,8 @@ async function saveDispatch(){
     party,address:document.getElementById('d-address').value,
     vehicle,lr:document.getElementById('d-lr').value,
     hybrid,lot:[...document.querySelectorAll('.d-lot-input')].map(el=>el.value.trim()).filter(Boolean).join(', '),
-    bin: binAllocations.length ? binAllocations[0].binId : null,
-    bins: binAllocations,
+    bin: null, bins: [],
+    shellingLots: shellingAllocations,
     bags,qty,
     moisture:parseFloat(document.getElementById('d-moisture').value)||0,
     amount,remarks:document.getElementById('d-remarks').value,
@@ -679,8 +729,9 @@ async function saveDispatch(){
       lr: d.lr,
       hybrid: d.hybrid,
       lot: d.lot,
-      bin_id: d.bin,
-      bins: binAllocations,
+      bin_id: null,
+      bins: [],
+      dispatch_lots: shellingAllocations,
       bags: d.bags,
       qty: d.qty,
       moisture: d.moisture,
@@ -701,17 +752,9 @@ async function saveDispatch(){
 
   if (success) {
       state.dispatches.unshift(d);
-      const binLabels = binAllocations.length ? binAllocations.map(a=>`BIN-${getBinLabel(a.binId)}`).join(', ') : 'N/A';
-      dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Kg / ₹${d.amount}) from ${binLabels}`, 'dispatch', d.receiptId);
-      // Deduct inventory from all selected bins
-      binAllocations.forEach(a => {
-          const b = state.bins.find(x => x.id === a.binId);
-          if (b) {
-              b.qty = Math.max(0, (b.qty || 0) - (a.qty));
-              b.pkts = Math.max(0, (b.pkts || 0) - a.bags);
-              dbUpdateBin(b.id, { qty: b.qty, pkts: b.pkts });
-          }
-      });
+      const lotLabels = shellingAllocations.length ? shellingAllocations.map(a=>a.lotNumber).join(', ') : 'N/A';
+      dbLogActivity('DISPATCH_CREATED', `Receipt ${d.receiptId} generated for ${d.party} (${d.qty} Kg / ₹${d.amount}) from lots: ${lotLabels}`, 'dispatch', d.receiptId);
+      // Mark dispatched shelling lots as dispatched (optional future enhancement)
       closeModal('dispatch-modal');
       toast(`Receipt ${receiptId} generated & signed`,'success');
       setTimeout(()=>viewReceipt(receiptId),350);
@@ -2923,5 +2966,266 @@ window.deleteUserRole = async function(id, email) {
     if (window.Store) window.Store.emitChange();
   } else {
     toast('Failed to remove — check permissions', 'error');
+  }
+};
+
+// ============================================================
+// SHELLING ACTIONS
+// ============================================================
+
+window.openShellingModal = async function(binId, editId) {
+  document.getElementById('shelling-edit-id').value = editId || '';
+  // Set default date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('s-date').value = today;
+
+  // Populate bin select: all non-empty bins
+  const binSel = document.getElementById('s-bin-id');
+  binSel.innerHTML = '<option value="">— No Bin (Ground Lot) —</option>';
+  state.bins.filter(b => b.status !== 'empty').forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    const ready = b.currentMoisture > 0 && b.currentMoisture <= (b.targetMoisture || 10);
+    opt.textContent = `BIN-${b.binLabel||b.id} — ${b.hybrid||'?'} — ${b.qty.toLocaleString('en-IN')} Kg — ${b.currentMoisture}% ${ready ? '✅ READY':''}`;
+    binSel.appendChild(opt);
+  });
+
+  if (editId) {
+    // Edit mode — populate from existing lot
+    const lot = state.shellingLots.find(l => String(l.id) === String(editId));
+    if (lot) {
+      binSel.value = lot.binId || '';
+      document.getElementById('s-hybrid').value = lot.hybrid;
+      document.getElementById('s-lot-number').value = lot.lotNumber;
+      document.getElementById('s-input-kg').value = lot.inputKg;
+      document.getElementById('s-output-kg').value = lot.outputKg;
+      document.getElementById('s-bags').value = lot.bags;
+      document.getElementById('s-status').value = lot.status;
+      document.getElementById('s-notes').value = lot.notes;
+      document.getElementById('s-date').value = lot.shellingDate || today;
+      calcShellingYield();
+    }
+  } else {
+    // New entry — auto-fill from bin if provided
+    document.getElementById('s-hybrid').value = '';
+    document.getElementById('s-input-kg').value = '';
+    document.getElementById('s-output-kg').value = '';
+    document.getElementById('s-bags').value = '';
+    document.getElementById('s-status').value = 'pending';
+    document.getElementById('s-notes').value = '';
+    document.getElementById('shelling-yield-display').style.display = 'none';
+
+    // Generate lot number
+    const lotNum = await dbNextLotNumber();
+    document.getElementById('s-lot-number').value = lotNum;
+
+    if (binId) {
+      binSel.value = binId;
+      const bin = state.bins.find(b => b.id === binId);
+      if (bin) {
+        document.getElementById('s-hybrid').value = bin.hybrid || '';
+        document.getElementById('s-input-kg').value = bin.qty || '';
+      }
+    }
+  }
+  openModal('shelling-modal');
+};
+
+window.calcShellingYield = function() {
+  const inp = parseFloat(document.getElementById('s-input-kg').value) || 0;
+  const out = parseFloat(document.getElementById('s-output-kg').value) || 0;
+  const el = document.getElementById('shelling-yield-display');
+  if (inp > 0 && out > 0) {
+    const pct = ((out / inp) * 100).toFixed(1);
+    const waste = (inp - out).toLocaleString('en-IN');
+    el.style.display = 'block';
+    el.textContent = `🌾 Seed Yield: ${pct}% — ${out.toLocaleString('en-IN')} Kg seed from ${inp.toLocaleString('en-IN')} Kg corn  (${waste} Kg cob/waste removed)`;
+  } else {
+    el.style.display = 'none';
+  }
+};
+
+window.saveShelling = async function() {
+  const editId  = document.getElementById('shelling-edit-id').value;
+  const binId   = document.getElementById('s-bin-id').value || null;
+  const hybrid  = document.getElementById('s-hybrid').value.trim();
+  const lotNum  = document.getElementById('s-lot-number').value.trim();
+  const inputKg = parseFloat(document.getElementById('s-input-kg').value);
+  const outputKg= parseFloat(document.getElementById('s-output-kg').value);
+  const bags    = parseInt(document.getElementById('s-bags').value) || 0;
+  const status  = document.getElementById('s-status').value;
+  const notes   = document.getElementById('s-notes').value.trim();
+  const date    = document.getElementById('s-date').value;
+
+  if (!hybrid)      { toast('Enter hybrid/variety', 'error'); return; }
+  if (!lotNum)      { toast('Lot number is required', 'error'); return; }
+  if (!inputKg || inputKg <= 0) { toast('Enter input weight', 'error'); return; }
+
+  const record = {
+    bin_id: binId ? parseInt(binId) : null,
+    lot_number: lotNum,
+    input_kg: inputKg,
+    output_kg: outputKg || 0,
+    bags,
+    shelling_date: date || new Date().toISOString().split('T')[0],
+    status,
+    hybrid,
+    notes
+  };
+
+  try {
+    let saved;
+    if (editId) {
+      saved = await dbUpdateShellingLot(parseInt(editId), record);
+      state.shellingLots = state.shellingLots.map(l => String(l.id) === String(editId) ? {
+        ...l, ...record,
+        inputKg: record.input_kg, outputKg: record.output_kg,
+        shellingDate: record.shelling_date, lotNumber: record.lot_number
+      } : l);
+      toast('Shelling entry updated', 'success');
+    } else {
+      saved = await dbInsertShellingLot(record);
+      state.shellingLots.unshift({
+        id: saved.id, binId: saved.bin_id, groundDryingId: null,
+        lotNumber: saved.lot_number, inputKg: saved.input_kg, outputKg: saved.output_kg,
+        bags: saved.bags, shellingDate: saved.shelling_date,
+        status: saved.status, hybrid: saved.hybrid || '', notes: saved.notes || '',
+        dateTS: new Date(saved.created_at).getTime(),
+        date: new Date(saved.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'})
+      });
+      // If bin-sourced and status complete → mark bin as empty
+      if (binId && status === 'complete') {
+        const bin = state.bins.find(b => String(b.id) === String(binId));
+        if (bin) {
+          try {
+            await dbClient.from('bins').update({ status:'empty', hybrid:'', qty:0, pkts:0, current_moisture:0, entry_moisture:0, intake_date_ts:null, notes:'' }).eq('id', bin.id);
+            bin.status = 'empty'; bin.hybrid = ''; bin.qty = 0;
+          } catch(e) { /* non-fatal */ }
+        }
+      }
+      toast('Shelling entry saved — Lot ' + saved.lot_number, 'success');
+    }
+    closeModal('shelling-modal');
+    if (window.Store) window.Store.emitChange();
+  } catch(e) {
+    toast('Save failed: ' + (e.message || e), 'error');
+  }
+};
+
+window.openShellingFromGround = function(groundId) {
+  // Open shelling modal pre-filled from a ground drying lot
+  const g = state.groundDrying.find(g => String(g.id) === String(groundId));
+  if (!g) return;
+  openShellingModal(null, null);
+  setTimeout(async () => {
+    document.getElementById('s-hybrid').value = g.hybrid || '';
+    document.getElementById('s-input-kg').value = g.qtyKg || '';
+    const lotNum = await dbNextLotNumber();
+    document.getElementById('s-lot-number').value = lotNum;
+    // store ground_drying_id in a hidden input if needed
+    document.getElementById('shelling-edit-id').value = '';
+  }, 50);
+};
+
+window.deleteShelling = async function(id, lotNum) {
+  if (!confirm(`Delete shelling lot ${lotNum}? This cannot be undone.`)) return;
+  const ok = await dbDeleteShellingLot(id);
+  if (ok) {
+    state.shellingLots = state.shellingLots.filter(l => String(l.id) !== String(id));
+    toast('Shelling lot deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Delete failed', 'error');
+  }
+};
+
+// ============================================================
+// GROUND DRYING ACTIONS
+// ============================================================
+
+window.openGroundDryingModal = function(editId) {
+  document.getElementById('gd-edit-id').value = editId || '';
+  const today = new Date().toISOString().split('T')[0];
+
+  if (editId) {
+    const g = state.groundDrying.find(g => String(g.id) === String(editId));
+    if (g) {
+      document.getElementById('gd-date').value = g.dryingDate || today;
+      document.getElementById('gd-challan').value = g.challan;
+      document.getElementById('gd-hybrid').value = g.hybrid;
+      document.getElementById('gd-qty').value = g.qtyKg;
+      document.getElementById('gd-entry-moisture').value = g.entryMoisture || '';
+      document.getElementById('gd-current-moisture').value = g.currentMoisture || '';
+      document.getElementById('gd-status').value = g.status;
+      document.getElementById('gd-notes').value = g.notes;
+    }
+  } else {
+    document.getElementById('gd-date').value = today;
+    document.getElementById('gd-challan').value = '';
+    document.getElementById('gd-hybrid').value = '';
+    document.getElementById('gd-qty').value = '';
+    document.getElementById('gd-entry-moisture').value = '';
+    document.getElementById('gd-current-moisture').value = '';
+    document.getElementById('gd-status').value = 'drying';
+    document.getElementById('gd-notes').value = '';
+  }
+  openModal('ground-drying-modal');
+};
+
+window.saveGroundDrying = async function() {
+  const editId  = document.getElementById('gd-edit-id').value;
+  const hybrid  = document.getElementById('gd-hybrid').value.trim();
+  const qty     = parseFloat(document.getElementById('gd-qty').value);
+  const date    = document.getElementById('gd-date').value;
+  const challan = document.getElementById('gd-challan').value.trim();
+  const entryM  = parseFloat(document.getElementById('gd-entry-moisture').value) || 0;
+  const currM   = parseFloat(document.getElementById('gd-current-moisture').value) || 0;
+  const status  = document.getElementById('gd-status').value;
+  const notes   = document.getElementById('gd-notes').value.trim();
+
+  if (!hybrid) { toast('Enter hybrid/variety', 'error'); return; }
+  if (!qty || qty <= 0) { toast('Enter quantity', 'error'); return; }
+
+  const record = {
+    hybrid, qty_kg: qty, drying_date: date || new Date().toISOString().split('T')[0],
+    challan, entry_moisture: entryM, current_moisture: currM, status, notes
+  };
+
+  try {
+    if (editId) {
+      await dbUpdateGroundDrying(parseInt(editId), record);
+      state.groundDrying = state.groundDrying.map(g => String(g.id) === String(editId) ? {
+        ...g, hybrid, qtyKg: qty, dryingDate: record.drying_date,
+        challan, entryMoisture: entryM, currentMoisture: currM, status, notes
+      } : g);
+      toast('Ground drying entry updated', 'success');
+    } else {
+      const saved = await dbInsertGroundDrying(record);
+      state.groundDrying.unshift({
+        id: saved.id, challan: saved.challan||'', hybrid: saved.hybrid,
+        qtyKg: parseFloat(saved.qty_kg)||0, entryMoisture: parseFloat(saved.entry_moisture)||0,
+        currentMoisture: parseFloat(saved.current_moisture)||0,
+        dryingDate: saved.drying_date, status: saved.status||'drying', notes: saved.notes||'',
+        dateTS: new Date(saved.created_at).getTime(),
+        date: new Date(saved.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'})
+      });
+      toast('Ground drying entry saved', 'success');
+    }
+    closeModal('ground-drying-modal');
+    if (window.Store) window.Store.emitChange();
+  } catch(e) {
+    toast('Save failed: ' + (e.message || e), 'error');
+  }
+};
+
+window.deleteGroundDrying = async function(id) {
+  if (!confirm('Delete this ground drying entry?')) return;
+  const ok = await dbDeleteGroundDrying(id);
+  if (ok) {
+    state.groundDrying = state.groundDrying.filter(g => String(g.id) !== String(id));
+    toast('Entry deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Delete failed', 'error');
   }
 };

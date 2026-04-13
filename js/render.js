@@ -95,7 +95,7 @@ function renderPage(name){
     moisture:null,dispatch:renderDispatchPage,receipts:renderReceiptsPage,
     analytics:renderAnalytics, manager: renderManagerPage, maintenance: renderMaintenancePage, labor: renderLaborPage,
     'entry-trucks': renderEntryTrucksPage, backyard: renderBackyardPage, updates: renderUpdatesPage,
-    audit: renderAuditPage};
+    audit: renderAuditPage, shelling: renderShellingPage, 'ground-drying': renderGroundDryingPage};
   if(map[name])map[name]();
 }
 
@@ -2234,6 +2234,125 @@ function renderAuditPage() {
       <div>${entriesHtml}</div>
     </div>`;
   }).join('');
+}
+
+// ── Shelling Page ─────────────────────────────────────────────
+function renderShellingPage() {
+  const lots = state.shellingLots || [];
+  const complete = lots.filter(l => l.status === 'complete');
+  const pending  = lots.filter(l => l.status !== 'complete');
+
+  const totalOutputKg = complete.reduce((s,l) => s + l.outputKg, 0);
+  const totalInputKg  = complete.reduce((s,l) => s + l.inputKg, 0);
+  const avgYield = totalInputKg > 0 ? ((totalOutputKg / totalInputKg) * 100).toFixed(1) + '%' : '—';
+
+  const sTotal = document.getElementById('s-total-lots');
+  const sComp  = document.getElementById('s-complete');
+  const sPend  = document.getElementById('s-pending');
+  const sYield = document.getElementById('s-yield');
+  if(sTotal) sTotal.textContent = lots.length;
+  if(sComp)  sComp.textContent  = complete.length;
+  if(sPend)  sPend.textContent  = pending.length;
+  if(sYield) sYield.textContent = avgYield;
+
+  const esc = s => String(s||'').replace(/'/g,'&apos;').replace(/"/g,'&quot;');
+  const tbody = document.getElementById('shelling-tbody');
+  if(tbody) {
+    if(!lots.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--ink-4);">No shelling entries yet — use bins ready below to start</td></tr>';
+    } else {
+      tbody.innerHTML = lots.map(l => {
+        const yld = l.inputKg > 0 ? ((l.outputKg/l.inputKg)*100).toFixed(1)+'%' : '—';
+        const srcBin = l.binId ? state.bins.find(b => b.id === l.binId) : null;
+        const srcLabel = srcBin ? ('BIN-'+(srcBin.binLabel||srcBin.id)) : (l.groundDryingId ? 'Ground Lot' : '—');
+        const badge = l.status === 'complete'
+          ? '<span class="status-badge status-empty" style="background:var(--green-bg);color:var(--green);">✅ Complete</span>'
+          : '<span class="status-badge status-drying" style="background:var(--amber-bg);color:var(--amber);">⏳ Pending</span>';
+        return `<tr>
+          <td style="font-weight:700;color:var(--gold);">${esc(l.lotNumber)}</td>
+          <td>${l.shellingDate||l.date}</td>
+          <td>${srcLabel}</td>
+          <td>${esc(l.hybrid)}</td>
+          <td>${l.inputKg.toLocaleString('en-IN')}</td>
+          <td style="font-weight:700;color:var(--green);">${l.outputKg.toLocaleString('en-IN')}</td>
+          <td>${l.bags}</td>
+          <td>${yld}</td>
+          <td>${badge}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-ghost btn-sm" onclick="openShellingModal(null,'${esc(l.id)}')" title="Edit">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteShelling('${esc(l.id)}','${esc(l.lotNumber)}')" style="color:var(--red);" title="Delete">🗑️</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // Ready bins panel
+  const readyBinsEl = document.getElementById('shelling-ready-bins');
+  if(readyBinsEl) {
+    const readyBins = state.bins.filter(b => b.status !== 'empty' && b.currentMoisture > 0 && b.currentMoisture <= (b.targetMoisture || 10));
+    if(!readyBins.length) {
+      readyBinsEl.innerHTML = '<div style="color:var(--ink-4);font-size:13px;padding:4px;">No bins have reached target moisture yet.</div>';
+    } else {
+      readyBinsEl.innerHTML = readyBins.map(b => `
+        <div style="background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius);padding:10px 14px;min-width:160px;">
+          <div style="font-weight:800;font-size:15px;color:var(--green);">BIN-${b.binLabel||b.id}</div>
+          <div style="font-size:12px;color:var(--ink-3);margin:2px 0;">${esc(b.hybrid)||'—'}</div>
+          <div style="font-size:12px;">💧 ${b.currentMoisture}% · ${b.qty.toLocaleString('en-IN')} Kg</div>
+          <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%;font-size:11px;" onclick="openShellingModal(${b.id})">⚙️ Shell This Bin</button>
+        </div>`).join('');
+    }
+  }
+}
+
+// ── Ground Drying Page ────────────────────────────────────────
+function renderGroundDryingPage() {
+  const lots = state.groundDrying || [];
+  const drying  = lots.filter(g => g.status === 'drying');
+  const ready   = lots.filter(g => g.status === 'ready');
+  const shelled = lots.filter(g => g.status === 'shelled');
+
+  const gTotal   = document.getElementById('g-total');
+  const gDrying  = document.getElementById('g-drying');
+  const gReady   = document.getElementById('g-ready');
+  const gShelled = document.getElementById('g-shelled');
+  if(gTotal)   gTotal.textContent   = lots.length;
+  if(gDrying)  gDrying.textContent  = drying.length;
+  if(gReady)   gReady.textContent   = ready.length;
+  if(gShelled) gShelled.textContent = shelled.length;
+
+  const esc = s => String(s||'').replace(/'/g,'&apos;').replace(/"/g,'&quot;');
+  const tbody = document.getElementById('ground-tbody');
+  if(tbody) {
+    if(!lots.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--ink-4);">No ground drying entries yet</td></tr>';
+    } else {
+      tbody.innerHTML = lots.map(g => {
+        const statusMap = { drying:'⏳ Drying', ready:'✅ Ready', shelled:'📦 Shelled' };
+        const colorMap  = { drying:'var(--amber)', ready:'var(--green)', shelled:'var(--purple)' };
+        const bgMap     = { drying:'var(--amber-bg)', ready:'var(--green-bg)', shelled:'var(--purple-bg)' };
+        const badge = `<span style="background:${bgMap[g.status]||'var(--surface-2)'};color:${colorMap[g.status]||'var(--ink-3)'};padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700;">${statusMap[g.status]||g.status}</span>`;
+        const shellBtn = g.status === 'ready'
+          ? `<button class="btn btn-gold btn-sm" onclick="openShellingFromGround('${g.id}')" style="font-size:11px;padding:2px 8px;">⚙️ Shell</button>`
+          : '';
+        return `<tr>
+          <td>${g.dryingDate||g.date}</td>
+          <td>${esc(g.challan)||'—'}</td>
+          <td style="font-weight:600;">${esc(g.hybrid)}</td>
+          <td>${g.qtyKg.toLocaleString('en-IN')}</td>
+          <td>${g.entryMoisture||'—'}%</td>
+          <td>${g.currentMoisture||'—'}%</td>
+          <td>${badge}</td>
+          <td style="font-size:12px;color:var(--ink-4);">${esc(g.notes)||''}</td>
+          <td style="white-space:nowrap;">
+            ${shellBtn}
+            <button class="btn btn-ghost btn-sm" onclick="openGroundDryingModal('${g.id}')" title="Edit">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteGroundDrying('${esc(g.id)}')" style="color:var(--red);" title="Delete">🗑️</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  }
 }
 
 // Predictable state management subscription
