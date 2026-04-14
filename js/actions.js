@@ -803,8 +803,8 @@ function openBinModal(binId){
     <div class="grid2 mb16" id="bm-details-container" style="${bin.status==='empty'?'display:none;':''}">
       <div class="form-group"><label class="form-label">Hybrid</label><input class="form-input fw700" id="bm-hybrid" value="${bin.hybrid||''}"></div>
       <div style="display:flex;gap:8px;">
-        <div class="form-group" style="flex:1;"><label class="form-label">Qty (KG)</label><input class="form-input fw700 text-gold" type="number" step="1" id="bm-qty" value="${bin.qty||''}"></div>
-        <div class="form-group" style="flex:1;"><label class="form-label">Bags</label><input class="form-input fw700 text-gold" type="number" id="bm-pkts" value="${bin.pkts||''}"></div>
+        <div class="form-group" style="flex:1;"><label class="form-label">Qty (KG) <span style="font-weight:400;color:var(--ink-5);font-size:10px;">auto from intake</span></label><input class="form-input fw700 text-gold" type="number" step="1" id="bm-qty" value="${bin.qty||''}" readonly style="background:var(--surface-2);cursor:not-allowed;opacity:.7;"></div>
+        <div class="form-group" style="flex:1;"><label class="form-label">Bags <span style="font-weight:400;color:var(--ink-5);font-size:10px;">auto from intake</span></label><input class="form-input fw700 text-gold" type="number" id="bm-pkts" value="${bin.pkts||''}" readonly style="background:var(--surface-2);cursor:not-allowed;opacity:.7;"></div>
       </div>
       <div class="form-group"><label class="form-label">Entry Moisture %</label><input class="form-input fw700" type="number" step="0.1" id="bm-entry-m" value="${bin.entryMoisture||''}"></div>
       <div class="form-group"><label class="form-label">Days in Bin</label><input class="form-input fw700" value="${days}d" disabled style="background:var(--surface-2);color:var(--ink-4);"></div>
@@ -832,10 +832,6 @@ function openBinModal(binId){
           <option value="shelling" ${bin.status==='shelling'?'selected':''}>Shelling</option>
           <option value="empty" ${bin.status==='empty'?'selected':''}>Empty (Clear Bin)</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Capacity (Kg)</label>
-        <input class="form-input" type="number" step="100" id="bm-capacity" value="${cap||''}" placeholder="e.g. 50000">
       </div>
     </div>
     <div class="form-group mt16">
@@ -871,12 +867,11 @@ async function saveBinModal(binId){
   b.status=document.getElementById('bm-s').value;
   b.airflow=window._bAir||b.airflow;
   b.targetMoisture = parseFloat(document.getElementById('bm-target-m')?.value) || b.targetMoisture || 10;
-  b.capacityKg = parseFloat(document.getElementById('bm-capacity')?.value) || b.capacityKg || 0;
+  // qty and pkts are NOT read from modal — they are set exclusively by intake allocations
 
   if(b.status !== 'empty') {
     b.hybrid = document.getElementById('bm-hybrid') ? document.getElementById('bm-hybrid').value : b.hybrid;
-    b.qty = document.getElementById('bm-qty') ? parseFloat(document.getElementById('bm-qty').value) || 0 : b.qty;
-    b.pkts = document.getElementById('bm-pkts') ? parseInt(document.getElementById('bm-pkts').value) || 0 : b.pkts;
+    // qty and pkts kept as-is (read-only in modal)
     b.entryMoisture = document.getElementById('bm-entry-m') ? parseFloat(document.getElementById('bm-entry-m').value) || 0 : b.entryMoisture;
     b.lot = document.getElementById('bm-lot') ? document.getElementById('bm-lot').value : b.lot;
     b.company = document.getElementById('bm-company') ? document.getElementById('bm-company').value : b.company;
@@ -898,14 +893,11 @@ async function saveBinModal(binId){
       hybrid: b.hybrid,
       company: b.company,
       lot: b.lot,
-      qty: b.qty,
-      pkts: b.pkts,
       entry_moisture: b.entryMoisture,
       current_moisture: b.currentMoisture,
       intake_date_ts: b.intakeDateTS || null,
       airflow: b.airflow,
-      target_moisture: b.targetMoisture,
-      capacity_kg: b.capacityKg
+      target_moisture: b.targetMoisture
   };
   
   const success = await dbUpdateBin(b.id, updates);
