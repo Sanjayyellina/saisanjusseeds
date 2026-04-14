@@ -1874,6 +1874,18 @@ function markTruckIntake(id) {
   }
 }
 
+window.deleteTruck = async function(id, vehicleNo) {
+  if (!confirm(`Delete truck entry for ${vehicleNo}? This cannot be undone.`)) return;
+  const ok = await dbDeleteTruck(id);
+  if (ok) {
+    state.entryTrucks = (state.entryTrucks || []).filter(t => t.id !== id);
+    toast('Truck entry deleted', 'success');
+    if (window.Store) window.Store.emitChange();
+  } else {
+    toast('Delete failed', 'error');
+  }
+};
+
 async function markTruckCompleted(id) {
   const ok = await dbUpdateTruck(id, { status: 'completed' });
   if (ok) {

@@ -367,6 +367,14 @@ async function dbUpdateTruck(id, updates) {
   return _directUpdateTruck(id, updates);
 }
 
+async function dbDeleteTruck(id) {
+  try {
+    const { error } = await dbClient.from('entry_trucks').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch(e) { console.error('dbDeleteTruck:', e); return false; }
+}
+
 async function dbInsertBackyardRemoval(record) {
   if (!navigator.onLine) {
     OfflineQueue.enqueue('INSERT_BACKYARD', record);

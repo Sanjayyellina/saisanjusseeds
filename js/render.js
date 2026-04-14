@@ -1680,6 +1680,7 @@ function renderEntryTrucksPage() {
         ${t.status === 'waiting' ? `<button class="btn btn-sm btn-gold" onclick="markTruckIntake('${t.id}')" style="flex:1;">Assign to Intake</button>` : ''}
         ${t.status === 'intake' ? `<button class="btn btn-sm btn-ghost" onclick="markTruckCompleted('${t.id}')" style="flex:1;">Mark Completed</button>` : ''}
         <button class="btn btn-sm btn-ghost" onclick="editTruck('${t.id}')">Edit</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteTruck('${t.id}','${esc(t.vehicleNo)}')" style="color:var(--red);" title="Delete">🗑️</button>
       </div>
     </div>`;
   }).join('');
