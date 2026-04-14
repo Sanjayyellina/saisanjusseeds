@@ -1792,6 +1792,20 @@ async function saveTruck() {
   const vehicleNo = (document.getElementById('t-vehicle').value || '').toUpperCase().trim();
   if (!vehicleNo) { toast('Vehicle number is required', 'error'); return; }
 
+  // Duplicate check — warn if same vehicle already active (waiting or intake)
+  if (!_editingTruckId) {
+    const existing = (state.entryTrucks || []).find(t =>
+      t.vehicle_no === vehicleNo && (t.status === 'waiting' || t.status === 'intake')
+    );
+    if (existing) {
+      const statusLabel = existing.status === 'intake' ? 'In Intake' : 'Waiting';
+      const proceed = confirm(
+        `Vehicle ${vehicleNo} is already registered and currently "${statusLabel}".\n\nAre you sure you want to add another entry for this vehicle?`
+      );
+      if (!proceed) return;
+    }
+  }
+
   const record = {
     vehicle_no: vehicleNo,
     company: document.getElementById('t-company').value.trim() || null,
