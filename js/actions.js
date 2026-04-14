@@ -1837,12 +1837,40 @@ async function saveTruck() {
   }
 }
 
-async function markTruckIntake(id) {
-  const ok = await dbUpdateTruck(id, { status: 'intake' });
-  if (ok) {
-    toast('Truck marked as In Intake', 'success');
-    await bootApp();
-    showPage('entry-trucks');
+function markTruckIntake(id) {
+  // Open intake modal pre-filled with this truck's details
+  openIntakeModal();
+
+  const truck = (state.entryTrucks || []).find(t => t.id === id);
+  if (!truck) return;
+
+  // Select the truck in the dropdown
+  const truckSel = document.getElementById('i-truck-select');
+  if (truckSel) {
+    // Populate the select if it's empty (intake modal resets it on open)
+    const existing = truckSel.querySelector(`option[value="${id}"]`);
+    if (!existing) {
+      const opt = document.createElement('option');
+      opt.value = truck.id;
+      opt.textContent = `${truck.vehicleNo} — ${truck.company||''} ${truck.grossWeight ? '(' + truck.grossWeight.toLocaleString('en-IN') + ' Kg gross)' : ''}`;
+      truckSel.appendChild(opt);
+    }
+    truckSel.value = id;
+    onTruckSelected(id);
+  }
+
+  // Also pre-fill company and lot numbers if available
+  const compEl = document.getElementById('i-company');
+  if (compEl && truck.company) compEl.value = truck.company;
+
+  if (truck.lotNumbers && truck.lotNumbers.length) {
+    // Clear auto-added blank lot row and populate from truck lots
+    document.getElementById('i-lot-rows').innerHTML = '';
+    truck.lotNumbers.forEach(ln => {
+      addLotRow();
+      const inputs = document.querySelectorAll('.i-lot-input');
+      if (inputs.length) inputs[inputs.length - 1].value = ln;
+    });
   }
 }
 
