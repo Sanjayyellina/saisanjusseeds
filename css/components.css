@@ -9,47 +9,58 @@
 .kpi-grid-analytics .kpi-val { font-size:22px; }
 .kpi-grid-analytics .kpi-icon { width:30px; height:30px; font-size:15px; margin-bottom:8px; }
 .kpi-card {
-  background: var(--glass-white);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg); padding: 20px;
-  box-shadow: var(--glass-shadow);
+  background: #FFFFFF;
+  border: 1px solid #E8ECF1;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(15,25,35,.04);
   position: relative; overflow: hidden;
-  transition: all var(--transition);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-.kpi-card:hover { box-shadow:var(--shadow); transform:translateY(-2px); }
-.kpi-card::after {
-  content:''; position:absolute; top:0; left:0; right:0; height:3px;
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+.kpi-card:hover {
+  border-color: #D4DAE3;
+  box-shadow: 0 2px 8px rgba(15,25,35,.06);
 }
-.kpi-gold::after  { background:linear-gradient(90deg,var(--gold),var(--gold-light)); }
-.kpi-green::after { background:linear-gradient(90deg,var(--green),#34D399); }
-.kpi-blue::after  { background:linear-gradient(90deg,var(--blue),#60A5FA); }
-.kpi-amber::after { background:linear-gradient(90deg,var(--amber),#FCD34D); }
-.kpi-purple::after{ background:linear-gradient(90deg,var(--purple),#A78BFA); }
-.kpi-red::after { background:linear-gradient(90deg,var(--red),#F87171); }
+/* Decorative top accent removed for cleaner look. Color is conveyed via the icon glyph only. */
 .kpi-icon {
-  width:36px; height:36px; border-radius:var(--radius);
+  width: 32px; height: 32px; border-radius: 8px;
   display:flex; align-items:center; justify-content:center;
-  font-size:18px; margin-bottom:12px;
+  font-size: 16px; margin-bottom: 14px;
+  background: #F4F6FA;
+  color: var(--ink-3);
 }
-.kpi-gold .kpi-icon   { background:var(--gold-pale); }
-.kpi-green .kpi-icon  { background:var(--green-bg); }
-.kpi-blue .kpi-icon   { background:var(--blue-bg); }
-.kpi-amber .kpi-icon  { background:var(--amber-bg); }
-.kpi-purple .kpi-icon { background:var(--purple-bg); }
-.kpi-red .kpi-icon { background:var(--red-bg); }
-.kpi-val { font-family:'Playfair Display',serif; font-size:28px; font-weight:800; color:var(--ink); line-height:1; }
-.kpi-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--ink-3); margin-top:5px; }
+.kpi-gold .kpi-icon   { background:#FFF6E5; color:var(--gold-dark); }
+.kpi-green .kpi-icon  { background:#ECFDF5; color:var(--green); }
+.kpi-blue .kpi-icon   { background:#EFF6FF; color:var(--blue); }
+.kpi-amber .kpi-icon  { background:#FFFBEB; color:var(--amber); }
+.kpi-purple .kpi-icon { background:#F5F3FF; color:var(--purple); }
+.kpi-red .kpi-icon    { background:#FEF2F2; color:var(--red); }
+
+.kpi-val {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 26px; font-weight: 700;
+  color: var(--ink); line-height: 1.1;
+  letter-spacing: -.5px;
+  font-feature-settings: "tnum";
+}
+.kpi-label {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: var(--ink-5); margin-top: 6px;
+}
 .kpi-delta {
   display:inline-flex; align-items:center; gap:3px;
-  font-size:11px; font-weight:600; margin-top:6px;
-  padding:2px 7px; border-radius:99px;
+  font-size: 11px; font-weight: 600; margin-top: 8px;
+  padding: 2px 7px; border-radius: 6px;
 }
-.delta-up   { background:var(--green-bg); color:var(--green); }
-.delta-down { background:var(--red-bg); color:var(--red); }
-.delta-flat { background:var(--surface-3); color:var(--ink-4); }
+.delta-up   { background:#ECFDF5; color:var(--green); }
+.delta-down { background:#FEF2F2; color:var(--red); }
+.delta-flat { background:#F4F6FA; color:var(--ink-4); }
+
+/* Analytics variant: tighter, smaller numbers */
+.kpi-grid-analytics .kpi-card { padding: 14px 16px; }
+.kpi-grid-analytics .kpi-val  { font-size: 20px; }
+.kpi-grid-analytics .kpi-icon { width: 28px; height: 28px; font-size: 14px; margin-bottom: 10px; }
 
 /* ============================================================
    SECTION HEADER
