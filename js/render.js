@@ -2028,6 +2028,19 @@ function _weatherCodeEmoji(code) {
   return '⛈️';
 }
 
+function _weatherCodeName(code) {
+  if (code === 0) return 'Clear sky';
+  if (code === 1) return 'Mostly clear';
+  if (code === 2) return 'Partly cloudy';
+  if (code === 3) return 'Overcast';
+  if (code <= 48) return 'Foggy';
+  if (code <= 57) return 'Drizzle';
+  if (code <= 67) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Showers';
+  return 'Thunderstorm';
+}
+
 function _renderWeatherData(el, data) {
   const c = data.current || {};
   const temp       = Math.round(c.temperature_2m != null ? c.temperature_2m : 0);
@@ -2037,18 +2050,15 @@ function _renderWeatherData(el, data) {
   const dew        = Math.round(c.dew_point_2m != null ? c.dew_point_2m : 0);
   const code       = c.weather_code || 0;
   const emoji      = _weatherCodeEmoji(code);
+  const condName   = _weatherCodeName(code);
 
   // Drying condition
-  let dryColor, dryLabel, dryBg;
-  if (humidity < 55)       { dryColor='#059669'; dryBg='#ECFDF5'; dryLabel='🟢 Excellent drying conditions'; }
-  else if (humidity < 65)  { dryColor='#D97706'; dryBg='#FFFBEB'; dryLabel='🟡 Good drying conditions'; }
-  else if (humidity < 75)  { dryColor='#EA580C'; dryBg='#FFF7ED'; dryLabel='🟠 Fair — monitor closely'; }
-  else                      { dryColor='#DC2626'; dryBg='#FEF2F2'; dryLabel='🔴 Poor — high humidity'; }
-  if (wind > 20) dryLabel += ' · Good airflow 💨';
-
-  // Humidity pill color
-  const humColor = humidity < 55 ? '#059669' : humidity < 70 ? '#D97706' : '#DC2626';
-  const humBg    = humidity < 55 ? '#ECFDF5' : humidity < 70 ? '#FFFBEB' : '#FEF2F2';
+  let dryClass, dryLabel;
+  if (humidity < 55)       { dryClass='status-good';    dryLabel='Excellent drying conditions'; }
+  else if (humidity < 65)  { dryClass='status-fair';    dryLabel='Good drying conditions'; }
+  else if (humidity < 75)  { dryClass='status-warning'; dryLabel='Fair — monitor closely'; }
+  else                      { dryClass='status-poor';    dryLabel='Poor — high humidity'; }
+  if (wind > 20) dryLabel += ' · Good airflow';
 
   // Next 6 hours
   const hourlyTimes = (data.hourly && data.hourly.time) || [];
@@ -2060,7 +2070,8 @@ function _renderWeatherData(el, data) {
   for (let i = Math.max(0, nowIdx); i < Math.min(hourlyTimes.length, nowIdx + 7); i++) {
     if (next6.length >= 6) break;
     const t = new Date(hourlyTimes[i]);
-    next6.push({ hour: t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}), hum: Math.round(hourlyHum[i]||0), temp: Math.round(hourlyTemp[i]||0) });
+    let hourLabel = t.toLocaleTimeString('en-IN',{hour:'numeric',hour12:true}).replace(' ','').toUpperCase();
+    next6.push({ hour: hourLabel, hum: Math.round(hourlyHum[i]||0), temp: Math.round(hourlyTemp[i]||0) });
   }
   const minHumIdx = next6.length ? next6.reduce((mi, h, i, arr) => h.hum < arr[mi].hum ? i : mi, 0) : 0;
 
@@ -2077,69 +2088,71 @@ function _renderWeatherData(el, data) {
   }));
 
   el.innerHTML = `
-    <div style="padding:16px 20px;">
-      <!-- Header -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">🌤️ Sathupally Weather</div>
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <span style="font-size:36px;line-height:1;">${emoji}</span>
-            <span style="font-family:'DM Mono',monospace;font-size:32px;font-weight:800;color:var(--ink);">${temp}°</span>
-            <span style="font-size:12px;color:var(--ink-5);">Feels ${feelsLike}°C</span>
-          </div>
-        </div>
-        <div style="text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-          <div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;background:${humBg};border:1px solid ${humColor}30;">
-            <span style="font-size:13px;">💧</span>
-            <span style="font-size:13px;font-weight:800;color:${humColor};">${humidity}%</span>
-          </div>
-          <div style="font-size:11px;color:var(--ink-5);">💨 ${wind} km/h</div>
-          <div style="font-size:11px;color:var(--ink-5);">🌡️ Dew ${dew}°C</div>
+    <div class="weather-card">
+      <div class="weather-eyebrow">Sathupally Weather</div>
+
+      <div class="weather-now">
+        <div class="weather-icon">${emoji}</div>
+        <div class="weather-temp">${temp}°</div>
+        <div class="weather-desc">
+          <div class="weather-cond">${condName}</div>
+          <div class="weather-feels">Feels like ${feelsLike}°</div>
         </div>
       </div>
 
-      <!-- Drying condition banner -->
-      <div style="padding:8px 12px;background:${dryBg};border-radius:var(--radius);margin-bottom:12px;border:1px solid ${dryColor}25;">
-        <div style="font-size:12px;font-weight:700;color:${dryColor};">${dryLabel}</div>
+      <div class="weather-status ${dryClass}">
+        <span class="weather-status-dot"></span>
+        <span>${dryLabel}</span>
       </div>
 
-      <!-- Next 6 hours -->
+      <div class="weather-metrics">
+        <div class="wm">
+          <div class="wm-label">Humidity</div>
+          <div class="wm-val">${humidity}<span class="wm-unit">%</span></div>
+        </div>
+        <div class="wm">
+          <div class="wm-label">Wind</div>
+          <div class="wm-val">${wind}<span class="wm-unit"> km/h</span></div>
+        </div>
+        <div class="wm">
+          <div class="wm-label">Dew Point</div>
+          <div class="wm-val">${dew}<span class="wm-unit">°</span></div>
+        </div>
+      </div>
+
       ${next6.length ? `
-      <div style="margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">Next 6 Hours</div>
-        <div style="display:flex;gap:4px;overflow-x:auto;">
+      <div class="weather-section">
+        <div class="weather-section-label">Next 6 Hours</div>
+        <div class="weather-hours">
           ${next6.map((h,i) => {
             const isBest = i === minHumIdx;
-            const hc = h.hum < 55 ? '#059669' : h.hum < 75 ? '#D97706' : '#DC2626';
-            return `<div style="flex:1;min-width:44px;text-align:center;padding:6px 4px;border-radius:var(--radius);background:${isBest?'#ECFDF5':'var(--surface-2)'};border:1px solid ${isBest?'#10B98133':'transparent'};">
-              <div style="font-size:10px;color:var(--ink-5);margin-bottom:3px;white-space:nowrap;">${h.hour.replace(':00','')}</div>
-              <div style="font-size:11px;font-weight:700;color:${hc};">${h.hum}%</div>
-              <div style="font-size:10px;color:var(--ink-5);">${h.temp}°</div>
-              ${isBest ? `<div style="font-size:9px;color:#059669;font-weight:700;">best</div>` : ''}
+            return `<div class="wh${isBest?' is-best':''}">
+              <div class="wh-time">${h.hour}</div>
+              <div class="wh-temp">${h.temp}°</div>
+              <div class="wh-hum">${h.hum}%</div>
+              ${isBest ? `<div class="wh-best-label">Best</div>` : ''}
             </div>`;
           }).join('')}
         </div>
       </div>` : ''}
 
-      <!-- 3-day forecast -->
       ${forecast3.length ? `
-      <div>
-        <div style="font-size:10px;font-weight:700;color:var(--ink-5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">3-Day Forecast</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      <div class="weather-section">
+        <div class="weather-section-label">3-Day Forecast</div>
+        <div class="weather-days">
           ${forecast3.map(d => {
             const avgHum = Math.round((d.humMax + d.humMin) / 2);
-            const dc = avgHum < 65 ? '#059669' : avgHum < 75 ? '#D97706' : '#DC2626';
-            return `<div style="padding:8px;background:var(--surface-2);border-radius:var(--radius);text-align:center;">
-              <div style="font-size:11px;font-weight:700;color:var(--ink-4);margin-bottom:4px;">${d.day}</div>
-              <div style="font-size:18px;margin-bottom:3px;">${d.emoji}</div>
-              <div style="font-size:11px;color:var(--ink);">${d.max}° / ${d.min}°</div>
-              <div style="font-size:10px;font-weight:700;color:${dc};margin-top:2px;">${avgHum}% hum</div>
+            return `<div class="wd">
+              <div class="wd-day">${d.day}</div>
+              <div class="wd-emoji">${d.emoji}</div>
+              <div class="wd-temp">${d.max}°<span class="wd-temp-min"> / ${d.min}°</span></div>
+              <div class="wd-hum">${avgHum}% humidity</div>
             </div>`;
           }).join('')}
         </div>
       </div>` : ''}
 
-      <div style="font-size:10px;color:var(--ink-5);margin-top:10px;text-align:right;">Sathupally, Telangana · Open-Meteo</div>
+      <div class="weather-footer">Sathupally, Telangana · Open-Meteo</div>
     </div>`;
 }
 
