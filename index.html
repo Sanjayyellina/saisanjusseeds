@@ -1312,61 +1312,76 @@
 
 <!-- SHELLING MODAL -->
 <div class="overlay" id="shelling-modal">
-  <div class="modal" style="width:600px;">
+  <div class="modal" style="width:560px;">
     <div class="modal-header">
-      <div class="modal-title">⚙️ New Shelling Entry</div>
+      <div class="modal-title">New Shelling Entry</div>
       <button class="modal-close" onclick="closeModal('shelling-modal')">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="shelling-edit-id">
-      <div class="form-section"><span class="form-section-icon">🏭</span> Source</div>
-      <div class="form-row cols2">
-        <div class="form-group">
-          <label class="form-label">Source Bin</label>
-          <select class="form-select" id="s-bin-id">
-            <option value="">— Ground Drying Lot —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Shelling Date *</label>
-          <input class="form-input" id="s-date" type="date">
-        </div>
+      <input type="hidden" id="s-source-type">
+      <input type="hidden" id="s-hybrid">
+
+      <!-- Step 1: Pick source -->
+      <div class="form-group">
+        <label class="form-label">Source</label>
+        <select class="form-select" id="s-source-pick" onchange="onShellingSourceChange()">
+          <option value="">— Select a bin or ground-drying lot —</option>
+        </select>
       </div>
-      <div class="form-row cols2">
-        <div class="form-group">
-          <label class="form-label">Hybrid / Variety *</label>
-          <input class="form-input" id="s-hybrid" placeholder="e.g. DS-255">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Lot Number <span style="color:var(--ink-4);font-weight:400;">(auto-generated)</span></label>
-          <input class="form-input" id="s-lot-number" placeholder="YL-2026-001" readonly style="background:var(--surface-2);cursor:default;">
-        </div>
-      </div>
-      <div class="form-section"><span class="form-section-icon">⚖️</span> Weights</div>
-      <div class="form-row cols3">
-        <div class="form-group">
-          <label class="form-label">Input Weight (Kg) *</label>
-          <input class="form-input" id="s-input-kg" type="number" min="0" step="0.1" placeholder="40000" oninput="calcShellingYield()">
-        </div>
+
+      <!-- Source summary card (auto-shown when source picked) -->
+      <div id="s-source-summary" style="display:none;"></div>
+
+      <!-- Step 2: Enter the new data only -->
+      <div class="form-row cols2" style="margin-top:14px;">
         <div class="form-group">
           <label class="form-label">Output Seed (Kg) *</label>
-          <input class="form-input" id="s-output-kg" type="number" min="0" step="0.1" placeholder="20000" oninput="calcShellingYield()">
+          <input class="form-input" id="s-output-kg" type="number" min="0" step="0.1" placeholder="e.g. 20,000" oninput="calcShellingYield()">
         </div>
         <div class="form-group">
-          <label class="form-label">Bags Packed</label>
-          <input class="form-input" id="s-bags" type="number" min="0" placeholder="339">
+          <label class="form-label">Bags Packed *</label>
+          <input class="form-input" id="s-bags" type="number" min="0" placeholder="e.g. 600">
         </div>
       </div>
-      <div id="shelling-yield-display" style="display:none;padding:8px 12px;background:var(--green-bg);border-radius:var(--radius);font-size:13px;color:var(--green);font-weight:600;margin-bottom:12px;"></div>
+
+      <div id="shelling-yield-display" style="display:none;"></div>
+
       <div class="form-row cols2">
         <div class="form-group">
           <label class="form-label">Status</label>
           <select class="form-select" id="s-status">
-            <option value="pending">⏳ Pending / In Progress</option>
-            <option value="complete">✅ Complete</option>
+            <option value="pending">In progress</option>
+            <option value="complete">Complete · empty source</option>
           </select>
         </div>
         <div class="form-group">
+          <label class="form-label">Lot Number</label>
+          <input class="form-input" id="s-lot-number" readonly style="background:#F4F6FA;cursor:default;">
+        </div>
+      </div>
+
+      <!-- Advanced (hidden until expanded) -->
+      <div style="margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleShellingAdvanced()" id="s-adv-toggle" style="font-size:11px;color:var(--ink-4);">+ Override input weight, hybrid, or date</button>
+      </div>
+
+      <div id="s-advanced" style="display:none;margin-top:10px;padding:12px;background:#F7F8FA;border-radius:8px;border:1px solid #E8ECF1;">
+        <div class="form-row cols3">
+          <div class="form-group">
+            <label class="form-label">Input Weight (Kg)</label>
+            <input class="form-input" id="s-input-kg" type="number" min="0" step="0.1" oninput="calcShellingYield()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hybrid</label>
+            <input class="form-input" id="s-hybrid-override" placeholder="Override hybrid">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shelling Date</label>
+            <input class="form-input" id="s-date" type="date">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
           <label class="form-label">Notes</label>
           <input class="form-input" id="s-notes" placeholder="Optional notes">
         </div>
@@ -2101,7 +2116,7 @@
 <script src="js/selects.js?v=4"></script>
 <script src="js/binTile.js?v=20"></script>
 <script src="js/render.js?v=43"></script>
-<script src="js/actions.js?v=49"></script>
+<script src="js/actions.js?v=50"></script>
 <script src="js/receipt.js?v=9"></script>
 <script src="js/clock.js?v=2"></script>
 <script src="js/roles.js?v=1"></script>
