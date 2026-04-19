@@ -206,7 +206,8 @@ window.addDispatchLotRowFromShelling = function() {
   const available = (state.shellingLots || []).filter(l => l.status === 'complete');
   let opts = '<option value="">— Select shelling lot —</option>';
   available.forEach(l => {
-    opts += `<option value="${l.id}" data-bags="${l.bags}" data-kg="${l.outputKg}" data-hybrid="${(l.hybrid||'').replace(/"/g,'&quot;')}">${l.lotNumber} — ${l.hybrid||'?'} — ${l.outputKg.toLocaleString('en-IN')} Kg (${l.bags} bags)</option>`;
+    const lotNo = (l.lotNumber || '').replace(/"/g,'&quot;');
+    opts += `<option value="${l.id}" data-bags="${l.bags||0}" data-kg="${l.outputKg||0}" data-hybrid="${(l.hybrid||'').replace(/"/g,'&quot;')}" data-lotno="${lotNo}">${l.lotNumber} — ${l.hybrid||'?'} — ${(l.outputKg||0).toLocaleString('en-IN')} Kg (${l.bags||0} bags)</option>`;
   });
   if (!available.length) {
     opts = '<option value="">No completed shelling lots — shell bins first</option>';
@@ -217,15 +218,25 @@ window.addDispatchLotRowFromShelling = function() {
       <label class="form-label">Shelling Lot *</label>
       <select class="form-select d-shelling-select" onchange="autofillShellingRow(this)">${opts}</select>
     </div>
-    <div class="form-group"><label class="form-label">Bags from this Lot</label><input class="form-input d-shelling-bags" type="number" placeholder="e.g. 200"></div>
+    <div class="form-group"><label class="form-label">Bags from this Lot</label><input class="form-input d-shelling-bags" type="number" placeholder="e.g. 200" oninput="recalcDispatchTotals()"></div>
     <div class="form-group" style="position:relative;">
       <label class="form-label">Qty (Kg)</label>
       <div style="display:flex;gap:8px;">
-        <input class="form-input d-shelling-qty" type="number" placeholder="e.g. 8000" style="flex:1;">
-        <button class="btn btn-ghost" style="padding:0 8px;" onclick="this.closest('.d-shelling-row').remove()">✕</button>
+        <input class="form-input d-shelling-qty" type="number" placeholder="e.g. 8000" style="flex:1;" oninput="recalcDispatchTotals()">
+        <button class="btn btn-ghost" style="padding:0 8px;" onclick="removeShellingRow(this)">✕</button>
       </div>
     </div>`;
   container.appendChild(row);
+};
+
+window.removeShellingRow = function(btn) {
+  const row = btn.closest('.d-shelling-row');
+  const sel = row?.querySelector('.d-shelling-select');
+  const lotNo = sel?.selectedOptions?.[0]?.dataset?.lotno;
+  // Remove corresponding lot number row
+  if (lotNo) removeDispatchLotByValue(lotNo);
+  row?.remove();
+  recalcDispatchTotals();
 };
 
 window.autofillShellingRow = function(sel) {
@@ -235,11 +246,87 @@ window.autofillShellingRow = function(sel) {
   if (!row) return;
   const bagsIn = row.querySelector('.d-shelling-bags');
   const qtyIn  = row.querySelector('.d-shelling-qty');
-  if (bagsIn && !bagsIn.value) bagsIn.value = opt.dataset.bags || '';
-  if (qtyIn  && !qtyIn.value)  qtyIn.value  = opt.dataset.kg   || '';
-  // Also auto-fill hybrid on dispatch form if empty
+  // Always overwrite with lot's stored values — user can edit after
+  if (bagsIn) bagsIn.value = opt.dataset.bags || '';
+  if (qtyIn)  qtyIn.value  = opt.dataset.kg   || '';
+  // Auto-fill hybrid on dispatch form (overwrite if empty, keep if set)
   const hybridEl = document.getElementById('d-hybrid');
   if (hybridEl && !hybridEl.value) hybridEl.value = opt.dataset.hybrid || '';
+  // Auto-add the lot number into the Lot Numbers section
+  const lotNo = opt.dataset.lotno || '';
+  if (lotNo) addOrUpdateDispatchLotNumber(row, lotNo);
+  // Recalculate totals
+  recalcDispatchTotals();
+};
+
+// Track which lot-no input corresponds to which shelling row,
+// so editing the select cleanly updates the right row.
+window.addOrUpdateDispatchLotNumber = function(shellingRow, lotNo) {
+  const container = document.getElementById('d-lot-rows');
+  if (!container) return;
+  // Find existing row tied to this shelling row
+  let owned = container.querySelector(`.d-lot-row[data-from-shelling="${shellingRow.dataset.rowId || ''}"]`);
+  // Assign a row id if not set
+  if (!shellingRow.dataset.rowId) {
+    shellingRow.dataset.rowId = 'sr-' + Date.now() + '-' + Math.floor(Math.random()*1000);
+  }
+  owned = container.querySelector(`.d-lot-row[data-from-shelling="${shellingRow.dataset.rowId}"]`);
+  if (owned) {
+    const inp = owned.querySelector('.d-lot-input');
+    if (inp) inp.value = lotNo;
+    return;
+  }
+  // Remove empty placeholder rows first (only if just one blank row exists)
+  const existingRows = container.querySelectorAll('.d-lot-row');
+  if (existingRows.length === 1) {
+    const inp = existingRows[0].querySelector('.d-lot-input');
+    if (inp && !inp.value.trim() && !existingRows[0].dataset.fromShelling) {
+      existingRows[0].remove();
+    }
+  }
+  // Create a new row tied to this shelling row
+  const row = document.createElement('div');
+  row.className = 'form-row cols1 d-lot-row';
+  row.style.cssText = 'align-items:flex-end;margin-bottom:6px;';
+  row.dataset.fromShelling = shellingRow.dataset.rowId;
+  row.innerHTML = `
+    <div class="form-group" style="position:relative;">
+      <div style="display:flex;gap:8px;">
+        <input class="form-input d-lot-input" placeholder="e.g. 255202" style="flex:1;" value="${lotNo.replace(/"/g,'&quot;')}">
+        <button class="btn btn-ghost" style="padding:0 10px;flex-shrink:0;" onclick="this.closest('.d-lot-row').remove()" title="Remove">✕</button>
+      </div>
+    </div>`;
+  container.appendChild(row);
+};
+
+window.removeDispatchLotByValue = function(lotNo) {
+  const container = document.getElementById('d-lot-rows');
+  if (!container) return;
+  container.querySelectorAll('.d-lot-row').forEach(r => {
+    const inp = r.querySelector('.d-lot-input');
+    if (inp && inp.value.trim() === lotNo) r.remove();
+  });
+};
+
+window.recalcDispatchTotals = function() {
+  const rows = document.querySelectorAll('.d-shelling-row');
+  if (!rows.length) return;
+  let totalBags = 0, totalQty = 0;
+  let hasAny = false;
+  rows.forEach(r => {
+    const b = parseInt(r.querySelector('.d-shelling-bags')?.value) || 0;
+    const q = parseFloat(r.querySelector('.d-shelling-qty')?.value) || 0;
+    if (b > 0 || q > 0) hasAny = true;
+    totalBags += b;
+    totalQty  += q;
+  });
+  if (!hasAny) return;
+  const dBags = document.getElementById('d-bags');
+  const dQty  = document.getElementById('d-qty');
+  if (dBags) dBags.value = totalBags;
+  if (dQty)  dQty.value  = totalQty;
+  // Trigger rate recalc if present
+  if (typeof calcDispatchRate === 'function') calcDispatchRate();
 };
 
 function addVehicleRow() {
